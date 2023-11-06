@@ -5,6 +5,7 @@ use std::str;
 static CLIENT_API_BASE_URL: &str = "https://api.ring.com/clients_api/";
 static DEVICE_API_BASE_URL: &str = "https://api.ring.com/devices/v1/";
 static COMMANDS_API_BASE_URL: &str = "https://api.ring.com/commands/v1/";
+static SNAPSHOTS_API_BASE_URL: &str = "https://app-snaps.ring.com/snapshots/";
 static APP_API_BASE_URL: &str = "https://app.ring.com/api/v1/";
 static OAUTH_API_BASE_URL: &str ="https://oauth.ring.com/oauth/token";
 
@@ -69,5 +70,9 @@ impl RingRestClient {
 
   pub async fn get_socket_ticket(&self) -> String {
     self.request(&format!("{}{}", APP_API_BASE_URL, "clap/ticket/request/signalsocket")).await
+  }
+
+  pub async fn get_camera_snapshot(&self) -> String {
+    self.request(&format!("{}{}", SNAPSHOTS_API_BASE_URL, "next/375458730")).await
   }
 }

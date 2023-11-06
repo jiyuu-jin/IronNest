@@ -12,8 +12,11 @@ pub async fn ring_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -
 
    let devices_res = ring_rest_client.get_devices().await;
    let socket_token = ring_rest_client.get_socket_ticket().await;
+   println!("{}",devices_res);
+   println!("{}", socket_token);
 
-   return socket_token;
+   let snapshot_res = ring_rest_client.get_camera_snapshot().await;
+   return snapshot_res;
 }
 
 pub async fn ring_auth_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -> String {
