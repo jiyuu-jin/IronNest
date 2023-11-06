@@ -28,14 +28,14 @@ impl RingRestClient {
 
     let client = reqwest::Client::new();
     let res = client.post(OAUTH_API_BASE_URL)
-    .json(&map)
-    .header("2fa-support","true")
-    .header("2fa-code", "")
-    .header("User-Agent", "android:com.ringapp")
-    .header("hardware_id", &self.hardware_id)
-    .send()
-    .await
-    .unwrap();
+      .json(&map)
+      .header("2fa-support","true")
+      .header("2fa-code", "")
+      .header("User-Agent", "android:com.ringapp")
+      .header("hardware_id", &self.hardware_id)
+      .send()
+      .await
+      .unwrap();
     res.text().await.unwrap()
   }
 
@@ -47,13 +47,13 @@ impl RingRestClient {
     let auth_value = format!("{}{}", "Bearer ", &self.auth_token);
 
     let res = client.get(path)
-    .json(&map)
-    .header("authorization", auth_value)
-    .header("hardware_id",&self.hardware_id)
-    .header("User-Agent","android:com.ringapp")
-    .send()
-    .await
-    .unwrap();
+      .json(&map)
+      .header("authorization", auth_value)
+      .header("hardware_id",&self.hardware_id)
+      .header("User-Agent","android:com.ringapp")
+      .send()
+      .await
+      .unwrap();
 
     println!("{}", res.status());
     return res.text().await.unwrap()
