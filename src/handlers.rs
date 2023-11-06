@@ -1,9 +1,10 @@
 use std::sync::Arc;
+use axum::body::Bytes;
 use axum::extract::State;
 use crate::utils::RingRestClient;
 use crate::types::LocationsRes;
 
-pub async fn ring_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -> String {
+pub async fn ring_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -> Bytes {
    let locations_res = ring_rest_client.get_locations().await;
    let locations = serde_json::from_str::<LocationsRes>(&locations_res).expect(&format!("locations_res: {locations_res}"));
    for location in locations.user_locations {
