@@ -122,5 +122,9 @@ pub async fn ring_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -
 }
 
 pub async fn ring_auth_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -> String {
-    ring_rest_client.request_auth_token().await
+    let username = "";
+    let password = "";
+    ring_rest_client
+        .request_auth_token(username, password)
+        .await
 }
