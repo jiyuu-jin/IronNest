@@ -30,7 +30,7 @@ impl RingRestClient {
         };
     }
 
-    pub async fn request_auth_token(&self, username: &str, password: &str) -> String {
+    pub async fn request_auth_token(&self, username: &str, password: &str, two_fa: &str) -> String {
         let mut request_body =
             HashMap::from([("client_id", "ring_official_android"), ("scope", "client")]);
 
@@ -48,7 +48,7 @@ impl RingRestClient {
             .post(OAUTH_API_BASE_URL)
             .json(&request_body)
             .header("2fa-support", "true")
-            .header("2fa-code", "")
+            .header("2fa-code", two_fa)
             .header("User-Agent", "android:com.ringapp")
             .header("hardware_id", &self.hardware_id)
             .send()
