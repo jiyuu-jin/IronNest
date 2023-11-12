@@ -31,6 +31,7 @@ pub fn App() -> impl IntoView {
                 <Routes>
                     <Route path="" view=HomePage/>
                     <Route path="/login" view=LoginPage/>
+                    <Route path="/app" view=AppPage/>
                 </Routes>
             </main>
         </Router>
@@ -46,12 +47,12 @@ fn HomePage() -> impl IntoView {
 
     view! {
         <h1>"Welcome to Iron Nest!"</h1>
-        <button on:click=on_click>"Click Me: " {count}</button>
-        <a href="/login">Login</a>
+        <p><button on:click=on_click>"Click Me: " {count}</button></p>
+        <p><a href="/login">Login</a></p>
     }
 }
 
-#[server(HandleLogin, "/api")]
+#[server(HandleLogin)]
 pub async fn handle_login(
     username: String,
     password: String,
@@ -81,6 +82,27 @@ fn LoginPage() -> impl IntoView {
             <input type="submit" value="Login"/>
         </ActionForm>
         <p>{value}</p>
-        <a href="/rest-api/ring">"Ring Dashboard"</a>
+        <p><a href="/app">"App"</a></p>
+        <p><a href="/rest-api/ring">"HTTP Dashboard"</a></p>
+    }
+}
+
+#[component]
+fn AppPage() -> impl IntoView {
+    let ws_url = create_resource(
+        || (),
+        |_| async move {
+            use {crate::utils::RingRestClient, std::sync::Arc};
+            let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
+            ring_rest_client.get_ws_url().await
+        },
+    );
+
+    view! {
+        <h1>"Dashboard"</h1>
+        <Suspense
+            fallback=move || view! { <p>"Loading..."</p> }>
+            {move || ws_url.get().map(|data| view! { <p>{data}</p> })}
+        </Suspense>
     }
 }
