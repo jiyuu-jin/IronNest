@@ -30,7 +30,7 @@ These can be set in a `.env` file at the root of your project.
 
 ```bash
 rustup target add wasm32-unknown-unknown
-cargo install trunk cargo-leptos just
+cargo install trunk cargo-leptos leptosfmt just
 ```
 
 ## Running the Project
