@@ -1051,6 +1051,7 @@ dependencies = [
  "tokio",
  "tower",
  "tower-http",
+ "uuid",
  "wasm-bindgen",
 ]
 

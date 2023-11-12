@@ -4,9 +4,11 @@ use {
     },
     chrono::{DateTime, TimeZone, Utc},
     chrono_tz::US::Eastern,
+    log::{info, warn},
     reqwest::{self, Client, Method},
-    sha2::Digest,
-    std::{collections::HashMap, str, sync::RwLock},
+    serde::{Deserialize, Serialize},
+    std::{collections::HashMap, fs::File, str, sync::RwLock},
+    uuid::Uuid,
 };
 
 static CLIENT_API_BASE_URL: &str = "https://api.ring.com/clients_api/";
@@ -16,7 +18,7 @@ static SNAPSHOTS_API_BASE_URL: &str = "https://app-snaps.ring.com/snapshots/";
 static APP_API_BASE_URL: &str = "https://app.ring.com/api/v1/";
 static OAUTH_API_BASE_URL: &str = "https://oauth.ring.com/oauth/token";
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 struct State {
     pub refresh_token: String,
     pub hardware_id: String,
@@ -29,18 +31,49 @@ pub struct RingRestClient {
     pub client: Client,
 }
 
+const STATE_FILE_NAME: &str = "state.json";
+
+fn read_state_from_file() -> std::io::Result<State> {
+    let state_file = File::open(STATE_FILE_NAME);
+    let result = match state_file {
+        Ok(file) => {
+            let state = serde_json::from_reader(file);
+            match state {
+                Ok(state) => Some(state),
+                Err(e) => {
+                    warn!("Error reading from state file, resetting to empty state: {e}");
+                    None
+                }
+            }
+        }
+        Err(e) => {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                info!("State file not found, defaulting to empty state");
+                None
+            } else {
+                return Err(e);
+            }
+        }
+    };
+
+    Ok(result.unwrap_or_else(|| State {
+        refresh_token: "".to_owned(),
+        hardware_id: Uuid::new_v4().to_string(),
+        auth_token: "".to_owned(),
+    }))
+}
+
+fn write_state_to_file(state: &State) -> std::io::Result<()> {
+    let state_file = File::create(STATE_FILE_NAME)?;
+    serde_json::to_writer(state_file, state)?;
+    Ok(())
+}
+
 impl RingRestClient {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        let mut hardware_id = sha2::Sha256::new();
-        hardware_id.update("jkfldsjkfls");
-        let hardware_id = hex::encode(hardware_id.finalize());
         Self {
-            state: RwLock::new(State {
-                refresh_token: "".to_owned(),
-                hardware_id,
-                auth_token: "".to_owned(),
-            }),
+            state: RwLock::new(read_state_from_file().unwrap()),
             client: reqwest::Client::new(),
         }
     }
@@ -85,6 +118,7 @@ impl RingRestClient {
             let mut state = self.state.write().unwrap();
             state.auth_token = auth_res.access_token;
             state.refresh_token = auth_res.refresh_token;
+            write_state_to_file(&state).unwrap();
             "Login successful".to_string()
         } else {
             res.text().await.unwrap()

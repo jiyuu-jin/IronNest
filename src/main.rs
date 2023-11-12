@@ -4,24 +4,21 @@ use {
         body::Body as AxumBody,
         extract::{FromRef, Path, RawQuery, State},
         response::{IntoResponse, Response},
-        routing::{get, post},
+        routing::{get,},
         Router,
     },
-    base64::{engine::general_purpose::STANDARD as base64, Engine},
-    cfg_if::cfg_if,
     dotenv::dotenv,
     http::Request,
     iron_nest::{
         app::App,
         fileserv::file_and_error_handler,
         handlers::{ring_auth_handler, ring_handler},
-        types::OauthRes,
         utils::RingRestClient,
     },
-    leptos::{get_configuration, logging::log, provide_context, view, IntoView, LeptosOptions},
+    leptos::{get_configuration, logging::log, provide_context, LeptosOptions},
     leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes},
     reqwest::header::HeaderMap,
-    std::{env, sync::Arc},
+    std::{ sync::Arc},
 };
 
 /// This takes advantage of Axum's SubStates feature by deriving FromRef. This is the only way to have more than one

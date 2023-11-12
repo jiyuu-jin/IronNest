@@ -57,7 +57,7 @@ pub struct DoorBotHealth {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct AuthorizedDoorbots {
+pub struct Doorbots {
     pub id: u64,
     pub description: String,
     pub health: DoorBotHealth,
@@ -65,7 +65,8 @@ pub struct AuthorizedDoorbots {
 
 #[derive(Deserialize, Debug)]
 pub struct DevicesRes {
-    pub authorized_doorbots: Vec<AuthorizedDoorbots>,
+    pub doorbots: Vec<Doorbots>,
+    pub authorized_doorbots: Vec<Doorbots>,
 }
 
 #[derive(Deserialize, Debug)]

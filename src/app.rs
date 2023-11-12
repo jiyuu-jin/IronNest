@@ -57,7 +57,7 @@ pub async fn handle_login(
     password: String,
     tfa: String,
 ) -> Result<String, ServerFnError> {
-    use {std::sync::Arc, utils::RingRestClient};
+    use {crate::utils::RingRestClient, std::sync::Arc};
 
     let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
     let result = ring_rest_client
