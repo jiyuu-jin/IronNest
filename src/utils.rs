@@ -4,7 +4,7 @@ use reqwest::{self, Client, Method};
 use std::collections::HashMap;
 use std::str;
 
-use crate::types::{SocketTicketRes, VideoSearchRes};
+use crate::types::{CameraEventsRes, DevicesRes, LocationsRes, SocketTicketRes, VideoSearchRes};
 
 static CLIENT_API_BASE_URL: &str = "https://api.ring.com/clients_api/";
 static DEVICE_API_BASE_URL: &str = "https://api.ring.com/devices/v1/";
@@ -76,14 +76,26 @@ impl RingRestClient {
         return res.text().await.unwrap();
     }
 
-    pub async fn get_locations(&self) -> String {
-        self.request(&format!("{DEVICE_API_BASE_URL}locations"), Method::GET)
-            .await
+    pub async fn get_locations(&self) -> LocationsRes {
+        let res = self
+            .request(&format!("{DEVICE_API_BASE_URL}locations"), Method::GET)
+            .await;
+        serde_json::from_str::<LocationsRes>(&res).expect(&format!("locations_res: {res}"))
     }
 
-    pub async fn get_devices(&self) -> String {
-        self.request(&format!("{CLIENT_API_BASE_URL}ring_devices"), Method::GET)
-            .await
+    pub async fn get_devices(&self) -> DevicesRes {
+        let res = self
+            .request(&format!("{CLIENT_API_BASE_URL}ring_devices"), Method::GET)
+            .await;
+        serde_json::from_str::<DevicesRes>(&res).expect(&format!("devices_res: {res}"))
+    }
+
+    pub async fn get_camera_events(&self, location_id: &str, device_id: &u64) -> CameraEventsRes {
+        let camera_events_url =
+            &format!("{CLIENT_API_BASE_URL}/locations/{location_id}/devices/{device_id}/events",);
+
+        let res = self.request(camera_events_url, Method::GET).await;
+        serde_json::from_str::<CameraEventsRes>(&res).expect(&format!("camera_event_res: {res}"))
     }
 
     pub async fn get_ws_url(&self) -> String {
@@ -131,7 +143,7 @@ impl RingRestClient {
         (time, res.bytes().await.unwrap())
     }
 
-    pub async fn get_recordings(&self, id: &u64) -> String {
+    pub async fn get_recordings(&self, id: &u64) -> VideoSearchRes {
         let date_from: i64 = 1699506000000;
         let date_to: i64 = 1699592399999;
 
@@ -139,13 +151,8 @@ impl RingRestClient {
             "{CLIENT_API_BASE_URL}video_search/history?doorbot_id={id}&date_from={date_from}&date_to={date_to}&order=asc&api_version=11"
         );
 
-        self.request(&recordings_url, Method::GET).await
-    }
-
-    pub async fn get_camera_events(&self, location_id: &str, device_id: &u64) -> String {
-        let camera_events_url =
-            &format!("{CLIENT_API_BASE_URL}/locations/{location_id}/devices/{device_id}/events",);
-        self.request(camera_events_url, Method::GET).await
+        let res = self.request(&recordings_url, Method::GET).await;
+        serde_json::from_str::<VideoSearchRes>(&res).expect(&format!("camera_event_res: {res}"))
     }
 }
 

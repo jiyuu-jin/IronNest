@@ -1,4 +1,3 @@
-use crate::types::{CameraEventsRes, DevicesRes, LocationsRes, VideoSearchRes};
 use crate::utils::{camera_recordings_list, RingRestClient};
 use axum::extract::State;
 use axum::response::Html;
@@ -6,13 +5,8 @@ use base64::{engine::general_purpose::STANDARD as base64, Engine};
 use std::sync::Arc;
 
 pub async fn ring_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -> Html<String> {
-    let locations_res = ring_rest_client.get_locations().await;
-    let locations = serde_json::from_str::<LocationsRes>(&locations_res)
-        .expect(&format!("locations_res: {locations_res}"));
-
-    let devices_res = ring_rest_client.get_devices().await;
-    let devices = serde_json::from_str::<DevicesRes>(&devices_res)
-        .expect(&format!("locations_res: {locations_res}"));
+    let locations = ring_rest_client.get_locations().await;
+    let devices = ring_rest_client.get_devices().await;
 
     let socket_ticket = ring_rest_client.get_ws_url().await;
 
@@ -26,30 +20,17 @@ pub async fn ring_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -
     let front_device_id = &devices.authorized_doorbots[1].id;
     let back_device_id = &devices.authorized_doorbots[0].id;
 
-    let front_camera_events_res = ring_rest_client
+    let front_camera_events = ring_rest_client
         .get_camera_events(&location_id, &front_device_id)
         .await;
-    let front_camera_events = serde_json::from_str::<CameraEventsRes>(&front_camera_events_res)
-        .expect(&format!("camera_event_res: {locations_res}"));
 
-    let back_camera_events_res = ring_rest_client
+    let back_camera_events = ring_rest_client
         .get_camera_events(&location_id, &back_device_id)
         .await;
-    let back_camera_events = serde_json::from_str::<CameraEventsRes>(&back_camera_events_res)
-        .expect(&format!("camera_event_res: {locations_res}"));
 
-    let front_camera_recordings_res = ring_rest_client.get_recordings(&front_device_id).await;
-    let front_camera_recordings =
-        serde_json::from_str::<VideoSearchRes>(&front_camera_recordings_res)
-            .expect(&format!("camera_event_res: {front_camera_recordings_res}"));
-
+    let front_camera_recordings = ring_rest_client.get_recordings(&front_device_id).await;
     let front_camera_component = camera_recordings_list(front_camera_recordings);
-
-    let back_camera_recordings_res = ring_rest_client.get_recordings(&back_device_id).await;
-    let back_camera_recordings =
-        serde_json::from_str::<VideoSearchRes>(&back_camera_recordings_res)
-            .expect(&format!("camera_event_res: {back_camera_recordings_res}"));
-
+    let back_camera_recordings = ring_rest_client.get_recordings(&back_device_id).await;
     let back_camera_component = camera_recordings_list(back_camera_recordings);
 
     let html_text = format!(
