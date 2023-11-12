@@ -1,12 +1,8 @@
 use {
-    crate::{
-        error_template::{AppError, ErrorTemplate},
-        utils::RingRestClient,
-    },
+    crate::error_template::{AppError, ErrorTemplate},
     leptos::*,
     leptos_meta::*,
     leptos_router::*,
-    std::sync::Arc,
 };
 
 #[component]

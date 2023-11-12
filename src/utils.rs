@@ -1,7 +1,6 @@
 use {
     crate::types::{
-        AuthResponse, CameraEventsRes, DevicesRes, LocationsRes, OauthRes, SocketTicketRes,
-        VideoSearchRes,
+        AuthResponse, CameraEventsRes, DevicesRes, LocationsRes, SocketTicketRes, VideoSearchRes,
     },
     chrono::{DateTime, TimeZone, Utc},
     chrono_tz::US::Eastern,
@@ -12,7 +11,7 @@ use {
 
 static CLIENT_API_BASE_URL: &str = "https://api.ring.com/clients_api/";
 static DEVICE_API_BASE_URL: &str = "https://api.ring.com/devices/v1/";
-static COMMANDS_API_BASE_URL: &str = "https://api.ring.com/commands/v1/";
+static _COMMANDS_API_BASE_URL: &str = "https://api.ring.com/commands/v1/";
 static SNAPSHOTS_API_BASE_URL: &str = "https://app-snaps.ring.com/snapshots/";
 static APP_API_BASE_URL: &str = "https://app.ring.com/api/v1/";
 static OAUTH_API_BASE_URL: &str = "https://oauth.ring.com/oauth/token";
@@ -56,10 +55,10 @@ impl RingRestClient {
                 (state.refresh_token.clone(), state.hardware_id.clone())
             };
 
-            if username != "" && password != "" {
+            if !username.is_empty() && !password.is_empty() {
                 request_body.insert("grant_type", "password");
-                request_body.insert("username", &username);
-                request_body.insert("password", &password);
+                request_body.insert("username", username);
+                request_body.insert("password", password);
             } else {
                 request_body.insert("refresh_token", &refresh_token);
                 request_body.insert("grant_type", "refresh_token");
@@ -81,7 +80,7 @@ impl RingRestClient {
             println!("response: {text}");
 
             let auth_res = serde_json::from_str::<AuthResponse>(&text)
-                .expect(&format!("error requesting: {text}"));
+                .unwrap_or_else(|_| panic!("error requesting: {text}"));
 
             let mut state = self.state.write().unwrap();
             state.auth_token = auth_res.access_token;
@@ -113,21 +112,22 @@ impl RingRestClient {
             .unwrap();
 
         println!("{}", res.status());
-        return res.text().await.unwrap();
+        res.text().await.unwrap()
     }
 
     pub async fn get_locations(&self) -> LocationsRes {
         let res = self
             .request(&format!("{DEVICE_API_BASE_URL}locations"), Method::GET)
             .await;
-        serde_json::from_str::<LocationsRes>(&res).expect(&format!("locations_res: {res}"))
+        serde_json::from_str::<LocationsRes>(&res)
+            .unwrap_or_else(|_| panic!("locations_res: {res}"))
     }
 
     pub async fn get_devices(&self) -> DevicesRes {
         let res = self
             .request(&format!("{CLIENT_API_BASE_URL}ring_devices"), Method::GET)
             .await;
-        serde_json::from_str::<DevicesRes>(&res).expect(&format!("devices_res: {res}"))
+        serde_json::from_str::<DevicesRes>(&res).unwrap_or_else(|_| panic!("devices_res: {res}"))
     }
 
     pub async fn get_camera_events(&self, location_id: &str, device_id: &u64) -> CameraEventsRes {
@@ -135,7 +135,8 @@ impl RingRestClient {
             &format!("{CLIENT_API_BASE_URL}/locations/{location_id}/devices/{device_id}/events",);
 
         let res = self.request(camera_events_url, Method::GET).await;
-        serde_json::from_str::<CameraEventsRes>(&res).expect(&format!("camera_event_res: {res}"))
+        serde_json::from_str::<CameraEventsRes>(&res)
+            .unwrap_or_else(|_| panic!("camera_event_res: {res}"))
     }
 
     pub async fn get_ws_url(&self) -> String {
@@ -147,7 +148,7 @@ impl RingRestClient {
             .await;
 
         let socket_ticket = serde_json::from_str::<SocketTicketRes>(&socket_ticket_res)
-            .expect(&format!("locations_res: {socket_ticket_res}"));
+            .unwrap_or_else(|_| panic!("locations_res: {socket_ticket_res}"));
 
         format!("wss://api.prod.signalling.ring.devices.a2z.com:443/ws?api_version=4.0&auth_type=ring_solutions&client_id=ring_site-3333&token={}", &socket_ticket.ticket)
     }
@@ -195,8 +196,9 @@ impl RingRestClient {
             "{CLIENT_API_BASE_URL}video_search/history?doorbot_id={id}&date_from={date_from}&date_to={date_to}&order=asc&api_version=11"
         );
 
-        let res = self.request(&recordings_url, Method::GET).await;
-        serde_json::from_str::<VideoSearchRes>(&res).expect(&format!("camera_event_res: {res}"))
+        let res = self.request(recordings_url, Method::GET).await;
+        serde_json::from_str::<VideoSearchRes>(&res)
+            .unwrap_or_else(|_| panic!("camera_event_res: {res}"))
     }
 }
 
