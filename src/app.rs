@@ -87,15 +87,21 @@ fn LoginPage() -> impl IntoView {
     }
 }
 
+#[server(GetWsUrl)]
+pub async fn get_ws_url() -> Result<String, ServerFnError> {
+    use {crate::utils::RingRestClient, std::sync::Arc};
+
+    let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
+    let result = ring_rest_client.get_ws_url().await;
+
+    Ok(result)
+}
+
 #[component]
 fn AppPage() -> impl IntoView {
     let ws_url = create_resource(
         || (),
-        |_| async move {
-            use {crate::utils::RingRestClient, std::sync::Arc};
-            let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
-            ring_rest_client.get_ws_url().await
-        },
+        |_| get_ws_url(),
     );
 
     view! {
