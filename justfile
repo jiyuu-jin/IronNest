@@ -5,3 +5,6 @@ clippy:
   cargo clippy --all-features
 
 lint: fmt clippy
+
+dev: lint
+  cargo leptos watch
