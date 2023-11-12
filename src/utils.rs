@@ -1,10 +1,14 @@
-use chrono::{DateTime, TimeZone, Utc};
-use chrono_tz::US::Eastern;
-use reqwest::{self, Client, Method};
-use std::collections::HashMap;
-use std::str;
-
-use crate::types::{CameraEventsRes, DevicesRes, LocationsRes, SocketTicketRes, VideoSearchRes};
+use {
+    crate::types::{
+        AuthResponse, CameraEventsRes, DevicesRes, LocationsRes, OauthRes, SocketTicketRes,
+        VideoSearchRes,
+    },
+    chrono::{DateTime, TimeZone, Utc},
+    chrono_tz::US::Eastern,
+    reqwest::{self, Client, Method},
+    sha2::Digest,
+    std::{collections::HashMap, str, sync::RwLock},
+};
 
 static CLIENT_API_BASE_URL: &str = "https://api.ring.com/clients_api/";
 static DEVICE_API_BASE_URL: &str = "https://api.ring.com/devices/v1/";
@@ -13,60 +17,96 @@ static SNAPSHOTS_API_BASE_URL: &str = "https://app-snaps.ring.com/snapshots/";
 static APP_API_BASE_URL: &str = "https://app.ring.com/api/v1/";
 static OAUTH_API_BASE_URL: &str = "https://oauth.ring.com/oauth/token";
 
-pub struct RingRestClient {
+#[derive(Debug)]
+struct State {
     pub refresh_token: String,
     pub hardware_id: String,
     pub auth_token: String,
+}
+
+#[derive(Debug)]
+pub struct RingRestClient {
+    state: RwLock<State>,
     pub client: Client,
 }
 
 impl RingRestClient {
-    pub fn new(refresh_token: String, hardware_id: String, auth_token: String) -> Self {
-        return Self {
-            refresh_token,
-            hardware_id,
-            auth_token,
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
+        let mut hardware_id = sha2::Sha256::new();
+        hardware_id.update("jkfldsjkfls");
+        let hardware_id = hex::encode(hardware_id.finalize());
+        Self {
+            state: RwLock::new(State {
+                refresh_token: "".to_owned(),
+                hardware_id,
+                auth_token: "".to_owned(),
+            }),
             client: reqwest::Client::new(),
-        };
+        }
     }
 
     pub async fn request_auth_token(&self, username: &str, password: &str, two_fa: &str) -> String {
         let mut request_body =
             HashMap::from([("client_id", "ring_official_android"), ("scope", "client")]);
 
-        if username != "" && password != "" {
-            request_body.insert("grant_type", "password");
-            request_body.insert("username", &username);
-            request_body.insert("password", &password);
-        } else {
-            request_body.insert("refresh_token", &self.refresh_token);
-            request_body.insert("grant_type", "refresh_token");
-        };
+        let res = {
+            let (refresh_token, hardware_id) = {
+                let state = self.state.read().unwrap();
+                (state.refresh_token.clone(), state.hardware_id.clone())
+            };
 
-        let res = self
-            .client
-            .post(OAUTH_API_BASE_URL)
-            .json(&request_body)
-            .header("2fa-support", "true")
-            .header("2fa-code", two_fa)
-            .header("User-Agent", "android:com.ringapp")
-            .header("hardware_id", &self.hardware_id)
-            .send()
-            .await
-            .unwrap();
-        res.text().await.unwrap()
+            if username != "" && password != "" {
+                request_body.insert("grant_type", "password");
+                request_body.insert("username", &username);
+                request_body.insert("password", &password);
+            } else {
+                request_body.insert("refresh_token", &refresh_token);
+                request_body.insert("grant_type", "refresh_token");
+            };
+
+            self.client
+                .post(OAUTH_API_BASE_URL)
+                .json(&request_body)
+                .header("2fa-support", "true")
+                .header("2fa-code", two_fa)
+                .header("User-Agent", "android:com.ringapp")
+                .header("hardware_id", &hardware_id)
+                .send()
+                .await
+                .unwrap()
+        };
+        if res.status().is_success() {
+            let text = res.text().await.unwrap();
+            println!("response: {text}");
+
+            let auth_res = serde_json::from_str::<AuthResponse>(&text)
+                .expect(&format!("error requesting: {text}"));
+
+            let mut state = self.state.write().unwrap();
+            state.auth_token = auth_res.access_token;
+            state.refresh_token = auth_res.refresh_token;
+            "Login successful".to_string()
+        } else {
+            res.text().await.unwrap()
+        }
     }
 
     pub async fn request(&self, path: &str, method: Method) -> String {
         let request_body = HashMap::from([("client_id", "ring_official_android")]);
-        let auth_value = format!("{}{}", "Bearer ", &self.auth_token);
+
+        let (auth_token, hardware_id) = {
+            let state = self.state.read().unwrap();
+            (state.auth_token.clone(), state.hardware_id.clone())
+        };
+        let auth_value = format!("{}{}", "Bearer ", &auth_token);
 
         let res = self
             .client
             .request(method, path)
             .json(&request_body)
             .header("authorization", auth_value)
-            .header("hardware_id", &self.hardware_id)
+            .header("hardware_id", &hardware_id)
             .header("User-Agent", "android:com.ringapp")
             .send()
             .await
@@ -112,15 +152,19 @@ impl RingRestClient {
         format!("wss://api.prod.signalling.ring.devices.a2z.com:443/ws?api_version=4.0&auth_type=ring_solutions&client_id=ring_site-3333&token={}", &socket_ticket.ticket)
     }
 
-    pub async fn get_camera_snapshot(&self, id: &str) -> (String, axum::body::Bytes) {
+    pub async fn get_camera_snapshot(&self, id: &str) -> (String, bytes::Bytes) {
         let request_body = HashMap::from([("client_id", "ring_official_android")]);
 
+        let (auth_token, hardware_id) = {
+            let state = self.state.read().unwrap();
+            (state.auth_token.clone(), state.hardware_id.clone())
+        };
         let res = self
             .client
             .get(&format!("{SNAPSHOTS_API_BASE_URL}next/{id}"))
             .json(&request_body)
-            .bearer_auth(&self.auth_token)
-            .header("hardware_id", &self.hardware_id)
+            .bearer_auth(&auth_token)
+            .header("hardware_id", &hardware_id)
             .header("User-Agent", "android:com.ringapp")
             .send()
             .await

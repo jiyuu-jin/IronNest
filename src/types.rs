@@ -1,20 +1,27 @@
-use std::string;
-
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct OauthRes {
     pub hid: String,
     pub rt: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
+pub struct AuthResponse {
+    pub access_token: String,
+    pub expires_in: u64,
+    pub refresh_token: String,
+    pub scope: String,
+    pub token_type: String,
+}
+
+#[derive(Deserialize, Debug)]
 pub struct GeoCoordinates {
     pub latitude: f64,
     pub longitude: f64,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Address {
     pub address1: String,
     pub address2: String,
@@ -26,7 +33,7 @@ pub struct Address {
     pub timezone: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct UserLocations {
     pub location_id: String,
     pub owner_id: u64,
@@ -39,34 +46,34 @@ pub struct UserLocations {
     pub is_owner: bool,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct LocationsRes {
     pub user_locations: Vec<UserLocations>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct DoorBotHealth {
     pub battery_percentage: u64,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct AuthorizedDoorbots {
     pub id: u64,
     pub description: String,
     pub health: DoorBotHealth,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct DevicesRes {
     pub authorized_doorbots: Vec<AuthorizedDoorbots>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct CameraEventsRes {
     pub events: Vec<CameraEvent>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct CameraEvent {
     pub event_id: String,
     pub event_type: String,
@@ -76,22 +83,22 @@ pub struct CameraEvent {
     pub cv_properties: CvProperties,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct CvProperties {
     pub person_detected: Option<bool>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct SocketTicketRes {
     pub ticket: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct VideoSearchRes {
     pub video_search: Vec<VideoItem>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct VideoItem {
     pub ding_id: String,
     pub created_at: u64,
