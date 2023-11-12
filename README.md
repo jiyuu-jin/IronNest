@@ -29,6 +29,7 @@ These can be set in a `.env` file at the root of your project.
 ## Dependencies
 
 ```bash
+rustup target add wasm32-unknown-unknown
 cargo install trunk cargo-leptos
 ```
 
@@ -37,12 +38,6 @@ cargo install trunk cargo-leptos
 ```bash
 cargo leptos watch
 ```
-
-1. Ensure Rust and Cargo are installed.
-2. Clone the repository.
-3. Navigate to the project directory.
-4. Run `cargo run` to start the server.
-5. By default, the server will start on port `3333`.
 
 ## Endpoints
 
