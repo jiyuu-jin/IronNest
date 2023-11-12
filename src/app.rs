@@ -99,10 +99,7 @@ pub async fn get_ws_url() -> Result<String, ServerFnError> {
 
 #[component]
 fn AppPage() -> impl IntoView {
-    let ws_url = create_resource(
-        || (),
-        |_| get_ws_url(),
-    );
+    let ws_url = create_resource(|| (), |_| get_ws_url());
 
     view! {
         <h1>"Dashboard"</h1>
