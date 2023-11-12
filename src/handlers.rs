@@ -1,11 +1,17 @@
-use crate::utils::{camera_recordings_list, RingRestClient};
-use axum::extract::State;
-use axum::response::Html;
-use base64::{engine::general_purpose::STANDARD as base64, Engine};
-use std::sync::Arc;
+use {
+    crate::{
+        types::{CameraEventsRes, DevicesRes, LocationsRes, VideoSearchRes},
+        utils::{camera_recordings_list, RingRestClient},
+    },
+    axum::{extract::State, response::Html},
+    base64::{engine::general_purpose::STANDARD as base64, Engine},
+    std::sync::Arc,
+};
 
+#[axum::debug_handler]
 pub async fn ring_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -> Html<String> {
     let locations = ring_rest_client.get_locations().await;
+    println!("locations: {locations:?}");
     let devices = ring_rest_client.get_devices().await;
 
     let socket_ticket = ring_rest_client.get_ws_url().await;

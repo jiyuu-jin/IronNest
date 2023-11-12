@@ -26,7 +26,17 @@ Before running the project, ensure you have the following environment variables 
 
 These can be set in a `.env` file at the root of your project.
 
+## Dependencies
+
+```bash
+cargo install trunk cargo-leptos
+```
+
 ## Running the Project
+
+```bash
+cargo leptos watch
+```
 
 1. Ensure Rust and Cargo are installed.
 2. Clone the repository.
