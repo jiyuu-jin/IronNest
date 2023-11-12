@@ -223,8 +223,17 @@ impl RingRestClient {
     }
 
     pub async fn get_recordings(&self, id: &u64) -> VideoSearchRes {
-        let date_from: i64 = 1699506000000;
-        let date_to: i64 = 1699592399999;
+        let now = Utc::now();
+        let date_from = now
+            .date_naive()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+            .timestamp_millis();
+        let date_to = now
+            .date_naive()
+            .and_hms_opt(23, 59, 59)
+            .unwrap()
+            .timestamp_millis();
 
         let recordings_url = &format!(
             "{CLIENT_API_BASE_URL}video_search/history?doorbot_id={id}&date_from={date_from}&date_to={date_to}&order=asc&api_version=11"
