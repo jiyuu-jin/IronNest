@@ -1,12 +1,8 @@
 use {
-    crate::{
-        error_template::{AppError, ErrorTemplate},
-        utils::RingRestClient,
-    },
+    crate::error_template::{AppError, ErrorTemplate},
     leptos::*,
     leptos_meta::*,
     leptos_router::*,
-    std::sync::Arc,
 };
 
 #[component]
@@ -61,6 +57,8 @@ pub async fn handle_login(
     password: String,
     tfa: String,
 ) -> Result<String, ServerFnError> {
+    use {std::sync::Arc, utils::RingRestClient};
+
     let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
     let result = ring_rest_client
         .request_auth_token(&username, &password, &tfa)
