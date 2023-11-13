@@ -38,62 +38,68 @@ pub async fn ring_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -
         .await;
 
     let front_camera_recordings = ring_rest_client.get_recordings(front_device_id).await;
-    let front_camera_component = camera_recordings_list(front_camera_recordings);
     let back_camera_recordings = ring_rest_client.get_recordings(back_device_id).await;
+
+    let front_camera_component = camera_recordings_list(front_camera_recordings);
     let back_camera_component = camera_recordings_list(back_camera_recordings);
 
     let html_text = format!(
         r#"<html>
-         <body>
-            <h1>{}</h1>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, max-content)); grid-gap: 8px">
-                <div>
-                    <h2>{} - Battery: {}</h2>
-                    <img style="width: 100%" src="data:image/png;base64,{front_image_base64}" />
-                    <h2>Time: {}</h2>
-                    <h2>Events:</h2>
-                    <ul>
-                        <li>
-                        {} - {}
-                        </li>
-                    </ul>
-                    <h2>Recordings</h2>
-                    {front_camera_component}
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <meta name="apple-mobile-web-app-capable" content="yes">
+                <meta name="mobile-web-app-capable" content="yes">
+            </head>
+            <body>
+                <h1>{}</h1>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, max-content)); grid-gap: 8px">
+                    <div>
+                        <h2>{} - Battery: {}</h2>
+                        <img style="width: 100%" src="data:image/png;base64,{front_image_base64}" />
+                        <h2>Time: {}</h2>
+                        <h2>Events:</h2>
+                        <ul>
+                            <li>
+                            {} - {}
+                            </li>
+                        </ul>
+                        <h2>Recordings</h2>
+                        {front_camera_component}
+                    </div>
+                    <div>
+                        <h2>{} - Battery: {} </h2>
+                        <img style="width: 100%" src="data:image/png;base64,{back_image_base64}" />
+                        <h2>Time: {}</h2>
+                        <h2>Events:</h2>
+                        <ul>
+                            <li>
+                            {} - {}
+                            </li>
+                        </ul>
+                        <h2>Recordings</h2>
+                        {back_camera_component}
+                    </div>
                 </div>
-                <div>
-                    <h2>{} - Battery: {} </h2>
-                    <img style="width: 100%" src="data:image/png;base64,{back_image_base64}" />
-                    <h2>Time: {}</h2>
-                    <h2>Events:</h2>
-                    <ul>
-                        <li>
-                        {} - {}
-                        </li>
-                    </ul>
-                    <h2>Recordings</h2>
-                    {back_camera_component}
-                </div>
-            </div>
-            <br />
-            <hr />
-            <div>Socket Ticket: {socket_ticket}</div>
-            <script>
-                const webSocket = new WebSocket("{socket_ticket}");
-                webSocket.addEventListener("open", event => {{
-                    webSock.send(JSON.stringify({{
-                        method: 'live_view',
-                        dialog_id: '333333',
-                        body: {{
-                          doorbot_id: {front_device_id},
-                          stream_options: {{ audio_enabled: true, video_enabled: true }},
-                          sdp,
-                        }},
-                      }}))
-                }});
-                console.log({{webSocket}});
-            </script>
-        </body>
-      <html>
+                <br />
+                <hr />
+                <div>Socket Ticket: {socket_ticket}</div>
+                <script>
+                    const webSocket = new WebSocket("{socket_ticket}");
+                    webSocket.addEventListener("open", event => {{
+                        webSock.send(JSON.stringify({{
+                            method: 'live_view',
+                            dialog_id: '333333',
+                            body: {{
+                            doorbot_id: {front_device_id},
+                            stream_options: {{ audio_enabled: true, video_enabled: true }},
+                            sdp,
+                            }},
+                        }}))
+                    }});
+                    console.log({{webSocket}});
+                </script>
+            </body>
+        <html>
    "#,
         &locations.user_locations[location_index].name,
         &doorbots[1].description,
