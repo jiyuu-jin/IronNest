@@ -243,6 +243,13 @@ impl RingRestClient {
         serde_json::from_str::<VideoSearchRes>(&res)
             .unwrap_or_else(|_| panic!("camera_event_res: {res}"))
     }
+
+    pub async fn subscribe_to_motion_events(&self, device_id: &u64) {
+        let recordings_url = &format!("{CLIENT_API_BASE_URL}devices/{device_id}/motions_subscribe");
+        println!("{recordings_url}");
+        let res = self.request(recordings_url, Method::POST).await;
+        println!("subscribe motion events: {res}");
+    }
 }
 
 pub fn camera_recordings_list(recordings: VideoSearchRes) -> String {
