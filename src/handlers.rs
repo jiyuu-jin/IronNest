@@ -43,12 +43,17 @@ pub async fn ring_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -
     let front_camera_component = camera_recordings_list(front_camera_recordings);
     let back_camera_component = camera_recordings_list(back_camera_recordings);
 
+    ring_rest_client
+        .subscribe_to_motion_events(front_device_id)
+        .await;
+
     let html_text = format!(
         r#"<html>
             <head>
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <meta name="apple-mobile-web-app-capable" content="yes">
                 <meta name="mobile-web-app-capable" content="yes">
+                <link rel="manifest" href="/manifest.json">
             </head>
             <body>
                 <h1>{}</h1>
@@ -97,6 +102,28 @@ pub async fn ring_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -
                         }}))
                     }});
                     console.log({{webSocket}});
+                    console.log("registering service worker 1")
+                    if ('serviceWorker' in navigator && 'Notification' in window) {{
+                        console.log("registering service worker 2")
+                        navigator.serviceWorker.register('/service-worker.js')
+                            .then(registration => {{
+                                console.log('Service Worker registered');
+                                // Request notification permission on page load
+                                Notification.requestPermission().then(permission => {{
+                                    console.log({{permission}});
+                                    if (permission === 'granted') {{
+                                        registration.active.postMessage({{ type: 'NOTIFY' }});
+                                        setInterval(() => {{
+                                            console.log("hh");
+                                            registration.active.postMessage({{ type: 'NOTIFY' }});
+                                        }}, 60000); // 60000ms = 1 minute
+                                    }}
+                                }});
+                            }})
+                            .catch(error => {{
+                                console.error('Service Worker registration failed:', error);
+                            }});
+                    }}                    
                 </script>
             </body>
         <html>
