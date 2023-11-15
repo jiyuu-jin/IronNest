@@ -1,0 +1,7 @@
+version: '3.8'
+
+services:
+  iron_nest:
+    build: .
+    ports:
+      - "8080:8080"
