@@ -82,8 +82,8 @@ fn LoginPage() -> impl IntoView {
             <input type="submit" value="Login"/>
         </ActionForm>
         <p>{value}</p>
-        <p><a href="/app">"App"</a></p>
-        <p><a href="/rest-api/ring">"HTTP Dashboard"</a></p>
+        <p><A href="/app">"App"</A></p>
+        <p><a href="/rest-api/ring" rel="external">"HTTP Dashboard"</a></p>
     }
 }
 
