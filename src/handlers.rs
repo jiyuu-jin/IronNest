@@ -143,10 +143,6 @@ pub async fn ring_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -
     Html(html_text)
 }
 
-pub async fn ring_auth_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -> String {
-    let username = "";
-    let password = "";
-    ring_rest_client
-        .request_auth_token(username, password, "")
-        .await
+pub async fn roku_handler() -> String {
+    "Hello Roku".to_string()
 }
