@@ -1,3 +1,5 @@
+use iron_nest::handlers::roku_handler;
+
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 use {
     axum::{
@@ -12,7 +14,7 @@ use {
     iron_nest::{
         app::App,
         fileserv::file_and_error_handler,
-        handlers::{ring_auth_handler, ring_handler},
+        handlers::{ring_handler},
         utils::RingRestClient,
     },
     leptos::{get_configuration, logging::log, provide_context, LeptosOptions},
@@ -84,7 +86,7 @@ async fn main() {
 
     let iron_nest_router = Router::new()
         .route("/ring", get(ring_handler))
-        .route("/ring/auth", get(ring_auth_handler))
+        .route("/roku", get(roku_handler))
         .with_state(ring_rest_client);
 
     let app = Router::new()
