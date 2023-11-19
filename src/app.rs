@@ -43,7 +43,6 @@ pub fn App() -> impl IntoView {
 fn HomePage() -> impl IntoView {
     // Creates a reactive value to update the button
     let (count, set_count) = create_signal(0);
-    let on_click = move |_| set_count.update(|count| *count += 1);
 
     view! {
         <h1>"Iron Nest is Running"</h1>
