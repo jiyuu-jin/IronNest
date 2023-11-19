@@ -55,7 +55,7 @@ pub async fn ring_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -
     let html_text = format!(
         r#"<html>
             <head>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
                 <meta name="apple-mobile-web-app-capable" content="yes">
                 <meta name="mobile-web-app-capable" content="yes">
                 <link rel="manifest" href="/manifest.json">
@@ -163,7 +163,7 @@ pub async fn roku_handler() -> Html<String> {
     let html_text = format!(
         r#"<html>
             <head>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
                 <title>Roku Remote</title>
                 <style>
                     body {{
@@ -175,6 +175,9 @@ pub async fn roku_handler() -> Html<String> {
                         height: 100vh;
                         margin: 0;
                         overflow: hidden;
+                    }}
+                    * {{
+                        touch-action: none;
                     }}
                     #buttons {{
                         display: grid;
@@ -281,6 +284,22 @@ pub async fn roku_handler() -> Html<String> {
                     <button class="bottom-button" onclick="sendCommand('Fwd')">Fwd</button>
                 </div>
                 <script>
+                    document.addEventListener('touchstart', function(event) {{
+                        if (event.touches.length > 1) {{
+                            event.preventDefault();
+                        }}
+                    }}, {{ passive: false }});
+
+                    document.addEventListener('touchend', function(event) {{
+                        if (event.touches.length > 1) {{
+                            event.preventDefault();
+                        }}
+                    }}, {{ passive: false }});
+
+                    document.addEventListener('dblclick', function(event) {{
+                        event.preventDefault();
+                    }}, {{ passive: false }});
+
                     function sendCommand(command) {{
                         const endpoint = '/rest-api/roku/keypress/' + command;
                         fetch(endpoint, {{ method: 'GET' }})
