@@ -1,3 +1,5 @@
+use iron_nest::handlers::roku_keypress_handler;
+
 cfg_if::cfg_if! {
     if #[cfg(feature = "ssr")] {
         use {
@@ -86,6 +88,7 @@ cfg_if::cfg_if! {
             let iron_nest_router = Router::new()
                 .route("/ring", get(ring_handler))
                 .route("/roku", get(roku_handler))
+                .route("/roku/keypress/:key", get(roku_keypress_handler))
                 .with_state(ring_rest_client);
 
             let app = Router::new()

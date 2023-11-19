@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use axum::{extract::Path, http::StatusCode};
 use futures::prelude::*;
 use {
     crate::utils::{camera_recordings_list, RingRestClient},
@@ -147,6 +148,17 @@ pub async fn ring_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -
     Html(html_text)
 }
 
+pub async fn roku_keypress_handler(Path(key): Path<String>) -> Result<String, StatusCode> {
+    let roku_ip = "10.0.0.162";
+    let roku_url = format!("http://{}:8060/keypress/{}", roku_ip, key);
+    let client = reqwest::Client::new();
+
+    match client.post(&roku_url).send().await {
+        Ok(_) => Ok(format!("Key pressed: {}", key)),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
 pub async fn roku_handler() -> Html<String> {
     let html_text = format!(
         r#"<html>
@@ -270,9 +282,15 @@ pub async fn roku_handler() -> Html<String> {
                 </div>
                 <script>
                     function sendCommand(command) {{
-                        const rokuUrl = 'http://10.0.0.162:8060/keypress/' + command;
-                        fetch(rokuUrl, {{ method: 'POST' }})
-                            .then(response => console.log('Command sent:', command))
+                        const endpoint = '/rest-api/roku/keypress/' + command;
+                        fetch(endpoint, {{ method: 'GET' }})
+                            .then(response => {{
+                                if (!response.ok) {{
+                                    throw new Error('Network response was not ok');
+                                }}
+                                return response.text();
+                            }})
+                            .then(data => console.log(data))
                             .catch(error => console.error('Error:', error));
                     }}
                 </script>
