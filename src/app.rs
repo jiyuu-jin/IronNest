@@ -41,9 +41,6 @@ pub fn App() -> impl IntoView {
 /// Renders the home page of your application.
 #[component]
 fn HomePage() -> impl IntoView {
-    // Creates a reactive value to update the button
-    let (count, set_count) = create_signal(0);
-
     view! {
         <h1>"Iron Nest is Running"</h1>
         <p><a href="/login">Login</a></p>

@@ -58,7 +58,6 @@ pub async fn ring_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
                 <meta name="apple-mobile-web-app-capable" content="yes">
                 <meta name="mobile-web-app-capable" content="yes">
-                <link rel="manifest" href="/manifest.json">
             </head>
             <body>
                 <h1>{}</h1>
@@ -148,8 +147,15 @@ pub async fn ring_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -
     Html(html_text)
 }
 
-pub async fn roku_keypress_handler(Path(key): Path<String>) -> Result<String, StatusCode> {
-    let roku_ip = "10.0.0.162";
+pub async fn roku_keypress_handler(
+    Path((device_id, key)): Path<(i64, String)>,
+) -> Result<String, StatusCode> {
+    let roku_ip = if device_id == 1 {
+        "10.0.0.162"
+    } else {
+        "10.0.0.217"
+    };
+
     let roku_url = format!("http://{}:8060/keypress/{}", roku_ip, key);
     let client = reqwest::Client::new();
 
@@ -160,6 +166,8 @@ pub async fn roku_keypress_handler(Path(key): Path<String>) -> Result<String, St
 }
 
 pub async fn roku_handler() -> Html<String> {
+    discover_roku().await;
+
     let color_value = "#333";
     let html_text = format!(
         r#"<html>
@@ -167,6 +175,7 @@ pub async fn roku_handler() -> Html<String> {
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
                 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
                 <meta name="theme-color" content="{color_value}">
+                <link rel="manifest" href="/manifest.json">
                 <title>Roku Remote</title>
                 <style>
                     body {{
@@ -273,18 +282,26 @@ pub async fn roku_handler() -> Html<String> {
                 </style>
             </head>
             <body>
-                <div id="buttons">
-                    <button class="top-button" onclick="sendCommand('Back')">Back</button>
-                    <button class="top-button" onclick="sendCommand('Home')">Home</button>
-                    <button class="top-button" onclick="sendCommand('PowerOff')">Power</button>
-                    <button class="d-pad-button d-pad-up" onclick="sendCommand('Up')">Up</button>
-                    <button class="d-pad-button d-pad-left" onclick="sendCommand('Left')">Left</button>
-                    <button class="ok-button" onclick="sendCommand('Select')">OK</button>
-                    <button class="d-pad-button d-pad-right" onclick="sendCommand('Right')">Right</button>
-                    <button class="d-pad-button d-pad-down" onclick="sendCommand('Down')">Down</button>
-                    <button class="bottom-button" onclick="sendCommand('Rev')">Rev</button>
-                    <button class="bottom-button" onclick="sendCommand('Play')">Play</button>
-                    <button class="bottom-button" onclick="sendCommand('Fwd')">Fwd</button>
+                <div>
+                    <div id="buttons">
+                        <button class="top-button" onclick="sendCommand('Back')">Back</button>
+                        <button class="top-button" onclick="sendCommand('Home')">Home</button>
+                        <button class="top-button" onclick="sendCommand('PowerOff')">Power</button>
+                        <button class="d-pad-button d-pad-up" onclick="sendCommand('Up')">Up</button>
+                        <button class="d-pad-button d-pad-left" onclick="sendCommand('Left')">Left</button>
+                        <button class="ok-button" onclick="sendCommand('Select')">OK</button>
+                        <button class="d-pad-button d-pad-right" onclick="sendCommand('Right')">Right</button>
+                        <button class="d-pad-button d-pad-down" onclick="sendCommand('Down')">Down</button>
+                        <button class="bottom-button" onclick="sendCommand('Rev')">Rev</button>
+                        <button class="bottom-button" onclick="sendCommand('Play')">Play</button>
+                        <button class="bottom-button" onclick="sendCommand('Fwd')">Fwd</button>
+                    </div>
+                    <div style="display: flex; justify-content: center;">
+                        <select id="device-select">
+                            <option value="1">Device 1</option>
+                            <option value="2">Device 2</option>
+                        </select>
+                    </div>
                 </div>
                 <script>
                     document.addEventListener('touchstart', function(event) {{
@@ -304,14 +321,10 @@ pub async fn roku_handler() -> Html<String> {
                     }}, {{ passive: false }});
 
                     function sendCommand(command) {{
-                        const endpoint = '/rest-api/roku/keypress/' + command;
+                        const deviceId = document.getElementById('device-select').value;
+                        const endpoint = `/rest-api/roku/${{deviceId}}/keypress/${{command}}`;
                         fetch(endpoint, {{ method: 'GET' }})
-                            .then(response => {{
-                                if (!response.ok) {{
-                                    throw new Error('Network response was not ok');
-                                }}
-                                return response.text();
-                            }})
+                            .then(response => response.text())
                             .then(data => console.log(data))
                             .catch(error => console.error('Error:', error));
                     }}
@@ -320,6 +333,20 @@ pub async fn roku_handler() -> Html<String> {
         </html>"#
     );
     Html(html_text)
+}
+
+pub async fn get_roku_apps() -> String {
+    let roku_url = format!("http://10.0.0.162:8060/query/apps");
+    let client = reqwest::Client::new();
+
+    client
+        .post(&roku_url)
+        .send()
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap()
 }
 
 pub async fn discover_roku() {
