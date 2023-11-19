@@ -69,6 +69,30 @@ fn write_state_to_file(state: &State) -> std::io::Result<()> {
     Ok(())
 }
 
+pub fn camera_recordings_list(recordings: VideoSearchRes) -> String {
+    "<ul>"
+        .chars()
+        .chain(recordings.video_search.iter().flat_map(|recording| {
+            // Convert the created_at timestamp to Eastern Time
+            let created_at_utc = Utc
+                .timestamp_millis_opt(recording.created_at as i64)
+                .unwrap();
+            let created_at_eastern = created_at_utc.with_timezone(&Eastern);
+
+            // Format the timestamp nicely, e.g., "April 5, 2023, 07:30 PM"
+            let formatted_time = created_at_eastern.format("%B %e, %Y, %I:%M %p").to_string();
+
+            format!(
+                "\n<li><a href=\"{}\" target=\"_blank\">{}</a></li>",
+                recording.hq_url, formatted_time
+            )
+            .chars()
+            .collect::<Vec<_>>()
+        }))
+        .chain("</ul>".chars())
+        .collect::<String>()
+}
+
 impl RingRestClient {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
@@ -250,28 +274,4 @@ impl RingRestClient {
         let res = self.request(recordings_url, Method::POST).await;
         println!("subscribe motion events: {res}");
     }
-}
-
-pub fn camera_recordings_list(recordings: VideoSearchRes) -> String {
-    "<ul>"
-        .chars()
-        .chain(recordings.video_search.iter().flat_map(|recording| {
-            // Convert the created_at timestamp to Eastern Time
-            let created_at_utc = Utc
-                .timestamp_millis_opt(recording.created_at as i64)
-                .unwrap();
-            let created_at_eastern = created_at_utc.with_timezone(&Eastern);
-
-            // Format the timestamp nicely, e.g., "April 5, 2023, 07:30 PM"
-            let formatted_time = created_at_eastern.format("%B %e, %Y, %I:%M %p").to_string();
-
-            format!(
-                "\n<li><a href=\"{}\" target=\"_blank\">{}</a></li>",
-                recording.hq_url, formatted_time
-            )
-            .chars()
-            .collect::<Vec<_>>()
-        }))
-        .chain("</ul>".chars())
-        .collect::<String>()
 }

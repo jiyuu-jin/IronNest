@@ -1,7 +1,11 @@
+use std::time::Duration;
+
+use futures::prelude::*;
 use {
     crate::utils::{camera_recordings_list, RingRestClient},
     axum::{extract::State, response::Html},
     base64::{engine::general_purpose::STANDARD as base64, Engine},
+    ssdp_client::SearchTarget,
     std::sync::Arc,
 };
 
@@ -143,6 +147,158 @@ pub async fn ring_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -
     Html(html_text)
 }
 
-pub async fn roku_handler() -> String {
-    "Hello Roku".to_string()
+pub async fn roku_handler() -> Html<String> {
+    let html_text = format!(
+        r#"<html>
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Roku Remote</title>
+                <style>
+                    body {{
+                        font-family: Arial, sans-serif;
+                        background: #333;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        height: 100vh;
+                        margin: 0;
+                        overflow: hidden;
+                    }}
+                    #buttons {{
+                        display: grid;
+                        grid-template-columns: 80px 80px 80px;
+                        grid-template-rows: 80px auto auto auto auto 80px auto auto auto auto 80px;
+                        grid-gap: 15px;
+                        background: black;
+                        padding: 20px;
+                        border-radius: 20px;
+                        box-shadow: 0 0 20px rgba(0,0,0,0.5);
+                        transform: scale(0.8);
+                    }}
+                    button {{
+                        background-color: #6A0DAD;
+                        color: white;
+                        border: none;
+                        border-radius: 50%;
+                        font-size: 16px;
+                        cursor: pointer;
+                        transition: background-color 0.3s;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        text-align: center;
+                        width: 80px;
+                        height: 80px;
+                    }}
+                    .top-button {{
+                        grid-column: span 1;
+                    }}
+                    .top-button:nth-child(1) {{
+                        grid-row: 1;
+                        grid-column: 1;
+                    }}
+                    .top-button:nth-child(2) {{
+                        grid-row: 1;
+                        grid-column: 2;
+                    }}
+                    .top-button:nth-child(3) {{
+                        grid-row: 1;
+                        grid-column: 3;
+                    }}
+                    .d-pad-button, .ok-button {{
+                        width: 80px;
+                        height: 80px;
+                        border-radius: 14px;
+                    }}
+                    .d-pad-up {{
+                        grid-column: 2;
+                        grid-row: 4;
+                    }}
+                    .d-pad-left {{
+                        grid-column: 1;
+                        grid-row: 5;
+                    }}
+                    .ok-button {{
+                        grid-column: 2;
+                        grid-row: 5;
+                    }}
+                    .d-pad-right {{
+                        grid-column: 3;
+                        grid-row: 5;
+                    }}
+                    .d-pad-down {{
+                        grid-column: 2;
+                        grid-row: 6;
+                    }}
+                    .bottom-button {{
+                        grid-column: span 1;
+                        width: 80px;
+                        height: 80px;
+                        border-radius: 14px;
+                    }}
+                    /* Specific placement for bottom buttons */
+                    .bottom-button:nth-child(9) {{ /* Rev button */
+                        grid-row: 8;
+                        grid-column: 1;
+                    }}
+                    .bottom-button:nth-child(10) {{ /* Play button */
+                        grid-row: 8;
+                        grid-column: 2;
+                    }}
+                    .bottom-button:nth-child(11) {{ /* Fwd button */
+                        grid-row: 8;
+                        grid-column: 3;
+                    }}
+                    button:hover {{
+                        background-color: #7B1FA2;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div id="buttons">
+                    <button class="top-button" onclick="sendCommand('Back')">Back</button>
+                    <button class="top-button" onclick="sendCommand('Home')">Home</button>
+                    <button class="top-button" onclick="sendCommand('PowerOff')">Power</button>
+                    <button class="d-pad-button d-pad-up" onclick="sendCommand('Up')">Up</button>
+                    <button class="d-pad-button d-pad-left" onclick="sendCommand('Left')">Left</button>
+                    <button class="ok-button" onclick="sendCommand('Select')">OK</button>
+                    <button class="d-pad-button d-pad-right" onclick="sendCommand('Right')">Right</button>
+                    <button class="d-pad-button d-pad-down" onclick="sendCommand('Down')">Down</button>
+                    <button class="bottom-button" onclick="sendCommand('Rev')">Rev</button>
+                    <button class="bottom-button" onclick="sendCommand('Play')">Play</button>
+                    <button class="bottom-button" onclick="sendCommand('Fwd')">Fwd</button>
+                </div>
+                <script>
+                    function sendCommand(command) {{
+                        const rokuUrl = 'http://10.0.0.162:8060/keypress/' + command;
+                        fetch(rokuUrl, {{ method: 'POST' }})
+                            .then(response => console.log('Command sent:', command))
+                            .catch(error => console.error('Error:', error));
+                    }}
+                </script>
+            </body>
+        </html>"#
+    );
+    Html(html_text)
+}
+
+pub async fn discover_roku() {
+    let search_target = SearchTarget::RootDevice;
+    let mut responses = ssdp_client::search(&search_target, Duration::from_secs(3), 2, None)
+        .await
+        .unwrap();
+
+    while let Some(response) = responses.next().await {
+        match response {
+            Ok(resp) => {
+                println!("Location: {}", resp.location());
+                println!("USN: {}", resp.usn());
+                println!("Server: {}", resp.server());
+                println!("------------------------");
+            }
+            Err(e) => {
+                println!("Error: {:?}", e);
+            }
+        }
+    }
 }
