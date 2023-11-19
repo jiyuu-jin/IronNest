@@ -46,9 +46,10 @@ fn HomePage() -> impl IntoView {
     let on_click = move |_| set_count.update(|count| *count += 1);
 
     view! {
-        <h1>"Welcome to Iron Nest!"</h1>
-        <p><button on:click=on_click>"Click Me: " {count}</button></p>
+        <h1>"Iron Nest is Running"</h1>
         <p><a href="/login">Login</a></p>
+        <p><a href="/rest-api/ring" rel="external">"Ring"</a></p>
+        <p><a href="/rest-api/roku" rel="external">"Roku"</a></p>
     }
 }
 
@@ -83,7 +84,6 @@ fn LoginPage() -> impl IntoView {
         </ActionForm>
         <p>{value}</p>
         <p><A href="/app">"App"</A></p>
-        <p><a href="/rest-api/ring" rel="external">"HTTP Dashboard"</a></p>
     }
 }
 
