@@ -55,7 +55,7 @@ pub async fn handle_login(
     password: String,
     tfa: String,
 ) -> Result<String, ServerFnError> {
-    use {crate::utils::RingRestClient, std::sync::Arc};
+    use {crate::integrations::ring::RingRestClient, std::sync::Arc};
 
     let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
     let result = ring_rest_client
@@ -85,7 +85,7 @@ fn LoginPage() -> impl IntoView {
 
 #[server(GetWsUrl)]
 pub async fn get_ws_url() -> Result<String, ServerFnError> {
-    use {crate::utils::RingRestClient, std::sync::Arc};
+    use {crate::integrations::ring::RingRestClient, std::sync::Arc};
 
     let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
     let result = ring_rest_client.get_ws_url().await;

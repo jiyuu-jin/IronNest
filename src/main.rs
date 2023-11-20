@@ -1,4 +1,4 @@
-use iron_nest::handlers::roku_keypress_handler;
+use iron_nest::{handlers::roku_keypress_handler, integrations::ring::RingRestClient};
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "ssr")] {
@@ -16,7 +16,6 @@ cfg_if::cfg_if! {
                 app::App,
                 fileserv::file_and_error_handler,
                 handlers::{ring_handler, roku_handler},
-                utils::RingRestClient,
             },
             leptos::{get_configuration, logging::log, provide_context, LeptosOptions},
             leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes},
@@ -78,7 +77,7 @@ cfg_if::cfg_if! {
             let addr = leptos_options.site_addr;
             let routes = generate_route_list(App);
 
-            let ring_rest_client = Arc::new(iron_nest::utils::RingRestClient::new());
+            let ring_rest_client = Arc::new(iron_nest::integrations::ring::RingRestClient::new());
 
             let app_state = AppState {
                 leptos_options,

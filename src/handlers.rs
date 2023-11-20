@@ -1,16 +1,16 @@
-use std::time::Duration;
+use crate::integrations::ring::{camera_recordings_list, RingRestClient};
 
-use axum::{extract::Path, http::StatusCode};
-use futures::prelude::*;
 use {
-    crate::utils::{camera_recordings_list, RingRestClient},
-    axum::{extract::State, response::Html},
+    crate::integrations::roku::discover_roku,
+    axum::{
+        extract::{Path, State},
+        http::StatusCode,
+        response::Html,
+    },
     base64::{engine::general_purpose::STANDARD as base64, Engine},
-    ssdp_client::SearchTarget,
     std::sync::Arc,
 };
 
-#[axum::debug_handler]
 pub async fn ring_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -> Html<String> {
     let locations = ring_rest_client.get_locations().await;
     let devices = ring_rest_client.get_devices().await;
@@ -333,39 +333,4 @@ pub async fn roku_handler() -> Html<String> {
         </html>"#
     );
     Html(html_text)
-}
-
-pub async fn get_roku_apps() -> String {
-    let roku_url = format!("http://10.0.0.162:8060/query/apps");
-    let client = reqwest::Client::new();
-
-    client
-        .post(&roku_url)
-        .send()
-        .await
-        .unwrap()
-        .text()
-        .await
-        .unwrap()
-}
-
-pub async fn discover_roku() {
-    let search_target = SearchTarget::RootDevice;
-    let mut responses = ssdp_client::search(&search_target, Duration::from_secs(3), 2, None)
-        .await
-        .unwrap();
-
-    while let Some(response) = responses.next().await {
-        match response {
-            Ok(resp) => {
-                println!("Location: {}", resp.location());
-                println!("USN: {}", resp.usn());
-                println!("Server: {}", resp.server());
-                println!("------------------------");
-            }
-            Err(e) => {
-                println!("Error: {:?}", e);
-            }
-        }
-    }
 }

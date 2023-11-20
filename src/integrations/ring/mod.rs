@@ -1,7 +1,8 @@
+use self::types::{
+    AuthResponse, CameraEventsRes, DevicesRes, LocationsRes, SocketTicketRes, VideoSearchRes,
+};
+
 use {
-    crate::types::{
-        AuthResponse, CameraEventsRes, DevicesRes, LocationsRes, SocketTicketRes, VideoSearchRes,
-    },
     chrono::{DateTime, TimeZone, Utc},
     chrono_tz::US::Eastern,
     log::{info, warn},
@@ -10,6 +11,7 @@ use {
     std::{collections::HashMap, fs::File, str, sync::RwLock},
     uuid::Uuid,
 };
+pub mod types;
 
 static CLIENT_API_BASE_URL: &str = "https://api.ring.com/clients_api/";
 static DEVICE_API_BASE_URL: &str = "https://api.ring.com/devices/v1/";
@@ -260,8 +262,8 @@ impl RingRestClient {
             .timestamp_millis();
 
         let recordings_url = &format!(
-            "{CLIENT_API_BASE_URL}video_search/history?doorbot_id={id}&date_from={date_from}&date_to={date_to}&order=asc&api_version=11"
-        );
+          "{CLIENT_API_BASE_URL}video_search/history?doorbot_id={id}&date_from={date_from}&date_to={date_to}&order=asc&api_version=11"
+      );
 
         let res = self.request(recordings_url, Method::GET).await;
         serde_json::from_str::<VideoSearchRes>(&res)

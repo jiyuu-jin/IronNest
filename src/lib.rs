@@ -3,11 +3,9 @@ pub mod app;
 pub mod error_template;
 pub mod fileserv;
 
-pub mod types;
-pub mod utils;
-
 cfg_if! { if #[cfg(feature = "ssr")] {
 pub mod handlers;
+pub mod integrations;
 }}
 
 cfg_if! { if #[cfg(feature = "hydrate")] {
