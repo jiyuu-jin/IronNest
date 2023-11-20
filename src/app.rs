@@ -17,6 +17,9 @@ pub fn App() -> impl IntoView {
 
         // sets the document title
         <Title text="Welcome to Iron Nest"/>
+        <Meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+        <Meta name="apple-mobile-web-app-capable" content="yes" />
+        <Meta name="mobile-web-app-capable" content="yes" />
 
         // content for this welcome page
         <Router fallback=|| {
