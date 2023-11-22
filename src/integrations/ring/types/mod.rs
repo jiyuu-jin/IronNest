@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug)]
 pub struct OauthRes {
@@ -69,12 +69,12 @@ pub struct DevicesRes {
     pub authorized_doorbots: Vec<Doorbots>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct CameraEventsRes {
     pub events: Vec<CameraEvent>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct CameraEvent {
     pub event_id: String,
     pub event_type: String,
@@ -84,7 +84,7 @@ pub struct CameraEvent {
     pub cv_properties: CvProperties,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct CvProperties {
     pub person_detected: Option<bool>,
 }

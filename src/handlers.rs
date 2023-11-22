@@ -20,7 +20,6 @@ pub async fn ring_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -
 
     let back_snapshot_res = ring_rest_client.get_camera_snapshot("375458730").await;
     let back_image_base64 = base64.encode(back_snapshot_res.1);
-
     let front_snapshot_res = ring_rest_client.get_camera_snapshot("141328255").await;
     let front_image_base64 = base64.encode(front_snapshot_res.1);
 
@@ -48,10 +47,6 @@ pub async fn ring_handler(State(ring_rest_client): State<Arc<RingRestClient>>) -
 
     let front_camera_component = camera_recordings_list(front_camera_recordings);
     let back_camera_component = camera_recordings_list(back_camera_recordings);
-
-    ring_rest_client
-        .subscribe_to_motion_events(front_device_id)
-        .await;
 
     let html_text = format!(
         r#"<html>
