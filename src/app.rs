@@ -1,8 +1,10 @@
 use {
     crate::error_template::{AppError, ErrorTemplate},
+    base64::{engine::general_purpose::STANDARD as base64, Engine},
     leptos::*,
     leptos_meta::*,
     leptos_router::*,
+    serde::{Deserialize, Serialize},
 };
 
 #[component]
@@ -30,14 +32,12 @@ pub fn App() -> impl IntoView {
                     <Route path="" view=HomePage/>
                     <Route path="/login" view=LoginPage/>
                     <Route path="/app" view=AppPage/>
-                    <Route path="/websocket" view=WebsocketPage/>
                 </Routes>
             </main>
         </Router>
     }
 }
 
-/// Renders the home page of your application.
 #[component]
 fn HomePage() -> impl IntoView {
     view! {
@@ -94,24 +94,184 @@ fn LoginPage() -> impl IntoView {
     }
 }
 
-#[server(GetWsUrl)]
-pub async fn get_ws_url() -> Result<String, ServerFnError> {
-    use {crate::integrations::ring::RingRestClient, std::sync::Arc};
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RingValues {
+    pub ws_url: String,
+    pub front_camera_name: String,
+    pub back_camera_name: String,
+    pub location_name: String,
+    pub back_image_base64: String,
+    pub front_image_base64: String,
+    pub front_camera_events: CameraEventsRes,
+    pub back_camera_events: CameraEventsRes,
+}
+
+#[server(GetRingValues)]
+pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
+    use {
+        crate::{integrations::ring::types::CameraEventsRes, integrations::ring::RingRestClient},
+        std::sync::Arc,
+    };
 
     let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
-    let result = ring_rest_client.get_ws_url().await;
+    let mut locations = ring_rest_client.get_locations().await;
+    let devices = ring_rest_client.get_devices().await;
 
-    Ok(result)
+    let back_snapshot_res = ring_rest_client.get_camera_snapshot("375458730").await;
+    let back_image_base64 = base64.encode(back_snapshot_res.1);
+
+    let front_snapshot_res = ring_rest_client.get_camera_snapshot("141328255").await;
+    let front_image_base64 = base64.encode(front_snapshot_res.1);
+
+    let location = locations.user_locations.remove(0);
+
+    let location_id = &location.location_id;
+    let mut doorbots = devices
+        .doorbots
+        .into_iter()
+        .chain(devices.authorized_doorbots.into_iter())
+        .collect::<Vec<_>>();
+
+    let front_camera = doorbots.remove(0);
+    let back_camera = doorbots.remove(0);
+
+    let front_camera_events = ring_rest_client
+        .get_camera_events(location_id, &front_camera.id)
+        .await;
+
+    let back_camera_events = ring_rest_client
+        .get_camera_events(location_id, &back_camera.id)
+        .await;
+
+    let ws_url = ring_rest_client.get_ws_url().await;
+
+    Ok(RingValues {
+        location_name: location.name,
+        front_camera_name: front_camera.description,
+        back_camera_name: back_camera.description,
+        front_image_base64,
+        back_image_base64,
+        front_camera_events,
+        back_camera_events,
+        ws_url,
+    })
 }
 
 #[component]
 fn AppPage() -> impl IntoView {
-    let ws_url = create_resource(|| (), |_| get_ws_url());
+    let ring_values = create_resource(|| (), |_| get_ring_values());
 
     view! {
         <h1>"Dashboard"</h1>
         <Suspense fallback=move || {
             view! { <p>"Loading..."</p> }
-        }>{move || ws_url.get().map(|data| view! { <p>{data}</p> })}</Suspense>
+        }>
+            {move || {
+                ring_values
+                    .get()
+                    .map(|data| {
+                        data.map(|data| {
+                            view! {
+                                <Title text="Roku Remote"/>
+                                <h1>{data.location_name}</h1>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, max-content)); grid-gap: 8px">
+                                    <div>
+                                        <h2>{data.front_camera_name} - Battery: {}</h2>
+                                        <img
+                                            style="width: 100%"
+                                            src=format!(
+                                                "data:image/png;base64,{}",
+                                                data.front_image_base64,
+                                            )
+                                        />
+
+                                        <h2>Time: {}</h2>
+                                        <h2>Events:</h2>
+                                        <ul>
+                                            <li>{} - {}</li>
+                                        </ul>
+                                        <h2>Recordings</h2>
+
+                                        {}
+                                    </div>
+                                    <div>
+                                        <h2>{data.back_camera_name} - Battery: {}</h2>
+                                        <img
+                                            style="width: 100%"
+                                            src=format!(
+                                                "data:image/png;base64,{}",
+                                                data.back_image_base64,
+                                            )
+                                        />
+
+                                        <h2>Time: {}</h2>
+                                        <h2>Events:</h2>
+                                        <ul>
+                                            <li>{} - {}</li>
+                                        </ul>
+                                        <h2>Recordings</h2>
+
+                                        {}
+                                    </div>
+                                </div>
+                                <br/>
+                                <hr/>
+                                <div>Socket Ticket: {data.ws_url}</div>
+                            }
+                        })
+                    })
+            }}
+
+        </Suspense>
+    }
+}
+
+#[component]
+fn RokuPage() -> impl IntoView {
+    view! {
+        <Title text="Roku Remote"/>
+        <div>
+            <div id="buttons">
+                <button class="top-button" onclick="sendCommand('Back')">
+                    Back
+                </button>
+                <button class="top-button" onclick="sendCommand('Home')">
+                    Home
+                </button>
+                <button class="top-button" onclick="sendCommand('PowerOff')">
+                    Power
+                </button>
+                <button class="d-pad-button d-pad-up" onclick="sendCommand('Up')">
+                    Up
+                </button>
+                <button class="d-pad-button d-pad-left" onclick="sendCommand('Left')">
+                    Left
+                </button>
+                <button class="ok-button" onclick="sendCommand('Select')">
+                    OK
+                </button>
+                <button class="d-pad-button d-pad-right" onclick="sendCommand('Right')">
+                    Right
+                </button>
+                <button class="d-pad-button d-pad-down" onclick="sendCommand('Down')">
+                    Down
+                </button>
+                <button class="bottom-button" onclick="sendCommand('Rev')">
+                    Rev
+                </button>
+                <button class="bottom-button" onclick="sendCommand('Play')">
+                    Play
+                </button>
+                <button class="bottom-button" onclick="sendCommand('Fwd')">
+                    Fwd
+                </button>
+            </div>
+            <div style="display: flex; justify-content: center;">
+                <select id="device-select">
+                    <option value="1">Device 1</option>
+                    <option value="2">Device 2</option>
+                </select>
+            </div>
+        </div>
     }
 }
