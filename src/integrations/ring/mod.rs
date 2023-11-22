@@ -1,8 +1,7 @@
-use self::types::{
-    AuthResponse, CameraEventsRes, DevicesRes, LocationsRes, SocketTicketRes, VideoSearchRes,
-};
-
 use {
+    self::types::{
+        AuthResponse, CameraEventsRes, DevicesRes, LocationsRes, SocketTicketRes, VideoSearchRes,
+    },
     chrono::{DateTime, TimeZone, Utc},
     chrono_tz::US::Eastern,
     log::{info, warn},

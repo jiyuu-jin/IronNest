@@ -1,7 +1,8 @@
-use crate::integrations::ring::{camera_recordings_list, RingRestClient};
-
 use {
-    crate::integrations::roku::discover_roku,
+    crate::integrations::{
+        ring::{camera_recordings_list, RingRestClient},
+        roku::discover_roku,
+    },
     axum::{
         extract::{Path, State},
         http::StatusCode,

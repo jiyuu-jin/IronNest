@@ -17,9 +17,9 @@ pub fn App() -> impl IntoView {
 
         // sets the document title
         <Title text="Welcome to Iron Nest"/>
-        <Meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-        <Meta name="apple-mobile-web-app-capable" content="yes" />
-        <Meta name="mobile-web-app-capable" content="yes" />
+        <Meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+        <Meta name="apple-mobile-web-app-capable" content="yes"/>
+        <Meta name="mobile-web-app-capable" content="yes"/>
 
         // content for this welcome page
         <Router fallback=|| {
@@ -32,6 +32,7 @@ pub fn App() -> impl IntoView {
                     <Route path="" view=HomePage/>
                     <Route path="/login" view=LoginPage/>
                     <Route path="/app" view=AppPage/>
+                    <Route path="/websocket" view=WebsocketPage/>
                 </Routes>
             </main>
         </Router>
@@ -43,9 +44,19 @@ pub fn App() -> impl IntoView {
 fn HomePage() -> impl IntoView {
     view! {
         <h1>"Iron Nest is Running"</h1>
-        <p><a href="/login">Login</a></p>
-        <p><a href="/rest-api/ring" rel="external">"Ring"</a></p>
-        <p><a href="/rest-api/roku" rel="external">"Roku"</a></p>
+        <p>
+            <a href="/login">Login</a>
+        </p>
+        <p>
+            <a href="/rest-api/ring" rel="external">
+                "Ring"
+            </a>
+        </p>
+        <p>
+            <a href="/rest-api/roku" rel="external">
+                "Roku"
+            </a>
+        </p>
     }
 }
 
@@ -79,7 +90,9 @@ fn LoginPage() -> impl IntoView {
             <input type="submit" value="Login"/>
         </ActionForm>
         <p>{value}</p>
-        <p><A href="/app">"App"</A></p>
+        <p>
+            <A href="/app">"App"</A>
+        </p>
     }
 }
 
