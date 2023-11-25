@@ -1,5 +1,8 @@
 use {
-    crate::error_template::{AppError, ErrorTemplate},
+    crate::{
+        error_template::{AppError, ErrorTemplate},
+        integrations::ring::types::Doorbot,
+    },
     base64::{engine::general_purpose::STANDARD as base64, Engine},
     leptos::*,
     leptos_meta::*,
@@ -97,21 +100,27 @@ fn LoginPage() -> impl IntoView {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RingValues {
     pub ws_url: String,
-    pub front_camera_name: String,
-    pub back_camera_name: String,
+    pub front_camera: RingCamera,
+    pub back_camera: RingCamera,
     pub location_name: String,
-    pub back_image_base64: String,
-    pub front_image_base64: String,
-    pub front_camera_events: CameraEventsRes,
-    pub back_camera_events: CameraEventsRes,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RingCameraSnapshot {
+    pub image: String,
+    pub timestamp: u64,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RingCamera {
+    pub description: String,
+    pub snapshot: RingCameraSnapshot,
+    pub health: String,
 }
 
 #[server(GetRingValues)]
 pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
-    use {
-        crate::{integrations::ring::types::CameraEventsRes, integrations::ring::RingRestClient},
-        std::sync::Arc,
-    };
+    use {crate::integrations::ring::RingRestClient, std::sync::Arc};
 
     let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
     let mut locations = ring_rest_client.get_locations().await;
@@ -125,7 +134,7 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
 
     let location = locations.user_locations.remove(0);
 
-    let location_id = &location.location_id;
+    // let location_id = &location.location_id;
     let mut doorbots = devices
         .doorbots
         .into_iter()
@@ -135,24 +144,34 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
     let front_camera = doorbots.remove(0);
     let back_camera = doorbots.remove(0);
 
-    let front_camera_events = ring_rest_client
-        .get_camera_events(location_id, &front_camera.id)
-        .await;
+    // let front_camera_events = ring_rest_client
+    //     .get_camera_events(location_id, &front_camera.id)
+    //     .await;
 
-    let back_camera_events = ring_rest_client
-        .get_camera_events(location_id, &back_camera.id)
-        .await;
+    // let back_camera_events = ring_rest_client
+    //     .get_camera_events(location_id, &back_camera.id)
+    //     .await;
 
     let ws_url = ring_rest_client.get_ws_url().await;
 
     Ok(RingValues {
         location_name: location.name,
-        front_camera_name: front_camera.description,
-        back_camera_name: back_camera.description,
-        front_image_base64,
-        back_image_base64,
-        front_camera_events,
-        back_camera_events,
+        front_camera: RingCamera {
+            description: front_camera.description,
+            snapshot: RingCameraSnapshot {
+                image: front_image_base64,
+                timestamp: (),
+            },
+            health: front_camera.health.battery_percentage,
+        },
+        back_camera: RingCamera {
+            description: back_camera.description,
+            snapshot: RingCameraSnapshot {
+                image: back_image_base64,
+                timestamp: (),
+            },
+            health: front_camera.health.battery_percentage,
+        },
         ws_url,
     })
 }
@@ -172,16 +191,16 @@ fn AppPage() -> impl IntoView {
                     .map(|data| {
                         data.map(|data| {
                             view! {
-                                <Title text="Roku Remote"/>
+                                <Title text="Dashboard"/>
                                 <h1>{data.location_name}</h1>
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, max-content)); grid-gap: 8px">
                                     <div>
-                                        <h2>{data.front_camera_name} - Battery: {}</h2>
+                                        <h2>{data.front_camera.description} - Battery: {data.front_camera.health}</h2>
                                         <img
                                             style="width: 100%"
                                             src=format!(
                                                 "data:image/png;base64,{}",
-                                                data.front_image_base64,
+                                                data.front_camera.snapshot,
                                             )
                                         />
 
@@ -195,12 +214,12 @@ fn AppPage() -> impl IntoView {
                                         {}
                                     </div>
                                     <div>
-                                        <h2>{data.back_camera_name} - Battery: {}</h2>
+                                        <h2>{data.back_camera.description} - Battery: {data.back_camera.health}</h2>
                                         <img
                                             style="width: 100%"
                                             src=format!(
                                                 "data:image/png;base64,{}",
-                                                data.back_image_base64,
+                                                data.back_camera.snapshot,
                                             )
                                         />
 
@@ -210,7 +229,6 @@ fn AppPage() -> impl IntoView {
                                             <li>{} - {}</li>
                                         </ul>
                                         <h2>Recordings</h2>
-
                                         {}
                                     </div>
                                 </div>
@@ -221,7 +239,6 @@ fn AppPage() -> impl IntoView {
                         })
                     })
             }}
-
         </Suspense>
     }
 }

@@ -51,22 +51,22 @@ pub struct LocationsRes {
     pub user_locations: Vec<UserLocations>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DoorBotHealth {
     pub battery_percentage: u64,
 }
 
-#[derive(Deserialize, Debug)]
-pub struct Doorbots {
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct Doorbot {
     pub id: u64,
     pub description: String,
     pub health: DoorBotHealth,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DevicesRes {
-    pub doorbots: Vec<Doorbots>,
-    pub authorized_doorbots: Vec<Doorbots>,
+    pub doorbots: Vec<Doorbot>,
+    pub authorized_doorbots: Vec<Doorbot>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
