@@ -31,7 +31,7 @@ pub fn App() -> impl IntoView {
                 <Routes>
                     <Route path="" view=HomePage/>
                     <Route path="/login" view=LoginPage/>
-                    <Route path="/app" view=AppPage/>
+                    <Route path="/ring" view=RingPage/>
                 </Routes>
             </main>
         </Router>
@@ -46,7 +46,7 @@ fn HomePage() -> impl IntoView {
             <a href="/login">Login</a>
         </p>
         <p>
-            <a href="/rest-api/ring" rel="external">
+            <a href="/ring" rel="external">
                 "Ring"
             </a>
         </p>
@@ -89,7 +89,7 @@ fn LoginPage() -> impl IntoView {
         </ActionForm>
         <p>{value}</p>
         <p>
-            <A href="/app">"App"</A>
+            <A href="/ring">"Ring"</A>
         </p>
     }
 }
@@ -167,14 +167,14 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
                 image: back_image_base64,
                 timestamp: back_snapshot_res.0,
             },
-            health: front_camera.health.battery_percentage,
+            health: back_camera.health.battery_percentage,
         },
         ws_url,
     })
 }
 
 #[component]
-fn AppPage() -> impl IntoView {
+fn RingPage() -> impl IntoView {
     let ring_values = create_resource(|| (), |_| get_ring_values());
 
     view! {
@@ -201,7 +201,7 @@ fn AppPage() -> impl IntoView {
                                             )
                                         />
 
-                                        <h2>Time: {}</h2>
+                                        <h2>Time: {data.front_camera.snapshot.timestamp}</h2>
                                         <h2>Events:</h2>
                                         <ul>
                                             <li>{} - {}</li>
@@ -220,7 +220,7 @@ fn AppPage() -> impl IntoView {
                                             )
                                         />
 
-                                        <h2>Time: {}</h2>
+                                        <h2>Time: {data.back_camera.snapshot.timestamp}</h2>
                                         <h2>Events:</h2>
                                         <ul>
                                             <li>{} - {}</li>
