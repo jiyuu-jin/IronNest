@@ -238,12 +238,13 @@ impl RingRestClient {
             .parse::<f64>()
             .unwrap();
 
-        let time = DateTime::<Utc>::from_timestamp((time_ms / 1000.) as i64, 0)
-            .unwrap()
-            .to_string();
+        let utc_time = DateTime::<Utc>::from_timestamp((time_ms / 1000.) as i64, 0).unwrap();
+        let est_time = utc_time.with_timezone(&Eastern);
+
+        let formatted_time = est_time.format("%Y-%m-%d %H:%M:%S").to_string();
 
         println!("{}", res.status());
-        (time, res.bytes().await.unwrap())
+        (formatted_time, res.bytes().await.unwrap())
     }
 
     pub async fn get_recordings(&self, id: &u64) -> VideoSearchRes {
