@@ -1,8 +1,5 @@
 use {
-    crate::{
-        error_template::{AppError, ErrorTemplate},
-        integrations::ring::types::Doorbot,
-    },
+    crate::error_template::{AppError, ErrorTemplate},
     base64::{engine::general_purpose::STANDARD as base64, Engine},
     leptos::*,
     leptos_meta::*,
@@ -108,14 +105,14 @@ pub struct RingValues {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RingCameraSnapshot {
     pub image: String,
-    pub timestamp: u64,
+    pub timestamp: String,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RingCamera {
     pub description: String,
     pub snapshot: RingCameraSnapshot,
-    pub health: String,
+    pub health: u64,
 }
 
 #[server(GetRingValues)]
@@ -160,7 +157,7 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
             description: front_camera.description,
             snapshot: RingCameraSnapshot {
                 image: front_image_base64,
-                timestamp: (),
+                timestamp: front_snapshot_res.0,
             },
             health: front_camera.health.battery_percentage,
         },
@@ -168,7 +165,7 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
             description: back_camera.description,
             snapshot: RingCameraSnapshot {
                 image: back_image_base64,
-                timestamp: (),
+                timestamp: back_snapshot_res.0,
             },
             health: front_camera.health.battery_percentage,
         },
@@ -200,7 +197,7 @@ fn AppPage() -> impl IntoView {
                                             style="width: 100%"
                                             src=format!(
                                                 "data:image/png;base64,{}",
-                                                data.front_camera.snapshot,
+                                                data.front_camera.snapshot.image,
                                             )
                                         />
 
@@ -219,7 +216,7 @@ fn AppPage() -> impl IntoView {
                                             style="width: 100%"
                                             src=format!(
                                                 "data:image/png;base64,{}",
-                                                data.back_camera.snapshot,
+                                                data.back_camera.snapshot.image,
                                             )
                                         />
 

@@ -2,10 +2,10 @@ use cfg_if::cfg_if;
 pub mod app;
 pub mod error_template;
 pub mod fileserv;
+pub mod integrations;
 
 cfg_if! { if #[cfg(feature = "ssr")] {
-pub mod handlers;
-pub mod integrations;
+    pub mod handlers;
 }}
 
 cfg_if! { if #[cfg(feature = "hydrate")] {
