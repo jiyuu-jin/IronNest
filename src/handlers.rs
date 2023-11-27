@@ -318,7 +318,7 @@ pub async fn roku_handler() -> Html<String> {
 
                     function sendCommand(command) {{
                         const deviceId = document.getElementById('device-select').value;
-                        const endpoint = `/rest-api/roku/${{deviceId}}/keypress/${{command}}`;
+                        const endpoint = `/api/roku/${{deviceId}}/keypress/${{command}}`;
                         fetch(endpoint, {{ method: 'GET' }})
                             .then(response => response.text())
                             .then(data => console.log(data))

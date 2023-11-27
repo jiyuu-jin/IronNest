@@ -16,7 +16,6 @@ pub fn App() -> impl IntoView {
         <Stylesheet id="leptos" href="/pkg/{{project-name}}.css"/>
 
         // sets the document title
-        <Title text="Welcome to Iron Nest"/>
         <Meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
         <Meta name="apple-mobile-web-app-capable" content="yes"/>
         <Meta name="mobile-web-app-capable" content="yes"/>
@@ -51,7 +50,7 @@ fn HomePage() -> impl IntoView {
             </a>
         </p>
         <p>
-            <a href="/rest-api/roku" rel="external">
+            <a href="/api/roku" rel="external">
                 "Roku"
             </a>
         </p>
@@ -138,8 +137,8 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
         .chain(devices.authorized_doorbots.into_iter())
         .collect::<Vec<_>>();
 
-    let front_camera = doorbots.remove(0);
     let back_camera = doorbots.remove(0);
+    let front_camera = doorbots.remove(0);
 
     // let front_camera_events = ring_rest_client
     //     .get_camera_events(location_id, &front_camera.id)
