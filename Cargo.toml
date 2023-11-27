@@ -38,6 +38,21 @@ tower = { version = "0.4.13", optional = true }
 tower-http = { version = "0.4.4", features = ["fs"], optional = true }
 uuid = { version = "1.5.0", features = ["v4"] }
 wasm-bindgen = "=0.2.88"
+js-sys = "0.3"
+leptos-use = "0.8.2"
+leptos_reactive = "0.5.2"
+web-sys = { version = "0.3.65", features = [
+  "MessageEvent",
+  "RtcPeerConnection",
+  "RtcSignalingState",
+  "RtcSdpType",
+  "RtcSessionDescriptionInit",
+  "RtcPeerConnectionIceEvent",
+  "RtcIceCandidate",
+  "RtcDataChannel",
+  "RtcDataChannelEvent",
+] }
+wasm-bindgen-futures = "0.4.38"
 
 [features]
 hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
