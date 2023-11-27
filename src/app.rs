@@ -1,6 +1,5 @@
 use {
     crate::error_template::{AppError, ErrorTemplate},
-    base64::{engine::general_purpose::STANDARD as base64, Engine},
     js_sys::Reflect,
     leptos::*,
     leptos_meta::*,
@@ -125,7 +124,11 @@ pub struct RingCamera {
 
 #[server(GetRingValues)]
 pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
-    use {crate::integrations::ring::RingRestClient, std::sync::Arc};
+    use {
+        crate::integrations::ring::RingRestClient,
+        base64::{engine::general_purpose::STANDARD as base64, Engine},
+        std::sync::Arc,
+    };
 
     let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
     let mut locations = ring_rest_client.get_locations().await;
