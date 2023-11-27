@@ -96,7 +96,7 @@ cfg_if::cfg_if! {
                     get(server_fn_handler).post(server_fn_handler),
                 )
                 .leptos_routes_with_handler(routes, get(leptos_routes_handler))
-                .nest("/rest-api", iron_nest_router)
+                .nest("/api", iron_nest_router)
                 .fallback(file_and_error_handler)
                 .with_state(app_state);
 
