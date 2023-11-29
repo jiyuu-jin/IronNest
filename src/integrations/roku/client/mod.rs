@@ -22,11 +22,11 @@ pub async fn discover_roku() {
 }
 
 pub async fn get_roku_apps() -> String {
-    let roku_url = format!("http://10.0.0.162:8060/query/apps");
+    let roku_url = "http://10.0.0.162:8060/query/apps";
     let client = reqwest::Client::new();
 
     client
-        .post(&roku_url)
+        .post(roku_url)
         .send()
         .await
         .unwrap()

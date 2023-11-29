@@ -1,10 +1,15 @@
 use {
     crate::error_template::{AppError, ErrorTemplate},
-    base64::{engine::general_purpose::STANDARD as base64, Engine},
+    js_sys::Reflect,
     leptos::*,
     leptos_meta::*,
+    leptos_reactive::create_effect,
     leptos_router::*,
+    leptos_use::{core::ConnectionReadyState, use_websocket, UseWebsocketReturn},
     serde::{Deserialize, Serialize},
+    serde_json::json,
+    wasm_bindgen::{closure::Closure, JsValue},
+    web_sys::RtcPeerConnection,
 };
 
 #[component]
@@ -31,6 +36,7 @@ pub fn App() -> impl IntoView {
                     <Route path="" view=HomePage/>
                     <Route path="/login" view=LoginPage/>
                     <Route path="/ring" view=RingPage/>
+                    <Route path="/websocket" view=WebSocketPage/>
                 </Routes>
             </main>
         </Router>
@@ -45,14 +51,15 @@ fn HomePage() -> impl IntoView {
             <a href="/login">Login</a>
         </p>
         <p>
-            <a href="/ring" rel="external">
-                "Ring"
-            </a>
+            <A href="/ring">"Ring"</A>
         </p>
         <p>
             <a href="/api/roku" rel="external">
                 "Roku"
             </a>
+        </p>
+        <p>
+            <A href="/websocket">"WebSocket"</A>
         </p>
     }
 }
@@ -88,7 +95,7 @@ fn LoginPage() -> impl IntoView {
         </ActionForm>
         <p>{value}</p>
         <p>
-            <A href="/ring">"Ring"</A>
+            <A href="/">"Home"</A>
         </p>
     }
 }
@@ -109,6 +116,7 @@ pub struct RingCameraSnapshot {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RingCamera {
+    pub id: u64,
     pub description: String,
     pub snapshot: RingCameraSnapshot,
     pub health: u64,
@@ -116,7 +124,11 @@ pub struct RingCamera {
 
 #[server(GetRingValues)]
 pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
-    use {crate::integrations::ring::RingRestClient, std::sync::Arc};
+    use {
+        crate::integrations::ring::RingRestClient,
+        base64::{engine::general_purpose::STANDARD as base64, Engine},
+        std::sync::Arc,
+    };
 
     let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
     let mut locations = ring_rest_client.get_locations().await;
@@ -153,6 +165,7 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
     Ok(RingValues {
         location_name: location.name,
         front_camera: RingCamera {
+            id: front_camera.id,
             description: front_camera.description,
             snapshot: RingCameraSnapshot {
                 image: front_image_base64,
@@ -161,6 +174,7 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
             health: front_camera.health.battery_percentage,
         },
         back_camera: RingCamera {
+            id: back_camera.id,
             description: back_camera.description,
             snapshot: RingCameraSnapshot {
                 image: back_image_base64,
@@ -231,6 +245,7 @@ fn RingPage() -> impl IntoView {
                                             <li>{} - {}</li>
                                         </ul>
                                         <h2>Recordings</h2>
+
                                         {}
                                     </div>
                                 </div>
@@ -241,6 +256,7 @@ fn RingPage() -> impl IntoView {
                         })
                     })
             }}
+
         </Suspense>
     }
 }
@@ -291,6 +307,115 @@ fn RokuPage() -> impl IntoView {
                     <option value="2">Device 2</option>
                 </select>
             </div>
+        </div>
+    }
+}
+
+#[component]
+fn WebSocketPage() -> impl IntoView {
+    let ring_values = create_resource(|| (), |_| get_ring_values());
+
+    view! {
+        <h1>"WebSocket"</h1>
+        <Suspense fallback=move || {
+            view! { <p>"Loading..."</p> }
+        }>
+            {move || {
+                ring_values
+                    .get()
+                    .map(|ring_values| {
+                        ring_values
+                            .map(|ring_values| {
+                                view! { <WebSocketComponent ring_values=ring_values/> }
+                            })
+                    })
+            }}
+
+        </Suspense>
+    }
+}
+
+#[component]
+fn WebSocketComponent(ring_values: RingValues) -> impl IntoView {
+    let UseWebsocketReturn {
+        ready_state,
+        message,
+        message_bytes,
+        send,
+        send_bytes,
+        open,
+        close,
+        ..
+    } = use_websocket(&ring_values.ws_url);
+
+    let send_message = move |_| {
+        send("Hello, world!");
+    };
+
+    // let send_byte_message = move |_| {
+    //     send_bytes(b"Hello, world!\r\n".to_vec());
+    // };
+
+    create_effect(move |_| {
+        if ready_state.get() == ConnectionReadyState::Open {
+            let send_bytes = send_bytes.clone();
+            let pc = RtcPeerConnection::new().unwrap();
+            let create_offer_callback = Closure::wrap(Box::new(move |offer: JsValue| {
+                let sdp = Reflect::get(&offer, &JsValue::from_str("sdp"))
+                    .unwrap()
+                    .as_string()
+                    .unwrap();
+                send_bytes(
+                    serde_json::to_vec(&json!({
+                        "method": "live_view",
+                        "dialog_id": "333333",
+                        "body": {
+                            "doorbot_id": ring_values.front_camera.id,
+                            "stream_options": { "audio_enabled": true, "video_enabled": true },
+                            "sdp": sdp,
+                        }
+                    }))
+                    .unwrap(),
+                );
+            }) as Box<dyn FnMut(JsValue)>);
+            let _ = pc.create_offer().then(&create_offer_callback);
+            create_offer_callback.forget();
+        }
+    });
+    let status = move || ready_state.get().to_string();
+
+    let connected = move || ready_state.get() == ConnectionReadyState::Open;
+
+    let open_connection = move |_| {
+        open();
+    };
+
+    let close_connection = move |_| {
+        close();
+    };
+
+    view! {
+        <div>
+            <p>"status: " {status}</p>
+
+            <button on:click=send_message disabled=move || !connected()>
+                "Send"
+            </button>
+            // <button on:click=send_byte_message disabled=move || !connected()>
+            // "Send bytes"
+            // </button>
+            <button on:click=open_connection disabled=connected>
+                "Open"
+            </button>
+            <button on:click=close_connection disabled=move || !connected()>
+                "Close"
+            </button>
+
+            <h2>"Receive message: "</h2>
+            <pre style="text-wrap: wrap; word-break: break-all;">
+                {move || format!("{:?}", message.get())}
+            </pre>
+            <p>"Receive byte message: " {move || format!("{:?}", message_bytes.get())}</p>
         </div>
     }
 }
