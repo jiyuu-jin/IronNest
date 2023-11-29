@@ -191,7 +191,10 @@ fn RingPage() -> impl IntoView {
                                 <h1>{data.location_name}</h1>
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, max-content)); grid-gap: 8px">
                                     <div>
-                                        <h2>{data.front_camera.description} - Battery: {data.front_camera.health}</h2>
+                                        <h2>
+                                            {data.front_camera.description} - Battery:
+                                            {data.front_camera.health}
+                                        </h2>
                                         <img
                                             style="width: 100%"
                                             src=format!(
@@ -210,7 +213,10 @@ fn RingPage() -> impl IntoView {
                                         {}
                                     </div>
                                     <div>
-                                        <h2>{data.back_camera.description} - Battery: {data.back_camera.health}</h2>
+                                        <h2>
+                                            {data.back_camera.description} - Battery:
+                                            {data.back_camera.health}
+                                        </h2>
                                         <img
                                             style="width: 100%"
                                             src=format!(
