@@ -73,13 +73,10 @@ pub fn camera_recordings_list(recordings: VideoSearchRes) -> String {
     "<ul>"
         .chars()
         .chain(recordings.video_search.iter().flat_map(|recording| {
-            // Convert the created_at timestamp to Eastern Time
             let created_at_utc = Utc
                 .timestamp_millis_opt(recording.created_at as i64)
                 .unwrap();
             let created_at_eastern = created_at_utc.with_timezone(&Eastern);
-
-            // Format the timestamp nicely, e.g., "April 5, 2023, 07:30 PM"
             let formatted_time = created_at_eastern.format("%B %e, %Y, %I:%M %p").to_string();
 
             format!(
@@ -147,6 +144,11 @@ impl RingRestClient {
         } else {
             res.text().await.unwrap()
         }
+    }
+
+    pub async fn refresh_auth_token(&self) {
+        let refresh_result = self.request_auth_token("", "", "").await;
+        info!("refresh_result: {refresh_result}");
     }
 
     pub async fn request(&self, path: &str, method: Method) -> String {
