@@ -1,6 +1,7 @@
-use super::types::RokuDiscoverRes;
-
-use {futures::prelude::*, ssdp_client::SearchTarget, std::time::Duration};
+use {
+    super::types::RokuDiscoverRes, futures::prelude::*, ssdp_client::SearchTarget,
+    std::time::Duration,
+};
 
 pub async fn discover_roku() -> Vec<RokuDiscoverRes> {
     let search_target = SearchTarget::RootDevice;

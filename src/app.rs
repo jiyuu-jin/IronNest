@@ -1,9 +1,7 @@
-use crate::integrations::roku::types::RokuDiscoverRes;
-
 use {
     crate::{
         error_template::{AppError, ErrorTemplate},
-        integrations::tplink::types::TPLinkDiscoveryData,
+        integrations::{roku::types::RokuDiscoverRes, tplink::types::TPLinkDiscoveryData},
     },
     js_sys::Reflect,
     leptos::*,
@@ -208,74 +206,128 @@ fn DashboardPage() -> impl IntoView {
     let ring_values = create_resource(|| (), |_| get_ring_values());
 
     view! {
-        <div class="dashboard-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+        <div
+            class="dashboard-container"
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;"
+        >
             <div class="sidebar" style="padding: 10px;">
                 <h2>"TP-Link Devices"</h2>
-                <Suspense fallback=|| view! { <p>"Loading TP-Link devices..."</p> }>
+                <Suspense fallback=|| {
+                    view! { <p>"Loading TP-Link devices..."</p> }
+                }>
                     {move || {
-                        ring_values.get().map(|data| {
-                            data.map(|data| {
-                                view! {
-                                    <ul class="tplink-device-list">
-                                        {data.tplink_devices.iter().map(|device| {
-                                            view! {
-                                                <li class="tplink-device">
-                                                    <div class="device-alias">{&device.alias}</div>
-                                                    <div class="device-name">{&device.dev_name}</div>
-                                                    <div class="device-state">{format!("State: {}", &device.relay_state)}</div>
-                                                </li>
-                                            }
-                                        }).collect::<Vec<_>>()}
-                                    </ul>
-                                }
+                        ring_values
+                            .get()
+                            .map(|data| {
+                                data.map(|data| {
+                                    view! {
+                                        <ul class="tplink-device-list">
+                                            {data
+                                                .tplink_devices
+                                                .iter()
+                                                .map(|device| {
+                                                    view! {
+                                                        <li class="tplink-device">
+                                                            <div class="device-alias">{&device.alias}</div>
+                                                            <div class="device-name">{&device.dev_name}</div>
+                                                            <div class="device-state">
+                                                                {format!("State: {}", &device.relay_state)}
+                                                            </div>
+                                                        </li>
+                                                    }
+                                                })
+                                                .collect::<Vec<_>>()}
+                                        </ul>
+                                    }
+                                })
                             })
-                        })
                     }}
+
                 </Suspense>
                 <h2>"Roku Devices"</h2>
-                <Suspense fallback=|| view! { <p>"Loading Roku devices..."</p> }>
+                <Suspense fallback=|| {
+                    view! { <p>"Loading Roku devices..."</p> }
+                }>
                     {move || {
-                        ring_values.get().map(|data| {
-                            data.map(|data| {
-                                view! {
-                                    <ul class="roku-device-list">
-                                        {data.roku_devices.iter().map(|device| {
-                                            view! {
-                                                <li class="roku-device">
-                                                    <div class="device-info">{"Location: "} {&device.location}</div>
-                                                </li>
-                                            }
-                                        }).collect::<Vec<_>>()}
-                                    </ul>
-                                }
+                        ring_values
+                            .get()
+                            .map(|data| {
+                                data.map(|data| {
+                                    view! {
+                                        <ul class="roku-device-list">
+                                            {data
+                                                .roku_devices
+                                                .iter()
+                                                .map(|device| {
+                                                    view! {
+                                                        <li class="roku-device">
+                                                            <div class="device-info">
+                                                                {"Location: "} {&device.location}
+                                                            </div>
+                                                        </li>
+                                                    }
+                                                })
+                                                .collect::<Vec<_>>()}
+                                        </ul>
+                                    }
+                                })
                             })
-                        })
                     }}
+
                 </Suspense>
             </div>
             <div class="dashboard-main" style="padding: 10px;">
                 <h2>"Ring Cameras"</h2>
-                <Suspense fallback=|| view! { <p>"Loading Ring cameras..."</p> }>
+                <Suspense fallback=|| {
+                    view! { <p>"Loading Ring cameras..."</p> }
+                }>
                     {move || {
-                        ring_values.get().map(|data| {
-                            data.map(|data| {
-                                view! {
-                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
-                                        <div>
-                                            <h2>{format!("{} - Battery: {}", data.front_camera.description, data.front_camera.health)}</h2>
-                                            <img style="width: 100%" src=format!("data:image/png;base64,{}", data.front_camera.snapshot.image) />
-                                            <p>{"Time: "} {data.front_camera.snapshot.timestamp}</p>
+                        ring_values
+                            .get()
+                            .map(|data| {
+                                data.map(|data| {
+                                    view! {
+                                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
+                                            <div>
+                                                <h2>
+                                                    {format!(
+                                                        "{} - Battery: {}",
+                                                        data.front_camera.description,
+                                                        data.front_camera.health,
+                                                    )}
+                                                </h2>
+                                                <img
+                                                    style="width: 100%"
+                                                    src=format!(
+                                                        "data:image/png;base64,{}",
+                                                        data.front_camera.snapshot.image,
+                                                    )
+                                                />
+                                                <p>{"Time: "} {data.front_camera.snapshot.timestamp}</p>
+                                            </div>
+                                            <div>
+                                                <h2>
+                                                    {format!(
+                                                        "{} - Battery: {}",
+                                                        data.back_camera.description,
+                                                        data.back_camera.health,
+                                                    )}
+                                                </h2>
+                                                <img
+                                                    style="width: 100%"
+                                                    src=format!(
+                                                        "data:image/png;base64,{}",
+                                                        data.back_camera.snapshot.image,
+                                                    )
+                                                />
+                                                <p>{"Time: "} {data.back_camera.snapshot.timestamp}</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h2>{format!("{} - Battery: {}", data.back_camera.description, data.back_camera.health)}</h2>
-                                            <img style="width: 100%" src=format!("data:image/png;base64,{}", data.back_camera.snapshot.image) />
-                                            <p>{"Time: "} {data.back_camera.snapshot.timestamp}</p>
-                                        </div>
-                                    </div>
-                                }
+                                    }
+                                })
                             })
-                        })
                     }}
+
                 </Suspense>
             </div>
         </div>
