@@ -1,6 +1,12 @@
 use {
+    super::types::{GetSysInfo, TPLinkDiscoveryData, TPLinkDiscoveryRes, TPLinkDiscoverySysInfo},
+    log::{info, trace, warn},
     serde_json::{json, Value},
-    std::{error::Error, io, net::IpAddr},
+    std::{
+        error::Error,
+        io,
+        net::{IpAddr, Ipv4Addr},
+    },
     tokio::{
         io::{AsyncReadExt, AsyncWriteExt},
         net::{TcpStream, UdpSocket},
@@ -10,42 +16,63 @@ use {
 
 const KEY: u8 = 0xAB;
 
-pub async fn discover_devices() -> Result<(), Box<dyn Error>> {
-    let socket = UdpSocket::bind("0.0.0.0:9999").await.unwrap();
+pub async fn discover_devices() -> Result<Vec<TPLinkDiscoveryData>, Box<dyn Error>> {
+    let port = 9999;
+    let socket = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, port))
+        .await
+        .unwrap();
     socket.set_broadcast(true).unwrap();
-    let msg_bytes = serde_json::to_vec(&json!({"system":{"get_sysinfo":{}}}))
-        .expect("Should be able to serialize hardcoded data w/o error");
+    let request = TPLinkDiscoveryRes {
+        system: TPLinkDiscoverySysInfo {
+            get_sysinfo: GetSysInfo::Empty(()),
+        },
+    };
+    let msg_bytes =
+        serde_json::to_vec(&request).expect("Should be able to serialize hardcoded data w/o error");
     let discover_msg = encrypt(&msg_bytes, KEY);
 
-    let broadcast_addr = "255.255.255.255:9999";
+    let broadcast_addr = (Ipv4Addr::BROADCAST, port);
     socket.send_to(&discover_msg, broadcast_addr).await.unwrap();
 
     let mut buf = [0; 1024];
-    let timeout_duration = Duration::from_secs(5);
+    let timeout_duration = Duration::from_millis(500);
 
+    let mut devices = Vec::with_capacity(20);
     loop {
         match timeout(timeout_duration, socket.recv_from(&mut buf)).await {
             Ok(Ok((num_bytes, src_addr))) => {
                 let incoming_data = decrypt(&buf, KEY);
-                let msg = serde_json::from_slice::<Value>(&incoming_data[..num_bytes]).unwrap();
-                println!("Received from {}: {}", src_addr, msg);
+                let incoming_msg_result =
+                    serde_json::from_slice::<TPLinkDiscoveryRes>(&incoming_data[..num_bytes]);
+                match incoming_msg_result {
+                    Ok(msg) => match msg.system.get_sysinfo {
+                        GetSysInfo::TPLinkDiscoveryData(get_sysinfo) => {
+                            info!("Received from {}: {}", src_addr, get_sysinfo.alias);
+                            devices.push(get_sysinfo);
+                        }
+                        GetSysInfo::Empty(()) => trace!("ignoring GetSysInfo::Empty(())"),
+                    },
+                    Err(e) => {
+                        warn!("Error parsing broadcast response: {e}");
+                    }
+                }
             }
             Ok(Err(e)) => {
-                eprintln!("Error receiving message: {}", e);
+                warn!("Error receiving broadcast response: {}", e);
                 break;
             }
             Err(_) => {
-                println!("Timeout reached, no more responses.");
+                trace!("Timeout reached, no more responses.");
                 break;
             }
         }
     }
 
-    Ok(())
+    Ok(devices)
 }
 
 pub async fn send() -> io::Result<()> {
-    let ip: IpAddr = "10.0.0.197".parse().unwrap();
+    let ip: IpAddr = "192.168.0.140".parse().unwrap();
     let mut stream = TcpStream::connect((ip, 9999)).await?;
 
     let msg_bytes = serde_json::to_vec(&json!({"system":{"set_relay_state":{"state":1}}}))
