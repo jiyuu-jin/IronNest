@@ -1,4 +1,7 @@
-use iron_nest::{handlers::roku_keypress_handler, integrations::ring::RingRestClient};
+use {
+    iron_nest::{handlers::roku_keypress_handler, integrations::ring::RingRestClient},
+    log::{error, info},
+};
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "ssr")] {
@@ -23,8 +26,6 @@ cfg_if::cfg_if! {
             std::{ sync::Arc},
         };
 
-        /// This takes advantage of Axum's SubStates feature by deriving FromRef. This is the only way to have more than one
-        /// item in Axum's State. Leptos requires you to have leptosOptions in your State struct for the leptos route handlers
         #[derive(FromRef, Debug, Clone)]
         pub struct AppState {
             pub leptos_options: LeptosOptions,
@@ -85,10 +86,10 @@ cfg_if::cfg_if! {
             };
 
             let iron_nest_router = Router::new()
-                .route("/ring", get(ring_handler))
+                .route("/dashboard", get(ring_handler))
                 .route("/roku", get(roku_handler))
                 .route("/roku/:device_id/keypress/:key", get(roku_keypress_handler))
-                .with_state(ring_rest_client);
+                .with_state(ring_rest_client.clone());
 
             let app = Router::new()
                 .route(
@@ -100,11 +101,26 @@ cfg_if::cfg_if! {
                 .fallback(file_and_error_handler)
                 .with_state(app_state);
 
-            log::info!("listening on http://{}", &addr);
-            axum::Server::bind(&addr)
-                .serve(app.into_make_service())
-                .await
-                .unwrap();
+            let ring_auth_refresh_job = tokio::task::spawn(async move {
+                let six_hours = chrono::Duration::hours(6).to_std().unwrap();
+                let mut interval = tokio::time::interval(six_hours);
+                loop {
+                    interval.tick().await;
+
+                    info!("Refreshing Ring auth token");
+                    ring_rest_client.refresh_auth_token().await;
+                }
+            });
+
+            let http_server = {
+                log::info!("listening on http://{}", &addr);
+                axum::Server::bind(&addr).serve(app.into_make_service())
+            };
+
+            tokio::select! {
+                e = http_server => error!("HTTP server exiting with error {e:?}"),
+                e = ring_auth_refresh_job => error!("Ring auth refresh job exiting with error {e:?}"),
+            }
         }
     }
 }

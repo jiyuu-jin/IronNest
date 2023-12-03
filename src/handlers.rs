@@ -162,6 +162,8 @@ pub async fn roku_keypress_handler(
 }
 
 pub async fn roku_handler() -> Html<String> {
+    // discover_devices().await;
+    // send().await;
     discover_roku().await;
 
     let color_value = "#333";
