@@ -1,5 +1,10 @@
+use crate::integrations::roku::types::RokuDiscoverRes;
+
 use {
-    crate::error_template::{AppError, ErrorTemplate},
+    crate::{
+        error_template::{AppError, ErrorTemplate},
+        integrations::tplink::types::TPLinkDiscoveryData,
+    },
     js_sys::Reflect,
     leptos::*,
     leptos_meta::*,
@@ -11,6 +16,10 @@ use {
     wasm_bindgen::{closure::Closure, JsValue},
     web_sys::RtcPeerConnection,
 };
+
+cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
+    use crate::integrations::{tplink::discover_devices, roku::discover_roku};
+}}
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -35,7 +44,7 @@ pub fn App() -> impl IntoView {
                 <Routes>
                     <Route path="" view=HomePage/>
                     <Route path="/login" view=LoginPage/>
-                    <Route path="/ring" view=RingPage/>
+                    <Route path="/dashboard" view=DashboardPage/>
                     <Route path="/websocket" view=WebSocketPage/>
                 </Routes>
             </main>
@@ -51,8 +60,9 @@ fn HomePage() -> impl IntoView {
             <a href="/login">Login</a>
         </p>
         <p>
-            <A href="/ring">"Ring"</A>
+            <A href="/dashboard">"Dashboard"</A>
         </p>
+
         <p>
             <a href="/api/roku" rel="external">
                 "Roku"
@@ -106,6 +116,8 @@ pub struct RingValues {
     pub front_camera: RingCamera,
     pub back_camera: RingCamera,
     pub location_name: String,
+    pub tplink_devices: Vec<TPLinkDiscoveryData>,
+    pub roku_devices: Vec<RokuDiscoverRes>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -152,6 +164,9 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
     let back_camera = doorbots.remove(0);
     let front_camera = doorbots.remove(0);
 
+    let tplink_devices = discover_devices().await.unwrap();
+    let roku_devices = discover_roku().await;
+
     // let front_camera_events = ring_rest_client
     //     .get_camera_events(location_id, &front_camera.id)
     //     .await;
@@ -160,7 +175,7 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
     //     .get_camera_events(location_id, &back_camera.id)
     //     .await;
 
-    let ws_url = ring_rest_client.get_ws_url().await;
+    let ws_url = "".to_string();
 
     Ok(RingValues {
         location_name: location.name,
@@ -183,81 +198,87 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
             health: back_camera.health.battery_percentage,
         },
         ws_url,
+        tplink_devices,
+        roku_devices,
     })
 }
 
 #[component]
-fn RingPage() -> impl IntoView {
+fn DashboardPage() -> impl IntoView {
     let ring_values = create_resource(|| (), |_| get_ring_values());
 
     view! {
-        <h1>"Dashboard"</h1>
-        <Suspense fallback=move || {
-            view! { <p>"Loading..."</p> }
-        }>
-            {move || {
-                ring_values
-                    .get()
-                    .map(|data| {
-                        data.map(|data| {
-                            view! {
-                                <Title text="Dashboard"/>
-                                <h1>{data.location_name}</h1>
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, max-content)); grid-gap: 8px">
-                                    <div>
-                                        <h2>
-                                            {data.front_camera.description} - Battery:
-                                            {data.front_camera.health}
-                                        </h2>
-                                        <img
-                                            style="width: 100%"
-                                            src=format!(
-                                                "data:image/png;base64,{}",
-                                                data.front_camera.snapshot.image,
-                                            )
-                                        />
-
-                                        <h2>Time: {data.front_camera.snapshot.timestamp}</h2>
-                                        <h2>Events:</h2>
-                                        <ul>
-                                            <li>{} - {}</li>
-                                        </ul>
-                                        <h2>Recordings</h2>
-
-                                        {}
-                                    </div>
-                                    <div>
-                                        <h2>
-                                            {data.back_camera.description} - Battery:
-                                            {data.back_camera.health}
-                                        </h2>
-                                        <img
-                                            style="width: 100%"
-                                            src=format!(
-                                                "data:image/png;base64,{}",
-                                                data.back_camera.snapshot.image,
-                                            )
-                                        />
-
-                                        <h2>Time: {data.back_camera.snapshot.timestamp}</h2>
-                                        <h2>Events:</h2>
-                                        <ul>
-                                            <li>{} - {}</li>
-                                        </ul>
-                                        <h2>Recordings</h2>
-
-                                        {}
-                                    </div>
-                                </div>
-                                <br/>
-                                <hr/>
-                                <div>Socket Ticket: {data.ws_url}</div>
-                            }
+        <div class="dashboard-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+            <div class="sidebar" style="padding: 10px;">
+                <h2>"TP-Link Devices"</h2>
+                <Suspense fallback=|| view! { <p>"Loading TP-Link devices..."</p> }>
+                    {move || {
+                        ring_values.get().map(|data| {
+                            data.map(|data| {
+                                view! {
+                                    <ul class="tplink-device-list">
+                                        {data.tplink_devices.iter().map(|device| {
+                                            view! {
+                                                <li class="tplink-device">
+                                                    <div class="device-alias">{&device.alias}</div>
+                                                    <div class="device-name">{&device.dev_name}</div>
+                                                    <div class="device-state">{format!("State: {}", &device.relay_state)}</div>
+                                                </li>
+                                            }
+                                        }).collect::<Vec<_>>()}
+                                    </ul>
+                                }
+                            })
                         })
-                    })
-            }}
-
-        </Suspense>
+                    }}
+                </Suspense>
+                <h2>"Roku Devices"</h2>
+                <Suspense fallback=|| view! { <p>"Loading Roku devices..."</p> }>
+                    {move || {
+                        ring_values.get().map(|data| {
+                            data.map(|data| {
+                                view! {
+                                    <ul class="roku-device-list">
+                                        {data.roku_devices.iter().map(|device| {
+                                            view! {
+                                                <li class="roku-device">
+                                                    <div class="device-info">{"Location: "} {&device.location}</div>
+                                                </li>
+                                            }
+                                        }).collect::<Vec<_>>()}
+                                    </ul>
+                                }
+                            })
+                        })
+                    }}
+                </Suspense>
+            </div>
+            <div class="dashboard-main" style="padding: 10px;">
+                <h2>"Ring Cameras"</h2>
+                <Suspense fallback=|| view! { <p>"Loading Ring cameras..."</p> }>
+                    {move || {
+                        ring_values.get().map(|data| {
+                            data.map(|data| {
+                                view! {
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
+                                        <div>
+                                            <h2>{format!("{} - Battery: {}", data.front_camera.description, data.front_camera.health)}</h2>
+                                            <img style="width: 100%" src=format!("data:image/png;base64,{}", data.front_camera.snapshot.image) />
+                                            <p>{"Time: "} {data.front_camera.snapshot.timestamp}</p>
+                                        </div>
+                                        <div>
+                                            <h2>{format!("{} - Battery: {}", data.back_camera.description, data.back_camera.health)}</h2>
+                                            <img style="width: 100%" src=format!("data:image/png;base64,{}", data.back_camera.snapshot.image) />
+                                            <p>{"Time: "} {data.back_camera.snapshot.timestamp}</p>
+                                        </div>
+                                    </div>
+                                }
+                            })
+                        })
+                    }}
+                </Suspense>
+            </div>
+        </div>
     }
 }
 

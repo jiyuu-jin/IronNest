@@ -11,11 +11,15 @@ pub async fn discover_roku() -> Vec<RokuDiscoverRes> {
 
     while let Some(response) = responses.next().await {
         match response {
-            Ok(resp) => devices.push(RokuDiscoverRes {
-                location: resp.location().to_string(),
-                usn: resp.usn().to_string(),
-                server: resp.server().to_string(),
-            }),
+            Ok(resp) => {
+                if resp.server().to_string().contains("Roku") {
+                    devices.push(RokuDiscoverRes {
+                        location: resp.location().to_string(),
+                        usn: resp.usn().to_string(),
+                        server: resp.server().to_string(),
+                    });
+                }
+            }
             Err(e) => {
                 println!("Error: {:?}", e);
             }
