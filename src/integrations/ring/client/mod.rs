@@ -19,7 +19,7 @@ static APP_API_BASE_URL: &str = "https://app.ring.com/api/v1/";
 static OAUTH_API_BASE_URL: &str = "https://oauth.ring.com/oauth/token";
 
 #[derive(Debug, Serialize, Deserialize)]
-struct State {
+pub struct State {
     pub refresh_token: String,
     pub hardware_id: String,
     pub auth_token: String,
