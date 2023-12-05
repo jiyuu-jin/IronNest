@@ -3,5 +3,6 @@
     "./Cargo.toml",
     "./Cargo.toml"
   ],
-  "rust-analyzer.cargo.features": "all"
+  "rust-analyzer.cargo.features": "all",
+  "rust-analyzer.showUnlinkedFileNotification": false
 }

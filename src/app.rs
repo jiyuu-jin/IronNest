@@ -1,8 +1,14 @@
+use crate::integrations::ring::types::Doorbot;
+
 use {
     crate::{
         error_template::{AppError, ErrorTemplate},
-        integrations::{roku::types::RokuDiscoverRes, tplink::types::TPLinkDiscoveryData},
+        integrations::{
+            roku::types::{ActionApp, RokuDiscoverRes},
+            tplink::types::TPLinkDiscoveryData,
+        },
     },
+    base64::{engine::general_purpose::STANDARD as base64, Engine},
     js_sys::Reflect,
     leptos::*,
     leptos_meta::*,
@@ -11,12 +17,16 @@ use {
     leptos_use::{core::ConnectionReadyState, use_websocket, UseWebsocketReturn},
     serde::{Deserialize, Serialize},
     serde_json::json,
+    std::sync::Arc,
     wasm_bindgen::{closure::Closure, JsValue},
     web_sys::RtcPeerConnection,
 };
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
-    use crate::integrations::{tplink::discover_devices, roku::discover_roku};
+    use crate::integrations::{
+        roku::{get_media_player, discover_roku, get_active_app, get_active_channel},
+        tplink::discover_devices,
+    };
 }}
 
 #[component]
@@ -78,8 +88,7 @@ pub async fn handle_login(
     password: String,
     tfa: String,
 ) -> Result<String, ServerFnError> {
-    use {crate::integrations::ring::RingRestClient, std::sync::Arc};
-
+    use crate::integrations::ring::client::RingRestClient;
     let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
     let result = ring_rest_client
         .request_auth_token(&username, &password, &tfa)
@@ -111,11 +120,11 @@ fn LoginPage() -> impl IntoView {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RingValues {
     pub ws_url: String,
-    pub front_camera: RingCamera,
-    pub back_camera: RingCamera,
     pub location_name: String,
+    pub cameras: Vec<RingCamera>,
     pub tplink_devices: Vec<TPLinkDiscoveryData>,
     pub roku_devices: Vec<RokuDiscoverRes>,
+    pub roku_app: ActionApp,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -134,37 +143,52 @@ pub struct RingCamera {
 
 #[server(GetRingValues)]
 pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
-    use {
-        crate::integrations::ring::RingRestClient,
-        base64::{engine::general_purpose::STANDARD as base64, Engine},
-        std::sync::Arc,
-    };
-
+    use crate::integrations::ring::client::RingRestClient;
     let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
     let mut locations = ring_rest_client.get_locations().await;
     let devices = ring_rest_client.get_devices().await;
-
-    let back_snapshot_res = ring_rest_client.get_camera_snapshot("375458730").await;
-    let back_image_base64 = base64.encode(back_snapshot_res.1);
-
-    let front_snapshot_res = ring_rest_client.get_camera_snapshot("141328255").await;
-    let front_image_base64 = base64.encode(front_snapshot_res.1);
-
+    let mut cameras = Vec::with_capacity(20);
     let location = locations.user_locations.remove(0);
 
-    // let location_id = &location.location_id;
-    let mut doorbots = devices
+    let doorbots = devices
         .doorbots
         .into_iter()
         .chain(devices.authorized_doorbots.into_iter())
         .collect::<Vec<_>>();
 
-    let back_camera = doorbots.remove(0);
-    let front_camera = doorbots.remove(0);
-
     let tplink_devices = discover_devices().await.unwrap();
     let roku_devices = discover_roku().await;
 
+    let roku_app = get_active_app().await;
+    println!("xml {}", roku_app.app[0].value);
+
+    let media_text = get_media_player().await;
+    println!("media xml: {}", media_text);
+
+    get_active_channel().await;
+
+    pub async fn get_ring_camera(
+        ring_rest_client: &Arc<RingRestClient>,
+        device: &Doorbot,
+    ) -> RingCamera {
+        let device_string = device.id.to_string();
+        let snapshot_res = ring_rest_client.get_camera_snapshot(&device_string).await;
+        let image_base64 = base64.encode(snapshot_res.1);
+
+        RingCamera {
+            id: device.id,
+            description: device.description.to_string(),
+            snapshot: RingCameraSnapshot {
+                image: image_base64,
+                timestamp: snapshot_res.0,
+            },
+            health: device.health.battery_percentage,
+        }
+    }
+
+    for doorbot in doorbots.iter() {
+        cameras.push(get_ring_camera(&ring_rest_client, doorbot).await)
+    }
     // let front_camera_events = ring_rest_client
     //     .get_camera_events(location_id, &front_camera.id)
     //     .await;
@@ -177,27 +201,11 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
 
     Ok(RingValues {
         location_name: location.name,
-        front_camera: RingCamera {
-            id: front_camera.id,
-            description: front_camera.description,
-            snapshot: RingCameraSnapshot {
-                image: front_image_base64,
-                timestamp: front_snapshot_res.0,
-            },
-            health: front_camera.health.battery_percentage,
-        },
-        back_camera: RingCamera {
-            id: back_camera.id,
-            description: back_camera.description,
-            snapshot: RingCameraSnapshot {
-                image: back_image_base64,
-                timestamp: back_snapshot_res.0,
-            },
-            health: back_camera.health.battery_percentage,
-        },
+        cameras,
         ws_url,
         tplink_devices,
         roku_devices,
+        roku_app,
     })
 }
 
@@ -262,7 +270,8 @@ fn DashboardPage() -> impl IntoView {
                                                     view! {
                                                         <li class="roku-device">
                                                             <div class="device-info">
-                                                                {"Location: "} {&device.location}
+                                                                {"Location: "} {&device.location} <br/> {"App: "}
+                                                                {&data.roku_app.app[0].value}
                                                             </div>
                                                         </li>
                                                     }
@@ -282,50 +291,57 @@ fn DashboardPage() -> impl IntoView {
                     view! { <p>"Loading Ring cameras..."</p> }
                 }>
                     {move || {
-                        ring_values
-                            .get()
-                            .map(|data| {
-                                data.map(|data| {
-                                    view! {
-                                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
-                                            <div>
-                                                <h2>
-                                                    {format!(
-                                                        "{} - Battery: {}",
-                                                        data.front_camera.description,
-                                                        data.front_camera.health,
-                                                    )}
-                                                </h2>
-                                                <img
-                                                    style="width: 100%"
-                                                    src=format!(
-                                                        "data:image/png;base64,{}",
-                                                        data.front_camera.snapshot.image,
-                                                    )
-                                                />
-                                                <p>{"Time: "} {data.front_camera.snapshot.timestamp}</p>
+                        match ring_values.get() {
+                            Some(data) => {
+                                match data {
+                                    Ok(data) => {
+                                        view! {
+                                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
+                                                {data
+                                                    .cameras
+                                                    .iter()
+                                                    .map(|camera| {
+                                                        view! {
+                                                            <div>
+                                                                <h2>
+                                                                    {format!(
+                                                                        "{} - Battery: {}",
+                                                                        camera.description,
+                                                                        camera.health,
+                                                                    )}
+                                                                </h2>
+                                                                <img
+                                                                    style="width: 100%"
+                                                                    src=format!(
+                                                                        "data:image/png;base64,{}",
+                                                                        camera.snapshot.image,
+                                                                    )
+                                                                />
+                                                                <p>{"Time: "} {&camera.snapshot.timestamp}</p>
+                                                            </div>
+                                                        }
+                                                    })
+                                                    .collect::<Vec<_>>()}
                                             </div>
-                                            <div>
-                                                <h2>
-                                                    {format!(
-                                                        "{} - Battery: {}",
-                                                        data.back_camera.description,
-                                                        data.back_camera.health,
-                                                    )}
-                                                </h2>
-                                                <img
-                                                    style="width: 100%"
-                                                    src=format!(
-                                                        "data:image/png;base64,{}",
-                                                        data.back_camera.snapshot.image,
-                                                    )
-                                                />
-                                                <p>{"Time: "} {data.back_camera.snapshot.timestamp}</p>
-                                            </div>
-                                        </div>
+                                        }
                                     }
-                                })
-                            })
+                                    Err(_) => {
+                                        view! {
+                                            <div>
+                                                <p>"Error loading cameras."</p>
+                                            </div>
+                                        }
+                                    }
+                                }
+                            }
+                            None => {
+                                view! {
+                                    <div>
+                                        <p>"Loading data or none available."</p>
+                                    </div>
+                                }
+                            }
+                        }
                     }}
 
                 </Suspense>
@@ -443,7 +459,7 @@ fn WebSocketComponent(ring_values: RingValues) -> impl IntoView {
                         "method": "live_view",
                         "dialog_id": "333333",
                         "body": {
-                            "doorbot_id": ring_values.front_camera.id,
+                            "doorbot_id": "",
                             "stream_options": { "audio_enabled": true, "video_enabled": true },
                             "sdp": sdp,
                         }

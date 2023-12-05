@@ -147,7 +147,7 @@ pub async fn roku_keypress_handler(
     Path((device_id, key)): Path<(i64, String)>,
 ) -> Result<String, StatusCode> {
     let roku_ip = if device_id == 1 {
-        "10.0.0.162"
+        "192.168.0.220"
     } else {
         "10.0.0.217"
     };
@@ -162,8 +162,6 @@ pub async fn roku_keypress_handler(
 }
 
 pub async fn roku_handler() -> Html<String> {
-    // discover_devices().await;
-    // send().await;
     discover_roku().await;
 
     let color_value = "#333";
