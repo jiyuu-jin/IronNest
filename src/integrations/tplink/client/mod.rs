@@ -35,7 +35,7 @@ pub async fn discover_devices() -> Result<Vec<TPLinkDiscoveryData>, Box<dyn Erro
     socket.send_to(&discover_msg, broadcast_addr).await.unwrap();
 
     let mut buf = [0; 1024];
-    let timeout_duration = Duration::from_millis(500);
+    let timeout_duration = Duration::from_millis(700);
 
     let mut devices = Vec::with_capacity(20);
     loop {
