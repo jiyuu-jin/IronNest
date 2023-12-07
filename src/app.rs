@@ -16,15 +16,23 @@ use {
     leptos_use::{core::ConnectionReadyState, use_websocket, UseWebsocketReturn},
     serde::{Deserialize, Serialize},
     serde_json::json,
-    std::sync::Arc,
+    std::{collections::HashMap, sync::Arc},
     wasm_bindgen::{closure::Closure, JsValue},
     web_sys::RtcPeerConnection,
 };
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     use crate::integrations::{
-        roku::{get_media_player, discover_roku, get_active_app, get_active_channel},
+        roku::{discover_roku, get_active_app, send_roku_keypress},
         tplink::discover_devices,
+    };
+    use async_openai::{
+        types::{
+            ChatCompletionFunctionsArgs, ChatCompletionRequestUserMessageArgs,
+            CreateChatCompletionRequestArgs,
+            ChatCompletionRequestFunctionMessageArgs,
+        },
+        Client,
     };
 }}
 
@@ -34,47 +42,225 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
 
     view! {
-        <Script src="https://cdn.tailwindcss.com" />
+        <Script src="https://cdn.tailwindcss.com"/>
+        <Script>
+            "window.addEventListener('DOMContentLoaded', () => {
+                const toggleButtons = document.querySelectorAll('.toggle-sidebar');
+                const sidebar = document.querySelector('.sidebar');
+                
+                toggleButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        console.log('Toggle sidebar clicked');
+                        sidebar.classList.toggle('hidden');
+                    });
+                });
+            });"
+        </Script>
         <Meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
         <Meta name="apple-mobile-web-app-capable" content="yes"/>
         <Meta name="mobile-web-app-capable" content="yes"/>
+        <div>
+            <div class="relative z-50 lg:hidden sidebar" role="dialog" aria-modal="true">
+                <div class="fixed inset-0 bg-gray-900/80"></div>
 
-        <Router fallback=|| {
-            let mut outside_errors = Errors::default();
-            outside_errors.insert_with_default_key(AppError::NotFound);
-            view! { <ErrorTemplate outside_errors/> }.into_view()
-        }>
-            <main>
-                <Routes>
-                    <Route path="" view=HomePage/>
-                    <Route path="/login" view=LoginPage/>
-                    <Route path="/dashboard" view=DashboardPage/>
-                    <Route path="/websocket" view=WebSocketPage/>
-                </Routes>
-            </main>
-        </Router>
-    }
-}
+                <div class="fixed inset-0 flex">
+                    <div class="relative mr-16 flex w-full max-w-xs flex-1">
+                        <div class="absolute left-full top-0 flex w-16 justify-center pt-5">
+                            <button type="button" class="-m-2.5 p-2.5 toggle-sidebar">
+                                <span class="sr-only">Close sidebar</span>
+                                <svg
+                                    class="h-6 w-6 text-white"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke-width="1.5"
+                                    stroke="currentColor"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M6 18L18 6M6 6l12 12"
+                                    ></path>
+                                </svg>
+                            </button>
+                        </div>
 
-#[component]
-fn HomePage() -> impl IntoView {
-    view! {
-        <h1>"Iron Nest is Running"</h1>
-        <p>
-            <a href="/login">Login</a>
-        </p>
-        <p>
-            <A href="/dashboard">"Dashboard"</A>
-        </p>
+                        <div class="flex grow flex-col gap-y-5 overflow-y-auto bg-gray-900 px-6 pb-2 ring-1 ring-white/10">
+                            <div class="flex h-16 shrink-0 items-center">
+                                <img class="h-8 w-auto" src="/icon.png" alt="Iron Nest"/>
+                            </div>
+                            <nav class="flex flex-1 flex-col">
+                                <ul role="list" class="-mx-2 flex-1 space-y-1">
+                                    <li>
+                                        <a
+                                            href="/"
+                                            class="bg-gray-800 text-white group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold"
+                                        >
+                                            <svg
+                                                class="h-6 w-6 shrink-0"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke-width="1.5"
+                                                stroke="currentColor"
+                                                aria-hidden="true"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+                                                ></path>
+                                            </svg>
+                                            Dashboard
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a
+                                            href="#"
+                                            class="text-gray-400 hover:text-white hover:bg-gray-800 group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold"
+                                        >
+                                            <svg
+                                                class="h-6 w-6 shrink-0"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke-width="1.5"
+                                                stroke="currentColor"
+                                                aria-hidden="true"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
+                                                ></path>
+                                            </svg>
+                                            Accounts
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-        <p>
-            <a href="/api/roku" rel="external">
-                "Roku"
-            </a>
-        </p>
-        <p>
-            <A href="/websocket">"WebSocket"</A>
-        </p>
+            <div class="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:block lg:w-20 lg:overflow-y-auto lg:bg-gray-900 lg:pb-4">
+                <div class="flex h-16 shrink-0 items-center justify-center">
+                    <img
+                        class="h-8 w-auto"
+                        src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=500"
+                        alt="IronNest"
+                    />
+                </div>
+                <nav class="mt-8">
+                    <ul role="list" class="flex flex-col items-center space-y-1">
+                        <li>
+                            <a
+                                href="/"
+                                class="bg-gray-800 text-white group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold"
+                            >
+                                <svg
+                                    class="h-6 w-6 shrink-0"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke-width="1.5"
+                                    stroke="currentColor"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+                                    ></path>
+                                </svg>
+                                <span class="sr-only">Dashboard</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a
+                                href="/login"
+                                class="text-gray-400 hover:text-white hover:bg-gray-800 group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold"
+                            >
+                                <svg
+                                    class="h-6 w-6 shrink-0"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke-width="1.5"
+                                    stroke="currentColor"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
+                                    ></path>
+                                </svg>
+                                <span class="sr-only">Accounts</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a
+                                href="/"
+                                class="text-gray-400 hover:text-white hover:bg-gray-800 group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold"
+                            >
+                                <svg
+                                    class="h-6 w-6 shrink-0"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke-width="1.5"
+                                    stroke="currentColor"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"
+                                    ></path>
+                                </svg>
+                                <span class="sr-only">Integrations</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+
+            <div class="sticky top-0 z-40 flex items-center gap-x-6 bg-gray-900 px-4 py-4 shadow-sm sm:px-6 lg:hidden">
+                <button type="button" class="-m-2.5 p-2.5 text-gray-400 lg:hidden toggle-sidebar">
+                    <span class="sr-only">Open sidebar</span>
+                    <svg
+                        class="h-6 w-6"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        aria-hidden="true"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                        ></path>
+                    </svg>
+                </button>
+                <div class="flex-1 text-sm font-semibold leading-6 text-white">Dashboard</div>
+                <a href="#">
+                    <span class="sr-only">Your profile</span>
+                    <img class="h-8 w-8 rounded-full bg-gray-800" src="/icon.png" alt=""/>
+                </a>
+            </div>
+
+            <Router fallback=|| {
+                let mut outside_errors = Errors::default();
+                outside_errors.insert_with_default_key(AppError::NotFound);
+                view! { <ErrorTemplate outside_errors/> }.into_view()
+            }>
+                <main>
+                    <Routes>
+                        <Route path="/login" view=LoginPage/>
+                        <Route path="/" view=DashboardPage/>
+                        <Route path="/websocket" view=WebSocketPage/>
+                    </Routes>
+                </main>
+            </Router>
+        </div>
     }
 }
 
@@ -93,23 +279,178 @@ pub async fn handle_login(
     Ok(result)
 }
 
+#[server(HandleAssistantCommand)]
+pub async fn handle_assistant_command(text: String) -> Result<String, ServerFnError> {
+    println!("calling assistant with {:?}", text);
+    let client = Client::new();
+
+    let request = CreateChatCompletionRequestArgs::default()
+        .max_tokens(512u16)
+        .model("gpt-3.5-turbo-0613")
+        .messages([ChatCompletionRequestUserMessageArgs::default()
+            .content(text.to_string())
+            .build()?
+            .into()])
+        .functions([ChatCompletionFunctionsArgs::default()
+            .name("send_roku_keypress")
+            .description("Send a keypress to a roku device")
+            .parameters(json!({
+                "type": "object",
+                "properties": {
+                    "key": { "type": "string", "enum": [ "PowerOn", "PowerOff", "home", "rev", "fwd", "play",
+                    "select", "left", "right", "down", "up", "back", "replay", "info",
+                    "backspace", "enter", "volumeDown", "volumeUp",
+                    "volumeMute", "inputTuner", "inputHDMI1", "inputHDMI2",
+                    "inputHDMI3", "inputHDMI4", "inputAV1", "channelUp",
+                    "channelDown"] },
+                },
+                "required": ["key"],
+            }))
+            .build()?])
+        .function_call("auto")
+        .build()?;
+
+    let response_message = client
+        .chat()
+        .create(request)
+        .await
+        .unwrap()
+        .choices
+        .get(0)
+        .unwrap()
+        .message
+        .clone();
+
+    let value = if let Some(function_call) = response_message.function_call {
+        let mut available_functions = HashMap::new();
+        available_functions.insert("send_roku_keypress", send_roku_keypress);
+        let function_name = function_call.name;
+        let function_args: serde_json::Value = function_call.arguments.parse().unwrap();
+
+        let key_press = function_args["key"].as_str().unwrap();
+
+        let function = available_functions.get(function_name.as_str()).unwrap();
+        let function_response = function(key_press);
+
+        let message = vec![
+            ChatCompletionRequestUserMessageArgs::default()
+                .content(text.to_string())
+                .build()?
+                .into(),
+            ChatCompletionRequestFunctionMessageArgs::default()
+                .content(function_response.await.to_string())
+                .name(function_name)
+                .build()?
+                .into(),
+        ];
+
+        println!("{}", serde_json::to_string(&message).unwrap());
+
+        let request = CreateChatCompletionRequestArgs::default()
+            .max_tokens(512u16)
+            .model("gpt-3.5-turbo-0613")
+            .messages(message)
+            .build()?;
+
+        let response = client.chat().create(request).await.unwrap();
+        let value = format!(
+            "{:?}",
+            match response.choices[0].message.content {
+                None => "No output found!",
+                Some(ref x) => x,
+            }
+        );
+        value.to_string()
+    } else {
+        "".to_string()
+    };
+    Ok(value)
+}
+
 #[component]
 fn LoginPage() -> impl IntoView {
     let handle_login = create_server_action::<HandleLogin>();
     let value = handle_login.value();
 
     view! {
-        <h1>"Login"</h1>
-        <ActionForm action=handle_login>
-            <input type="text" name="username" placeholder="Username"/>
-            <input type="password" name="password" placeholder="Password"/>
-            <input type="password" name="tfa" placeholder="2FA code"/>
-            <input type="submit" value="Login"/>
-        </ActionForm>
-        <p>{value}</p>
-        <p>
-            <A href="/">"Home"</A>
-        </p>
+        <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
+            <div class="sm:mx-auto sm:w-full sm:max-w-sm">
+                <img
+                    class="mx-auto h-20 w-auto"
+                    src="https://cdn.shopify.com/s/files/1/2393/8647/files/31291831386201.jpg?v=1701174026"
+                    alt="Your Company"
+                />
+                <h2 class="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
+                    Sign in to your account
+                </h2>
+            </div>
+
+            <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
+                <ActionForm action=handle_login class="space-y-6">
+                    <div>
+                        <label for="email" class="block text-sm font-medium leading-6 text-white">
+                            Email address
+                        </label>
+                        <div class="mt-2">
+                            <input
+                                id="email"
+                                name="username"
+                                type="text"
+                                placeholder="Username"
+                                autocomplete="email"
+                                required
+                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <label
+                                for="password"
+                                class="block text-sm font-medium leading-6 text-white"
+                            >
+                                Password
+                            </label>
+                        </div>
+                        <div class="mt-2">
+                            <input
+                                type="password"
+                                name="password"
+                                placeholder="Password"
+                                autocomplete="current-password"
+                                required
+                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <label for="tfa" class="block text-sm font-medium leading-6 text-white">
+                                Password
+                            </label>
+                        </div>
+                        <div class="mt-2">
+                            <input
+                                type="password"
+                                name="tfa"
+                                placeholder="2FA code"
+                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <input
+                            type="submit"
+                            value="Login"
+                            class="flex w-full justify-center rounded-md bg-indigo-500 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+                        />
+                    </div>
+                </ActionForm>
+                <p>{value}</p>
+            </div>
+        </div>
     }
 }
 
@@ -209,179 +550,95 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
 fn DashboardPage() -> impl IntoView {
     let ring_values = create_resource(|| (), |_| get_ring_values());
 
+    let handle_assistant = create_server_action::<HandleAssistantCommand>();
+    let value = handle_assistant.value();
+
     view! {
-        <div>
-        <Script>
-            "window.addEventListener('DOMContentLoaded', () => {
-                const closeButton = document.querySelector('.close-sidebar');
-                const sidebar = document.querySelector('.sidebar');
-                
-                closeButton.addEventListener('click', () => {
-                    console.log(`click`);
-                    sidebar.classList.toggle('hidden');
-                });
-            });"
-        </Script>
-        <div class="relative z-50 lg:hidden sidebar" role="dialog" aria-modal="true">
-          <div class="fixed inset-0 bg-gray-900/80"></div>
-
-          <div class="fixed inset-0 flex">
-            <div class="relative mr-16 flex w-full max-w-xs flex-1">
-              <div class="absolute left-full top-0 flex w-16 justify-center pt-5">
-                <button type="button" class="-m-2.5 p-2.5 close-sidebar">
-                  <span class="sr-only">Close sidebar</span>
-                  <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <div class="flex grow flex-col gap-y-5 overflow-y-auto bg-gray-900 px-6 pb-2 ring-1 ring-white/10">
-                <div class="flex h-16 shrink-0 items-center">
-                  <img class="h-8 w-auto" src="/icon.png" alt="Iron Nest" />
-                </div>
-                <nav class="flex flex-1 flex-col">
-                  <ul role="list" class="-mx-2 flex-1 space-y-1">
-                    <li>
-                      <a href="#" class="bg-gray-800 text-white group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold">
-                        <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-                        </svg>
-                        Dashboard
-                      </a>
-                    </li>
-                    <li>
-                      <a href="#" class="text-gray-400 hover:text-white hover:bg-gray-800 group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold">
-                        <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-                        </svg>
-                        Accounts
-                      </a>
-                    </li>
-                  </ul>
-                </nav>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:block lg:w-20 lg:overflow-y-auto lg:bg-gray-900 lg:pb-4">
-          <div class="flex h-16 shrink-0 items-center justify-center">
-            <img class="h-8 w-auto" src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=500" alt="Your Company" />
-          </div>
-          <nav class="mt-8">
-            <ul role="list" class="flex flex-col items-center space-y-1">
-              <li>
-                <a href="#" class="bg-gray-800 text-white group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold">
-                  <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-                  </svg>
-                  <span class="sr-only">Dashboard</span>
-                </a>
-              </li>
-              <li>
-                <a href="#" class="text-gray-400 hover:text-white hover:bg-gray-800 group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold">
-                  <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-                  </svg>
-                  <span class="sr-only">Accounts</span>
-                </a>
-              </li>
-              <li>
-                <a href="#" class="text-gray-400 hover:text-white hover:bg-gray-800 group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold">
-                  <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
-                  </svg>
-                  <span class="sr-only">Integrations</span>
-                </a>
-              </li>
-            </ul>
-          </nav>
-        </div>
-
-        <div class="sticky top-0 z-40 flex items-center gap-x-6 bg-gray-900 px-4 py-4 shadow-sm sm:px-6 lg:hidden">
-          <button type="button" class="-m-2.5 p-2.5 text-gray-400 lg:hidden">
-            <span class="sr-only">Open sidebar</span>
-            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-            </svg>
-          </button>
-          <div class="flex-1 text-sm font-semibold leading-6 text-white">Dashboard</div>
-          <a href="#">
-            <span class="sr-only">Your profile</span>
-            <img class="h-8 w-8 rounded-full bg-gray-800" src="/icon.png" alt="" />
-          </a>
-        </div>
-
         <main class="lg:pl-20">
-          <div class="xl:pl-96">
-            <div class="px-4 py-10 sm:px-6 lg:px-8 lg:py-6">
-            <Suspense fallback=|| {
-                view! { <p>"Loading Ring cameras..."</p> }
-            }>
-                {move || {
-                    match ring_values.get() {
-                        Some(data) => {
-                            match data {
-                                Ok(data) => {
-                                    view! {
-                                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
-                                            {data
-                                                .cameras
-                                                .iter()
-                                                .map(|camera| {
-                                                    view! {
-                                                        <div>
-                                                            <h2>
-                                                                {format!(
-                                                                    "{} - Battery: {}",
-                                                                    camera.description,
-                                                                    camera.health,
-                                                                )}
-                                                            </h2>
-                                                            <img
-                                                                style="width: 100%"
-                                                                src=format!(
-                                                                    "data:image/png;base64,{}",
-                                                                    camera.snapshot.image,
-                                                                )
-                                                            />
-                                                            <p>{"Time: "} {&camera.snapshot.timestamp}</p>
-                                                        </div>
-                                                    }
-                                                })
-                                                .collect::<Vec<_>>()}
-                                        </div>
+            <div class="xl:pl-96">
+                <div class="px-4 py-10 sm:px-6 lg:px-8 lg:py-6">
+                    <Suspense fallback=|| {
+                        view! { <p>"Loading Ring cameras..."</p> }
+                    }>
+                        {move || {
+                            match ring_values.get() {
+                                Some(data) => {
+                                    match data {
+                                        Ok(data) => {
+                                            view! {
+                                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
+                                                    {data
+                                                        .cameras
+                                                        .iter()
+                                                        .map(|camera| {
+                                                            view! {
+                                                                <div>
+                                                                    <h2>
+                                                                        {format!(
+                                                                            "{} - Battery: {}",
+                                                                            camera.description,
+                                                                            camera.health,
+                                                                        )}
+
+                                                                    </h2>
+                                                                    <img
+                                                                        style="width: 100%"
+                                                                        src=format!(
+                                                                            "data:image/png;base64,{}",
+                                                                            camera.snapshot.image,
+                                                                        )
+                                                                    />
+
+                                                                    <p>{"Time: "} {&camera.snapshot.timestamp}</p>
+                                                                </div>
+                                                            }
+                                                        })
+                                                        .collect::<Vec<_>>()}
+                                                </div>
+                                            }
+                                        }
+                                        Err(_) => {
+                                            view! {
+                                                <div>
+                                                    <p>"Error loading cameras."</p>
+                                                </div>
+                                            }
+                                        }
                                     }
                                 }
-                                Err(_) => {
+                                None => {
                                     view! {
                                         <div>
-                                            <p>"Error loading cameras."</p>
+                                            <p>"Loading data or none available."</p>
                                         </div>
                                     }
                                 }
                             }
-                        }
-                        None => {
-                            view! {
-                                <div>
-                                    <p>"Loading data or none available."</p>
-                                </div>
-                            }
-                        }
-                    }
-                }}
-                <br />
-                <textarea class="resize rounded-md border-2 p-2 h-32 w-full border-blue-500" placeholder="Enter text and hit enter"></textarea>
-            </Suspense>
+                        }}
+                        <br/> <ActionForm action=handle_assistant class="space-y-6">
+                            <textarea
+                                name="text"
+                                type="text"
+                                class="resize rounded-md border-2 p-2 h-32 w-full border-blue-500"
+                                placeholder="Enter text and hit enter"
+                            ></textarea>
+                            <div class="flex-shrink-0">
+                                <button
+                                    type="submit"
+                                    class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                                >
+                                    Submit command
+                                </button>
+                            </div>
+                        </ActionForm> {value}
+                    </Suspense>
+                </div>
             </div>
-          </div>
         </main>
 
         <aside class="fixed inset-y-0 left-20 hidden w-96 overflow-y-auto border-r border-gray-200 px-4 py-6 sm:px-6 lg:px-8 xl:block space-y-0.5">
             <h2 class="text-lg">"TP-Link Devices"</h2>
-            <hr />
+            <hr/>
             <Suspense fallback=|| {
                 view! { <p>"Loading TP-Link devices..."</p> }
             }>
@@ -414,9 +671,9 @@ fn DashboardPage() -> impl IntoView {
                 }}
 
             </Suspense>
-            <br />
+            <br/>
             <h2 class="text-lg">"Roku Devices"</h2>
-            <hr />
+            <hr/>
             <Suspense fallback=|| {
                 view! { <p>"Loading Roku devices..."</p> }
             }>
@@ -446,9 +703,9 @@ fn DashboardPage() -> impl IntoView {
                             })
                         })
                 }}
+
             </Suspense>
         </aside>
-      </div>
     }
 }
 
