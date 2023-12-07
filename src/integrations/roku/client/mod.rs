@@ -1,3 +1,5 @@
+use serde_json::json;
+
 use {
     super::types::{ActionApp, RokuDiscoverRes},
     futures::prelude::*,
@@ -87,4 +89,17 @@ pub async fn get_active_channel() -> String {
         .text()
         .await
         .unwrap()
+}
+
+pub async fn send_roku_keypress(key: &str) -> serde_json::Value {
+    let roku_url = format!("http://192.168.0.220:8060/keypress/{key}");
+    let client = reqwest::Client::new();
+
+    client.post(&roku_url).send().await.unwrap();
+
+    let info = json!({
+        "success": true,
+    });
+
+    info
 }
