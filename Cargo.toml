@@ -54,6 +54,7 @@ web-sys = { version = "0.3.65", features = [
 ] }
 wasm-bindgen-futures = "0.4.38"
 serde-xml-rs = "0.6.0"
+async-openai = { version = "0.17.1", optional = true }
 
 [features]
 hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
@@ -67,6 +68,7 @@ ssr = [
     "leptos_meta/ssr",
     "leptos_router/ssr",
     "dep:ssdp-client",
+    "dep:async-openai",
 ]
 
 # Defines a size-optimized profile for the WASM bundle in release mode
