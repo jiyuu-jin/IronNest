@@ -16,7 +16,7 @@ use {
     leptos_use::{core::ConnectionReadyState, use_websocket, UseWebsocketReturn},
     serde::{Deserialize, Serialize},
     serde_json::json,
-    std::{collections::HashMap, sync::Arc},
+    std::sync::Arc,
     wasm_bindgen::{closure::Closure, JsValue},
     web_sys::RtcPeerConnection,
 };
@@ -24,16 +24,47 @@ use {
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     use crate::integrations::{
         roku::{discover_roku, get_active_app, send_roku_keypress},
-        tplink::discover_devices,
+        tplink::{discover_devices, tplink_turn_on, tplink_turn_off},
     };
-    use async_openai::{
-        types::{
-            ChatCompletionFunctionsArgs, ChatCompletionRequestUserMessageArgs,
-            CreateChatCompletionRequestArgs,
-            ChatCompletionRequestFunctionMessageArgs,
-        },
-        Client,
-    };
+    cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
+        use crate::integrations::{
+            roku::{discover_roku, get_active_app, send_roku_keypress},
+            tplink::discover_devices,
+        };
+        use async_openai::{
+            types::{
+                ChatCompletionFunctionsArgs, ChatCompletionRequestUserMessageArgs,
+                CreateChatCompletionRequestArgs,
+                ChatCompletionRequestFunctionMessageArgs,
+            },
+            Client,
+        };
+    }
+
+    pub enum AssistantFunction {
+        RokuKeyPress { key: String },
+        TPLinkTurnOn {},
+        TPLinkTurnOff {},
+    }
+
+    impl AssistantFunction {
+        async fn execute(self) -> Result<String, ServerFnError> {
+            match self {
+                AssistantFunction::RokuKeyPress { key } => {
+                    send_roku_keypress(&key).await;
+                    Ok(format!("Roku Key Pressed: {}", key))
+                }
+                AssistantFunction::TPLinkTurnOn {} => {
+                    tplink_turn_on().await;
+                    Ok(format!("TP-link switch turned on"))
+                }
+                AssistantFunction::TPLinkTurnOff {} => {
+                    tplink_turn_off().await;
+                    Ok(format!("TP-link switch turned off"))
+                }
+            }
+        }
+    }
 }}
 
 #[component]
