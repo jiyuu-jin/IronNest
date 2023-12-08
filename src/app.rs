@@ -1,3 +1,4 @@
+
 use {
     crate::{
         error_template::{AppError, ErrorTemplate},
@@ -26,20 +27,17 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
         roku::{discover_roku, get_active_app, send_roku_keypress},
         tplink::{discover_devices, tplink_turn_on, tplink_turn_off},
     };
-    cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
-        use crate::integrations::{
-            roku::{discover_roku, get_active_app, send_roku_keypress},
-            tplink::discover_devices,
-        };
-        use async_openai::{
-            types::{
-                ChatCompletionFunctionsArgs, ChatCompletionRequestUserMessageArgs,
-                CreateChatCompletionRequestArgs,
-                ChatCompletionRequestFunctionMessageArgs,
-            },
-            Client,
-        };
-    }
+    use async_openai::{
+        types::{
+            ChatCompletionFunctionsArgs,
+            ChatCompletionRequestUserMessageArgs,
+            CreateChatCompletionRequestArgs,
+            ChatCompletionToolType,
+            ChatCompletionToolArgs,
+            ChatCompletionRequestToolMessageArgs
+        },
+        Client,
+    };
 
     pub enum AssistantFunction {
         RokuKeyPress { key: String },
@@ -316,30 +314,71 @@ pub async fn handle_assistant_command(text: String) -> Result<String, ServerFnEr
     let client = Client::new();
 
     let request = CreateChatCompletionRequestArgs::default()
-        .max_tokens(512u16)
-        .model("gpt-3.5-turbo-0613")
-        .messages([ChatCompletionRequestUserMessageArgs::default()
+    .max_tokens(512u16)
+    .model("gpt-3.5-turbo-1106")
+    .messages([
+        ChatCompletionRequestUserMessageArgs::default()
             .content(text.to_string())
             .build()?
-            .into()])
-        .functions([ChatCompletionFunctionsArgs::default()
-            .name("send_roku_keypress")
-            .description("Send a keypress to a roku device")
-            .parameters(json!({
-                "type": "object",
-                "properties": {
-                    "key": { "type": "string", "enum": [ "PowerOn", "PowerOff", "home", "rev", "fwd", "play",
-                    "select", "left", "right", "down", "up", "back", "replay", "info",
-                    "backspace", "enter", "volumeDown", "volumeUp",
-                    "volumeMute", "inputTuner", "inputHDMI1", "inputHDMI2",
-                    "inputHDMI3", "inputHDMI4", "inputAV1", "channelUp",
-                    "channelDown"] },
-                },
-                "required": ["key"],
-            }))
-            .build()?])
-        .function_call("auto")
-        .build()?;
+            .into()
+    ])
+    .tools(vec![
+        ChatCompletionToolArgs::default()
+            .r#type(ChatCompletionToolType::Function)
+            .function(
+                ChatCompletionFunctionsArgs::default()
+                    .name("send_roku_keypress")
+                    .description("Send a keypress to a roku tv device")
+                    .parameters(json!({
+                        "type": "object",
+                        "properties": {
+                            "key": { 
+                                "type": "string", 
+                                "enum": [ 
+                                    "PowerOn", "PowerOff", "home", "rev", "fwd", "play", "select", "left", "right", "down", "up", "back", 
+                                    "replay", "info", "backspace", "enter", "volumeDown", "volumeUp", "volumeMute", "inputTuner", 
+                                    "inputHDMI1", "inputHDMI2", "inputHDMI3", "inputHDMI4", "inputAV1", "channelUp", "channelDown"
+                                ] 
+                            },
+                        },
+                        "required": ["key"],
+                    }))
+                    .build().unwrap()
+            )
+            .build().unwrap(),
+        ChatCompletionToolArgs::default()
+            .r#type(ChatCompletionToolType::Function)
+            .function(
+                ChatCompletionFunctionsArgs::default()
+                    .name("tplink_turn_on")
+                    .description("Turn on tplink switch")
+                    .parameters(json!({
+                        "type": "object",
+                        "properties": {},
+                        "required": [],
+                    }))
+                    .build().unwrap()
+            )
+            .build().unwrap(),
+        ChatCompletionToolArgs::default()
+            .r#type(ChatCompletionToolType::Function)
+            .function(
+                ChatCompletionFunctionsArgs::default()
+                    .name("tplink_turn_off")
+                    .description("Turn off tplink switch")
+                    .parameters(json!({
+                        "type": "object",
+                        "properties": {},
+                        "required": [],
+                    }))
+                    .build().unwrap()
+            )
+            .build().unwrap()
+    ])
+    .build().unwrap();
+
+    println!("{}", serde_json::to_string(&request).unwrap());
+
 
     let response_message = client
         .chat()
@@ -352,49 +391,62 @@ pub async fn handle_assistant_command(text: String) -> Result<String, ServerFnEr
         .message
         .clone();
 
-    let value = if let Some(function_call) = response_message.function_call {
-        let mut available_functions = HashMap::new();
-        available_functions.insert("send_roku_keypress", send_roku_keypress);
-        let function_name = function_call.name;
-        let function_args: serde_json::Value = function_call.arguments.parse().unwrap();
+    println!("response message {}", serde_json::to_string(&response_message).unwrap());
 
-        let key_press = function_args["key"].as_str().unwrap();
+    let value = if let Some(tool_calls) = response_message.tool_calls {
+        let mut handles = Vec::new();
+        for tool_call in tool_calls.iter() {
+            let function_name = tool_call.function.name.to_string();
+            let function_args: serde_json::Value = tool_call.function.arguments.parse().unwrap();
+            let assistant_function = match function_name.as_str() {
+                "send_roku_keypress" => {
+                    let key = function_args["key"].as_str().unwrap().to_string();
+                    AssistantFunction::RokuKeyPress { key }
+                }
+                "tplink_turn_on" => AssistantFunction::TPLinkTurnOn {},
+                "tplink_turn_off" => AssistantFunction::TPLinkTurnOff {},
+                &_ => return Err(ServerFnError::ServerError("Function not found".to_string())),
+            };
 
-        let function = available_functions.get(function_name.as_str()).unwrap();
-        let function_response = function(key_press);
+            let function_response = assistant_function.execute().await?;
+            handles.push((tool_call.id.to_string(), function_response));
+        }
 
-        let message = vec![
-            ChatCompletionRequestUserMessageArgs::default()
-                .content(text.to_string())
-                .build()?
-                .into(),
-            ChatCompletionRequestFunctionMessageArgs::default()
-                .content(function_response.await.to_string())
-                .name(function_name)
-                .build()?
-                .into(),
-        ];
+        let mut message = vec![ChatCompletionRequestUserMessageArgs::default()
+            .content(text)
+            .build()?
+            .into()];
+
+        for handle in handles {
+            message.push(
+                ChatCompletionRequestToolMessageArgs::default()
+                    .tool_call_id(handle.0)
+                    .content(handle.1)
+                    .build()?
+                    .into(),
+            )
+        }
 
         println!("{}", serde_json::to_string(&message).unwrap());
 
         let request = CreateChatCompletionRequestArgs::default()
             .max_tokens(512u16)
-            .model("gpt-3.5-turbo-0613")
+            .model("gpt-3.5-turbo-1106")
             .messages(message)
             .build()?;
 
         let response = client.chat().create(request).await.unwrap();
-        let value = format!(
+        format!(
             "{:?}",
             match response.choices[0].message.content {
                 None => "No output found!",
                 Some(ref x) => x,
             }
-        );
-        value.to_string()
+        )
     } else {
         "".to_string()
     };
+
     Ok(value)
 }
 
