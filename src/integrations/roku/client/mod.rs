@@ -1,8 +1,7 @@
-use serde_json::json;
-
 use {
     super::types::{ActionApp, RokuDiscoverRes},
     futures::prelude::*,
+    serde_json::json,
     serde_xml_rs::from_str,
     ssdp_client::SearchTarget,
     std::time::Duration,

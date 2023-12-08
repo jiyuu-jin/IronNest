@@ -71,11 +71,11 @@ pub async fn discover_devices() -> Result<Vec<TPLinkDiscoveryData>, Box<dyn Erro
     Ok(devices)
 }
 
-pub async fn send() -> io::Result<()> {
+pub async fn send(state: i64) -> io::Result<()> {
     let ip: IpAddr = "192.168.0.140".parse().unwrap();
     let mut stream = TcpStream::connect((ip, 9999)).await?;
 
-    let msg_bytes = serde_json::to_vec(&json!({"system":{"set_relay_state":{"state":1}}}))
+    let msg_bytes = serde_json::to_vec(&json!({"system":{"set_relay_state":{"state": state}}}))
         .expect("Should be able to serialize hardcoded data w/o error");
     let discover_msg = encrypt_with_header(&msg_bytes, KEY);
 
@@ -88,6 +88,14 @@ pub async fn send() -> io::Result<()> {
     let msg = serde_json::from_slice::<Value>(&decrypted_msg).unwrap();
     println!("msg: {msg:?}");
     Ok(())
+}
+
+pub async fn tplink_turn_on() {
+    send(1).await.unwrap();
+}
+
+pub async fn tplink_turn_off() {
+    send(0).await.unwrap();
 }
 
 fn encrypt_with_header(input: &[u8], first_key: u8) -> Vec<u8> {
