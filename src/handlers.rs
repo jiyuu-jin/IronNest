@@ -1,7 +1,7 @@
 use {
     crate::integrations::{
         ring::{camera_recordings_list, RingRestClient},
-        roku::discover_roku,
+        roku::roku_discover,
     },
     axum::{
         extract::{Path, State},
@@ -162,7 +162,7 @@ pub async fn roku_keypress_handler(
 }
 
 pub async fn roku_handler() -> Html<String> {
-    discover_roku().await;
+    roku_discover().await;
 
     let color_value = "#333";
     let html_text = format!(

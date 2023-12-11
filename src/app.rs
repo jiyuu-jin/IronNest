@@ -1,4 +1,3 @@
-
 use {
     crate::{
         error_template::{AppError, ErrorTemplate},
@@ -24,7 +23,7 @@ use {
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     use crate::integrations::{
-        roku::{discover_roku, get_active_app, send_roku_keypress},
+        roku::{roku_discover, roku_get_active_app, roku_send_keypress, roku_search, roku_launch_app},
         tplink::{discover_devices, tplink_turn_on, tplink_turn_off},
     };
     use async_openai::{
@@ -43,13 +42,15 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
         RokuKeyPress { key: String },
         TPLinkTurnOn {},
         TPLinkTurnOff {},
+        RokuSearch { query: String },
+        RokuLaunchApp { app_id: String },
     }
 
     impl AssistantFunction {
         async fn execute(self) -> Result<String, ServerFnError> {
             match self {
                 AssistantFunction::RokuKeyPress { key } => {
-                    send_roku_keypress(&key).await;
+                    roku_send_keypress(&key).await;
                     Ok(format!("Roku Key Pressed: {}", key))
                 }
                 AssistantFunction::TPLinkTurnOn {} => {
@@ -59,6 +60,14 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
                 AssistantFunction::TPLinkTurnOff {} => {
                     tplink_turn_off().await;
                     Ok(format!("TP-link switch turned off"))
+                }
+                AssistantFunction::RokuSearch { query } => {
+                    roku_search(&query).await;
+                    Ok(format!("Roku search sent"))
+                }
+                AssistantFunction::RokuLaunchApp { app_id } => {
+                    roku_launch_app(&app_id).await;
+                    Ok(format!("Roku app launched"))
                 }
             }
         }
@@ -327,7 +336,7 @@ pub async fn handle_assistant_command(text: String) -> Result<String, ServerFnEr
             .r#type(ChatCompletionToolType::Function)
             .function(
                 ChatCompletionFunctionsArgs::default()
-                    .name("send_roku_keypress")
+                    .name("roku_send_keypress")
                     .description("Send a keypress to a roku tv device")
                     .parameters(json!({
                         "type": "object",
@@ -335,10 +344,10 @@ pub async fn handle_assistant_command(text: String) -> Result<String, ServerFnEr
                             "key": { 
                                 "type": "string", 
                                 "enum": [ 
-                                    "PowerOn", "PowerOff", "home", "rev", "fwd", "play", "select", "left", "right", "down", "up", "back", 
+                                    "powerOn", "powerOff", "home", "rev", "fwd", "play", "select", "left", "right", "down", "up", "back", 
                                     "replay", "info", "backspace", "enter", "volumeDown", "volumeUp", "volumeMute", "inputTuner", 
                                     "inputHDMI1", "inputHDMI2", "inputHDMI3", "inputHDMI4", "inputAV1", "channelUp", "channelDown"
-                                ] 
+                                ]
                             },
                         },
                         "required": ["key"],
@@ -373,12 +382,49 @@ pub async fn handle_assistant_command(text: String) -> Result<String, ServerFnEr
                     }))
                     .build().unwrap()
             )
-            .build().unwrap()
+            .build().unwrap(),
+            ChatCompletionToolArgs::default()
+                .r#type(ChatCompletionToolType::Function)
+                .function(
+                    ChatCompletionFunctionsArgs::default()
+                        .name("roku_search")
+                        .description("Open the Roku search page with the given search params")
+                        .parameters(json!({
+                            "type": "object",
+                            "properties": {
+                                "query": {
+                                    "type": "string",
+                                    "description": "The value to search for on the roku",
+                                },
+                            },
+                            "required": [],
+                        }))
+                        .build().unwrap()
+                )
+                .build().unwrap(),
+                ChatCompletionToolArgs::default()
+                    .r#type(ChatCompletionToolType::Function)
+                    .function(
+                        ChatCompletionFunctionsArgs::default()
+                            .name("roku_launch_app")
+                            .description("")
+                            .parameters(json!({
+                                "type": "object",
+                                "properties": {
+                                    "app_id": {
+                                        "type": "string",
+                                        "description": "Roku app_id or name, e,g YouTube or 837",
+                                    },
+                                },
+                                "required": [],
+                            }))
+                            .build().unwrap()
+                    )
+                    .build().unwrap()
     ])
     .build().unwrap();
 
     println!("{}", serde_json::to_string(&request).unwrap());
-
 
     let response_message = client
         .chat()
@@ -391,7 +437,10 @@ pub async fn handle_assistant_command(text: String) -> Result<String, ServerFnEr
         .message
         .clone();
 
-    println!("response message {}", serde_json::to_string(&response_message).unwrap());
+    println!(
+        "response message {}",
+        serde_json::to_string(&response_message).unwrap()
+    );
 
     let value = if let Some(tool_calls) = response_message.tool_calls {
         let mut handles = Vec::new();
@@ -399,12 +448,20 @@ pub async fn handle_assistant_command(text: String) -> Result<String, ServerFnEr
             let function_name = tool_call.function.name.to_string();
             let function_args: serde_json::Value = tool_call.function.arguments.parse().unwrap();
             let assistant_function = match function_name.as_str() {
-                "send_roku_keypress" => {
+                "roku_send_keypress" => {
                     let key = function_args["key"].as_str().unwrap().to_string();
                     AssistantFunction::RokuKeyPress { key }
                 }
                 "tplink_turn_on" => AssistantFunction::TPLinkTurnOn {},
                 "tplink_turn_off" => AssistantFunction::TPLinkTurnOff {},
+                "roku_search" => {
+                    let query = function_args["query"].as_str().unwrap().to_string();
+                    AssistantFunction::RokuSearch { query }
+                }
+                "roku_launch_app" => {
+                    let app_id = function_args["app_id"].as_str().unwrap().to_string();
+                    AssistantFunction::RokuLaunchApp { app_id }
+                }
                 &_ => return Err(ServerFnError::ServerError("Function not found".to_string())),
             };
 
@@ -577,9 +634,9 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
         .collect::<Vec<_>>();
 
     let tplink_devices = discover_devices().await.unwrap();
-    let roku_devices = discover_roku().await;
+    let roku_devices = roku_discover().await;
 
-    let roku_app = get_active_app().await;
+    let roku_app = roku_get_active_app().await;
     println!("xml {}", roku_app.app[0].value);
 
     // let media_text = get_media_player().await;

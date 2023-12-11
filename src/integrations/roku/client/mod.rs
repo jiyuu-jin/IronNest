@@ -7,7 +7,7 @@ use {
     std::time::Duration,
 };
 
-pub async fn discover_roku() -> Vec<RokuDiscoverRes> {
+pub async fn roku_discover() -> Vec<RokuDiscoverRes> {
     let search_target = SearchTarget::RootDevice;
     let mut responses = ssdp_client::search(&search_target, Duration::from_secs(3), 2, None)
         .await
@@ -33,72 +33,54 @@ pub async fn discover_roku() -> Vec<RokuDiscoverRes> {
     devices
 }
 
-pub async fn get_roku_apps() -> String {
-    let roku_url = "http://10.0.0.162:8060/query/apps";
-    let client = reqwest::Client::new();
-
-    client
-        .post(roku_url)
-        .send()
-        .await
-        .unwrap()
-        .text()
-        .await
-        .unwrap()
+pub async fn roku_get_apps() -> String {
+    get("query/apps").await
 }
 
-pub async fn get_active_app() -> ActionApp {
-    let roku_url = "http://192.168.0.220:8060/query/active-app";
-    let client = reqwest::Client::new();
+pub async fn roku_get_media_player() -> String {
+    get("query/media-player").await
+}
 
-    let app_text = client
-        .get(roku_url)
-        .send()
-        .await
-        .unwrap()
-        .text()
-        .await
-        .unwrap();
+pub async fn roku_get_active_app() -> ActionApp {
+    let app_text = get("query/active-app").await;
     from_str(&app_text).unwrap()
 }
 
-pub async fn get_media_player() -> String {
-    let roku_url = "http://192.168.0.220:8060/query/media-player";
-    let client = reqwest::Client::new();
-
-    client
-        .get(roku_url)
-        .send()
-        .await
-        .unwrap()
-        .text()
-        .await
-        .unwrap()
+pub async fn roku_send_keypress(key: &str) -> serde_json::Value {
+    post(format!("keypress/{key}").as_str()).await
 }
 
-pub async fn get_active_channel() -> String {
-    let roku_url = "http://192.168.0.220:8060/query/tv-active-channel";
-    let client = reqwest::Client::new();
-
-    client
-        .get(roku_url)
-        .send()
-        .await
-        .unwrap()
-        .text()
-        .await
-        .unwrap()
+pub async fn roku_search(query: &str) -> serde_json::Value {
+    post(format!("search/browse?{query}={query}&matchAny=true").as_str()).await
 }
 
-pub async fn send_roku_keypress(key: &str) -> serde_json::Value {
-    let roku_url = format!("http://192.168.0.220:8060/keypress/{key}");
+pub async fn roku_launch_app(app_id: &str) -> serde_json::Value {
+    post(format!("launch/{app_id}").as_str()).await
+}
+
+pub async fn post(query: &str) -> serde_json::Value {
+    let roku_url = format!("http://192.168.0.220:8060/{query}'");
     let client = reqwest::Client::new();
+    match client.post(&roku_url).send().await {
+        Ok(data) => println!("input: {:?}", data),
+        Err(err) => println!("Error! {err}"),
+    };
 
-    client.post(&roku_url).send().await.unwrap();
-
-    let info = json!({
+    json!({
         "success": true,
-    });
+    })
+}
 
-    info
+pub async fn get(query: &str) -> String {
+    let roku_url = format!("http://192.168.0.220:8060/{query}");
+    let client = reqwest::Client::new();
+
+    client
+        .get(roku_url)
+        .send()
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap()
 }
