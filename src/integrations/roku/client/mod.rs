@@ -61,7 +61,7 @@ pub async fn roku_launch_app(app_id: &str) -> serde_json::Value {
 }
 
 pub async fn post(query: &str) -> serde_json::Value {
-    let roku_url = format!("http://192.168.0.220:8060/{query}");
+    let roku_url = format!("http://10.0.0.162:8060/{query}");
     let client = reqwest::Client::new();
 
     match client.post(&roku_url).send().await {
@@ -75,7 +75,7 @@ pub async fn post(query: &str) -> serde_json::Value {
 }
 
 pub async fn get(query: &str) -> String {
-    let roku_url = format!("http://192.168.0.220:8060/{query}");
+    let roku_url = format!("http://10.0.0.162:8060/{query}");
     let client = reqwest::Client::new();
 
     client
