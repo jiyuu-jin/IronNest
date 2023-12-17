@@ -25,7 +25,7 @@ services:
     labels:
       - "traefik.http.routers.iron-nest.rule=Host(`${TRAEFIK_HOST_URL}`)"
       - "traefik.http.routers.iron-nest.entrypoints=websecure"
-      - "traefik.http.routers.iron-nest.service=iron-nest"
       - "traefik.http.services.iron-nest.loadbalancer.server.port=8080"
+      - "traefik.http.routers.iron-nest.service=iron-nest"
       - "traefik.http.routers.iron-nest.tls.certresolver=letsencrypt"
       - "traefik.http.routers.iron-nest.tls=true"
