@@ -1,7 +1,25 @@
 version: '3.8'
 
 services:
+  traefik:
+    image: "traefik:v2.9"
+    restart: always
+    command:
+      - "--providers.docker=true"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "443:443"
+    volumes:
+      - "./letsencrypt:/letsencrypt"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
   iron_nest:
     build: .
-    ports:
-      - "8080:8080"
+    labels:
+      - "traefik.http.routers.iron-nest.rule=Host(`${TRAEFIK_HOST_URL}`)"
+      - "traefik.http.routers.iron-nest.entrypoints=websecure"
+      - "traefik.http.routers.iron-nest.service=iron-nest"
+      - "traefik.http.routers.iron-nest.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.iron-nest.tls=true"
