@@ -17,6 +17,9 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
   iron_nest:
     build: .
+    ports:
+      - "8060:8060"
+      - "9999:9999"
     labels:
       - "traefik.http.routers.iron-nest.rule=Host(`${TRAEFIK_HOST_URL}`)"
       - "traefik.http.routers.iron-nest.entrypoints=websecure"

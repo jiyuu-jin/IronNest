@@ -1,9 +1,10 @@
-use std::sync::Arc;
-
-use reqwest::{
-    cookie::Jar,
-    header::{HeaderMap, HeaderValue},
-    Client,
+use {
+    reqwest::{
+        cookie::Jar,
+        header::{HeaderMap, HeaderValue},
+        Client,
+    },
+    std::sync::Arc,
 };
 
 const LANGUAGE: &str = "en-us";
