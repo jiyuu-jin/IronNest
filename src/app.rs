@@ -23,6 +23,7 @@ use {
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     use crate::integrations::{
+        alexa::login,
         openai::open_api_command,
         roku::{roku_discover, roku_get_active_app},
         tplink::{discover_devices},
@@ -445,6 +446,10 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
     //     .await;
 
     let ws_url = "".to_string();
+
+    let username = "";
+    let password = "";
+    login(username, password).await.unwrap();
 
     Ok(RingValues {
         location_name: location.name,

@@ -5,6 +5,8 @@ use {
     serde_xml_rs::from_str,
     ssdp_client::SearchTarget,
     std::time::Duration,
+    tokio_tungstenite::{connect_async, tungstenite::protocol::Message},
+    url::Url,
 };
 
 pub async fn roku_discover() -> Vec<RokuDiscoverRes> {
@@ -84,4 +86,26 @@ pub async fn get(query: &str) -> String {
         .text()
         .await
         .unwrap()
+}
+
+pub async fn roku_ws() {
+    // Parse the URL for the WebSocket connection
+    let url = Url::parse("ws://192.168.0.220:8060").unwrap();
+
+    // Establish a connection
+    let (ws_stream, _) = connect_async(url).await.expect("Failed to connect");
+
+    // Split the stream into a sender and receiver
+    let (mut write, mut read) = ws_stream.split();
+
+    write
+        .send(Message::Text("Hello WebSocket".into()))
+        .await
+        .unwrap();
+
+    read.for_each(|message| async {
+        let message = message.unwrap();
+        println!("Received a message: {:?}", message);
+    })
+    .await;
 }
