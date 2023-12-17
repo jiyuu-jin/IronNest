@@ -25,7 +25,10 @@ RUN cargo leptos build --release -vv
 # Use the debian bookworm slim image as the base image
 FROM debian:bookworm-slim
 
-RUN apt update && apt install -y openssl
+# Install openssl and update CA certificates
+RUN apt update && apt install -y openssl ca-certificates && \
+    apt clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy the build artifact from the builder stage
 COPY --from=builder /ironnest/target/release/iron_nest /app/
