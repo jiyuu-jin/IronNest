@@ -17,7 +17,9 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
   iron_nest:
     build: .
-    network_mode: "host"
+    ports:
+      - "8060:8060"
+      - "9999:9999"
     volumes:
       - "./data/app/:/app/data/"
     labels:
