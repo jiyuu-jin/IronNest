@@ -1,4 +1,7 @@
-use serde::{Deserialize, Serialize};
+use {
+    serde::{Deserialize, Serialize},
+    std::net::IpAddr,
+};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct TPLinkDiscoveryRes {
@@ -42,4 +45,5 @@ pub struct TPLinkDiscoveryData {
     pub status: String,
     pub sw_ver: String,
     pub updating: u64,
+    pub ip: Option<IpAddr>,
 }

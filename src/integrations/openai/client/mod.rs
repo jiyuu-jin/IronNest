@@ -1,3 +1,5 @@
+use crate::integrations::tplink::discover_devices;
+
 use {leptos::ServerFnError, serde_json::json};
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
@@ -18,8 +20,8 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
 pub enum AssistantFunction {
     RokuKeyPress { key: String },
-    TPLinkTurnOn {},
-    TPLinkTurnOff {},
+    TPLinkTurnOn { ip: String },
+    TPLinkTurnOff { ip: String },
     RokuSearch { query: String },
     RokuLaunchApp { app_id: String },
 }
@@ -31,12 +33,12 @@ impl AssistantFunction {
                 roku_send_keypress(&key).await;
                 Ok(format!("Roku Key Pressed: {}", key))
             }
-            AssistantFunction::TPLinkTurnOn {} => {
-                tplink_turn_on().await;
+            AssistantFunction::TPLinkTurnOn { ip } => {
+                tplink_turn_on(&ip).await;
                 Ok(format!("TP-link switch turned on"))
             }
-            AssistantFunction::TPLinkTurnOff {} => {
-                tplink_turn_off().await;
+            AssistantFunction::TPLinkTurnOff { ip } => {
+                tplink_turn_off(&ip).await;
                 Ok(format!("TP-link switch turned off"))
             }
             AssistantFunction::RokuSearch { query } => {
@@ -56,12 +58,28 @@ pub async fn open_api_command(text: String) -> Result<String, ServerFnError> {
     println!("calling assistant with {:?}", text);
     let client = Client::new();
 
+    let tp_link_devices = discover_devices().await;
+    let mut tp_link_ips: Vec<String> = Vec::new();
+
+    for device in tp_link_devices.iter() {
+        for data in device {
+            if let Some(ip) = data.ip {
+                tp_link_ips.push(ip.to_string());
+            }
+        }
+    }
+
     let request = CreateChatCompletionRequestArgs::default()
     .max_tokens(512u16)
     .model("gpt-3.5-turbo-1106")
     .messages([
         ChatCompletionRequestUserMessageArgs::default()
-            .content(text.to_string())
+            .content("You are a home assistant named Iron Nest.
+                Here are the following device names
+                    lava lamp - 10.0.0.197
+                    christmas tree - 10.0.0.196
+                    plasma ball - 10.0.0.198
+                Respond to the following input ".to_owned() + &text.to_string())
             .build()?
             .into()
     ])
@@ -97,8 +115,13 @@ pub async fn open_api_command(text: String) -> Result<String, ServerFnError> {
                     .description("Turn on tplink switch")
                     .parameters(json!({
                         "type": "object",
-                        "properties": {},
-                        "required": [],
+                        "properties": {
+                            "ip": { 
+                                "type": "string", 
+                                "enum": tp_link_ips,
+                            },
+                        },
+                        "required": ["ip"],
                     }))
                     .build().unwrap()
             )
@@ -111,8 +134,13 @@ pub async fn open_api_command(text: String) -> Result<String, ServerFnError> {
                     .description("Turn off tplink switch")
                     .parameters(json!({
                         "type": "object",
-                        "properties": {},
-                        "required": [],
+                        "properties": {
+                            "ip": { 
+                                "type": "string", 
+                                "enum": tp_link_ips,
+                            },
+                        },
+                        "required": ["ip"],
                     }))
                     .build().unwrap()
             )
@@ -183,17 +211,23 @@ pub async fn open_api_command(text: String) -> Result<String, ServerFnError> {
             let function_args: serde_json::Value = tool_call.function.arguments.parse().unwrap();
             let assistant_function = match function_name.as_str() {
                 "roku_send_keypress" => {
-                    let key = function_args["key"].as_str().unwrap().to_string();
+                    let key = function_args["key"].to_string();
                     AssistantFunction::RokuKeyPress { key }
                 }
-                "tplink_turn_on" => AssistantFunction::TPLinkTurnOn {},
-                "tplink_turn_off" => AssistantFunction::TPLinkTurnOff {},
+                "tplink_turn_on" => {
+                    let ip = function_args["ip"].to_string();
+                    AssistantFunction::TPLinkTurnOn { ip }
+                }
+                "tplink_turn_off" => {
+                    let ip = function_args["ip"].to_string();
+                    AssistantFunction::TPLinkTurnOff { ip }
+                }
                 "roku_search" => {
-                    let query = function_args["query"].as_str().unwrap().to_string();
+                    let query = function_args["query"].to_string();
                     AssistantFunction::RokuSearch { query }
                 }
                 "roku_launch_app" => {
-                    let app_id = function_args["app_id"].as_str().unwrap().to_string();
+                    let app_id = function_args["app_id"].to_string();
                     AssistantFunction::RokuLaunchApp { app_id }
                 }
                 &_ => return Err(ServerFnError::ServerError("Function not found".to_string())),

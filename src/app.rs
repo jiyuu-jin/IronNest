@@ -372,7 +372,7 @@ pub struct RingValues {
     pub cameras: Vec<RingCamera>,
     pub tplink_devices: Vec<TPLinkDiscoveryData>,
     pub roku_devices: Vec<RokuDiscoverRes>,
-    pub roku_app: ActionApp,
+    // pub roku_app: ActionApp,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -407,8 +407,8 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
     let tplink_devices = discover_devices().await.unwrap();
     let roku_devices = roku_discover().await;
 
-    let roku_app = roku_get_active_app().await;
-    println!("xml {}", roku_app.app[0].value);
+    // let roku_app = roku_get_active_app().await;
+    // println!("xml {}", roku_app.app[0].value);
 
     // let media_text = get_media_player().await;
     // println!("media xml: {}", media_text);
@@ -447,9 +447,9 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
 
     let ws_url = "".to_string();
 
-    let username = "";
-    let password = "";
-    login(username, password).await.unwrap();
+    // let username = "";
+    // let password = "";
+    // login(username, password).await.unwrap();
 
     Ok(RingValues {
         location_name: location.name,
@@ -457,7 +457,6 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
         ws_url,
         tplink_devices,
         roku_devices,
-        roku_app,
     })
 }
 
@@ -563,7 +562,7 @@ fn DashboardPage() -> impl IntoView {
                         .map(|data| {
                             data.map(|data| {
                                 view! {
-                                    <ul class="tplink-device-list">
+                                    <ul class="tplink-device-list space-y-2">
                                         {data
                                             .tplink_devices
                                             .iter()
@@ -598,7 +597,7 @@ fn DashboardPage() -> impl IntoView {
                         .map(|data| {
                             data.map(|data| {
                                 view! {
-                                    <ul class="roku-device-list">
+                                    <ul class="roku-device-list space-y-2">
                                         {data
                                             .roku_devices
                                             .iter()
@@ -606,8 +605,9 @@ fn DashboardPage() -> impl IntoView {
                                                 view! {
                                                     <li class="roku-device">
                                                         <div class="device-info">
-                                                            {"Location: "} {&device.location} <br/> {"App: "}
-                                                            {&data.roku_app.app[0].value}
+                                                            {"Location: "} {&device.location}
+                                                            <br/>
+                                                            {"App: "}
                                                         </div>
                                                     </li>
                                                 }

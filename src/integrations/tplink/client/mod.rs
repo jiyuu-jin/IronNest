@@ -44,10 +44,12 @@ pub async fn discover_devices() -> Result<Vec<TPLinkDiscoveryData>, Box<dyn Erro
                 let incoming_data = decrypt(&buf, KEY);
                 let incoming_msg_result =
                     serde_json::from_slice::<TPLinkDiscoveryRes>(&incoming_data[..num_bytes]);
+
                 match incoming_msg_result {
                     Ok(msg) => match msg.system.get_sysinfo {
-                        GetSysInfo::TPLinkDiscoveryData(get_sysinfo) => {
+                        GetSysInfo::TPLinkDiscoveryData(mut get_sysinfo) => {
                             info!("Received from {}: {}", src_addr, get_sysinfo.alias);
+                            get_sysinfo.ip = Some(src_addr.ip());
                             devices.push(get_sysinfo);
                         }
                         GetSysInfo::Empty(()) => trace!("ignoring GetSysInfo::Empty(())"),
@@ -71,9 +73,17 @@ pub async fn discover_devices() -> Result<Vec<TPLinkDiscoveryData>, Box<dyn Erro
     Ok(devices)
 }
 
-pub async fn send(state: i64) -> io::Result<()> {
-    let ip: IpAddr = "192.168.0.140".parse().unwrap();
-    let mut stream = TcpStream::connect((ip, 9999)).await?;
+pub async fn send(ip: &str, state: i64) -> io::Result<()> {
+    let trimmed_ip = ip.trim_matches('"');
+    let _ip: IpAddr = match trimmed_ip.parse() {
+        Ok(addr) => addr,
+        Err(e) => {
+            eprintln!("Failed to parse IP address '{}': {}", trimmed_ip, e);
+            return Err(io::Error::new(io::ErrorKind::InvalidInput, e));
+        }
+    };
+
+    let mut stream = TcpStream::connect((_ip, 9999)).await?;
 
     let msg_bytes = serde_json::to_vec(&json!({"system":{"set_relay_state":{"state": state}}}))
         .expect("Should be able to serialize hardcoded data w/o error");
@@ -90,12 +100,12 @@ pub async fn send(state: i64) -> io::Result<()> {
     Ok(())
 }
 
-pub async fn tplink_turn_on() {
-    send(1).await.unwrap();
+pub async fn tplink_turn_on(ip: &str) {
+    send(ip, 1).await.unwrap();
 }
 
-pub async fn tplink_turn_off() {
-    send(0).await.unwrap();
+pub async fn tplink_turn_off(ip: &str) {
+    send(ip, 0).await.unwrap();
 }
 
 fn encrypt_with_header(input: &[u8], first_key: u8) -> Vec<u8> {
