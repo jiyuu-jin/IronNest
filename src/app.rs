@@ -389,8 +389,10 @@ pub struct RingCamera {
 
 #[server(GetRingValues)]
 pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
-    use crate::integrations::ring::client::RingRestClient;
-    use sqlx::{Pool, Row, Sqlite};
+    use {
+        crate::integrations::ring::client::RingRestClient,
+        sqlx::{Pool, Row, Sqlite},
+    };
 
     let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
     let pool = use_context::<Pool<Sqlite>>().unwrap();
