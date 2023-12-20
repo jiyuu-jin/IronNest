@@ -1,6 +1,6 @@
-use crate::integrations::tplink::discover_devices;
+use crate::integrations::iron_nest::types::Device;
 
-use {leptos::ServerFnError, serde_json::json};
+use {crate::integrations::tplink::discover_devices, leptos::ServerFnError, serde_json::json};
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
   use {
@@ -60,26 +60,36 @@ pub async fn open_api_command(text: String) -> Result<String, ServerFnError> {
 
     let tp_link_devices = discover_devices().await;
     let mut tp_link_ips: Vec<String> = Vec::new();
+    let mut devices: Vec<Device> = Vec::new();
 
     for device in tp_link_devices.iter() {
         for data in device {
-            if let Some(ip) = data.ip {
+            if let Some(ip) = data.ip {T
                 tp_link_ips.push(ip.to_string());
+                devices.push(Device {
+                    id: 0,
+                    name: data.alias.to_string(),
+                    ip: ip.to_string(),
+                    state: data.relay_state.to_string(),
+                })
             }
         }
     }
+
+    let initial_system_prompt = format!(
+        "You are a home assistant named Iron Nest.
+        Here are the following device names:
+        {:?}
+        Respond to the following input: {text}",
+        devices
+    );
 
     let request = CreateChatCompletionRequestArgs::default()
     .max_tokens(512u16)
     .model("gpt-3.5-turbo-1106")
     .messages([
         ChatCompletionRequestUserMessageArgs::default()
-            .content("You are a home assistant named Iron Nest.
-                Here are the following device names
-                    lava lamp - 10.0.0.197
-                    christmas tree - 10.0.0.196
-                    plasma ball - 10.0.0.198
-                Respond to the following input ".to_owned() + &text.to_string())
+            .content(initial_system_prompt)
             .build()?
             .into()
     ])
@@ -211,7 +221,10 @@ pub async fn open_api_command(text: String) -> Result<String, ServerFnError> {
             let function_args: serde_json::Value = tool_call.function.arguments.parse().unwrap();
             let assistant_function = match function_name.as_str() {
                 "roku_send_keypress" => {
-                    let key = function_args["key"].to_string();
+                    let key = function_args["key"]
+                        .to_string()
+                        .trim_matches('"')
+                        .to_string();
                     AssistantFunction::RokuKeyPress { key }
                 }
                 "tplink_turn_on" => {
@@ -241,6 +254,11 @@ pub async fn open_api_command(text: String) -> Result<String, ServerFnError> {
             .content(text)
             .build()?
             .into()];
+
+        // let tool_calls: Vec<ChatCompletionMessageToolCall> = handles
+        //     .iter()
+        //     .map(|(tool_call, _response_content)| tool_call.clone())
+        //     .collect();
 
         for handle in handles {
             message.push(
