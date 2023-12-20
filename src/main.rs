@@ -24,7 +24,7 @@ cfg_if::cfg_if! {
             leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes},
             reqwest::header::HeaderMap,
             std::{ sync::Arc},
-            sqlx::sqlite::SqlitePool;
+            sqlx::sqlite::SqlitePool,
         };
 
         #[derive(FromRef, Debug, Clone)]

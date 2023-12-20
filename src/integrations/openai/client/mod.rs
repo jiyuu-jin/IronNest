@@ -1,6 +1,8 @@
-use crate::integrations::iron_nest::types::Device;
-
-use {crate::integrations::tplink::discover_devices, leptos::ServerFnError, serde_json::json};
+use {
+    crate::integrations::{iron_nest::types::Device, tplink::discover_devices},
+    leptos::ServerFnError,
+    serde_json::json,
+};
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
   use {
@@ -64,7 +66,7 @@ pub async fn open_api_command(text: String) -> Result<String, ServerFnError> {
 
     for device in tp_link_devices.iter() {
         for data in device {
-            if let Some(ip) = data.ip {T
+            if let Some(ip) = data.ip {
                 tp_link_ips.push(ip.to_string());
                 devices.push(Device {
                     id: 0,
