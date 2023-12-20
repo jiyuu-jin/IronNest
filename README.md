@@ -6,7 +6,7 @@ IronNest is a home automation system designed to integrate with various smart de
 
 - Integration with Ring doorbells, cameras, etc.
 - Fetch authentication tokens from Ring.
-- Get details of Ring, Alexa, oOku & TP-Link devices.
+- Get details of Ring, Alexa, Roku & TP-Link devices.
 - Obtain socket tickets from Ring.
 - Autmotic local network discovery of devices.
 - Chain multiple commands and control devices by `type`, `name`, or by `ip`.
