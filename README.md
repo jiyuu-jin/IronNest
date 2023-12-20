@@ -1,6 +1,6 @@
 # IronNest
 
-IronNest is a home automation system designed to integrate with various smart devices. The current implementation integrates with Ring, Alex, TP-Link, and Roku devices, all controllable by GPT-3.5-turbo-1106.
+IronNest is a home automation system designed to integrate with various smart devices. The current implementation integrates with Ring, Alexa, TP-Link, and Roku devices, all controllable by GPT-3.5-turbo-1106.
 
 ## Features
 
