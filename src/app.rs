@@ -605,9 +605,7 @@ fn DashboardPage() -> impl IntoView {
                                                 view! {
                                                     <li class="roku-device">
                                                         <div class="device-info">
-                                                            {"Location: "} {&device.location}
-                                                            <br/>
-                                                            {"App: "}
+                                                            {"Location: "} {&device.location} <br/> {"App: "}
                                                         </div>
                                                     </li>
                                                 }

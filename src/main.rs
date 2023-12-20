@@ -24,6 +24,7 @@ cfg_if::cfg_if! {
             leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes},
             reqwest::header::HeaderMap,
             std::{ sync::Arc},
+            sqlx::sqlite::SqlitePool;
         };
 
         #[derive(FromRef, Debug, Clone)]
@@ -70,6 +71,19 @@ cfg_if::cfg_if! {
         #[tokio::main]
         async fn main() {
             dotenv().ok();
+            let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+
+            // Create the `devices` table
+            sqlx::query(
+                "CREATE TABLE devices (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    ip TEXT NOT NULL,
+                    state TEXT NOT NULL
+                )",
+            )
+            .execute(&pool)
+            .await.unwrap();
 
             simple_logger::init_with_level(log::Level::Debug).expect("couldn't initialize logging");
 
