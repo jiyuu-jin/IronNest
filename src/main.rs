@@ -31,6 +31,7 @@ cfg_if::cfg_if! {
             reqwest::header::HeaderMap,
             std::{ sync::Arc},
             sqlx::sqlite::SqlitePool,
+            tokio::sync::mpsc,
         };
 
         #[derive(FromRef, Debug, Clone)]
@@ -135,41 +136,64 @@ cfg_if::cfg_if! {
                 }
             });
 
+            // Create a channel for database operations
+            let (db_sender, mut db_receiver) = mpsc::channel(32);
+
+            // Dedicated task for database operations
+            let db_task = tokio::task::spawn(async move {
+                while let Some(devices) = db_receiver.recv().await {
+                    if let Err(e) = insert_devices_into_db(&pool, &devices).await {
+                        error!("Error inserting devices into database: {:?}", e);
+                    }
+                }
+            });
+
+            // Assuming db_sender is defined elsewhere
+            let db_sender_clone = db_sender.clone();
+
+            let discover_tp_link = tokio::task::spawn(async move {
+                let interval_duration = chrono::Duration::minutes(6).to_std().unwrap();
+                let mut interval = tokio::time::interval(interval_duration);
+
+                loop {
+                    interval.tick().await;
+
+                    let tp_link_devices = match discover_devices().await {
+                        Ok(devices) => devices,
+                        Err(e) => {
+                            error!("Error discovering TP-Link devices: {:?}", e);
+                            continue;
+                        }
+                    };
+
+                    let mut devices: Vec<Device> = Vec::new();
+                    for device in tp_link_devices.iter() {
+                            if let Some(ip) = &device.ip {
+                                devices.push(Device {
+                                    id: 0,
+                                    name: device.alias.clone(),
+                                    ip: ip.clone().to_string(),
+                                    state: device.relay_state.to_string(),
+                                });
+                            }
+                    }
+
+                    if let Err(e) = db_sender_clone.send(devices).await {
+                        error!("Failed to send devices to db task: {:?}", e);
+                    }
+                }
+            });
+
             let http_server = {
                 log::info!("listening on http://{}", &addr);
                 axum::Server::bind(&addr).serve(app.into_make_service())
             };
 
-            thread::spawn(move || {
-                println!("Running discovery thread");
-                let rt = tokio::runtime::Runtime::new().unwrap();
-                rt.block_on(async {
-                    loop {
-                        let tp_link_devices = discover_devices().await;
-                        let mut devices: Vec<Device> = Vec::new();
-
-                        for device in tp_link_devices.iter() {
-                            for data in device {
-                                if let Some(ip) = &data.ip {
-                                    devices.push(Device {
-                                        id: 0,
-                                        name: data.alias.clone(),
-                                        ip: ip.clone().to_string(),
-                                        state: data.relay_state.to_string(),
-                                    });
-                                }
-                            }
-                        }
-
-                        insert_devices_into_db(&pool, &devices).await.unwrap();
-                        tokio::time::sleep(Duration::from_secs(300)).await;
-                    }
-                });
-            });
-
             tokio::select! {
                 e = http_server => error!("HTTP server exiting with error {e:?}"),
                 e = ring_auth_refresh_job => error!("Ring auth refresh job exiting with error {e:?}"),
+                e = db_task => error!("Database task exiting with error: {:?}", e),
+                e = discover_tp_link => error!("Discover TP-Link task exiting with error: {:?}", e),
             }
         }
     }
