@@ -2,9 +2,7 @@ use {
     crate::{
         error_template::{AppError, ErrorTemplate},
         integrations::{
-            ring::types::Doorbot,
-            roku::types::{ActionApp, RokuDiscoverRes},
-            tplink::types::TPLinkDiscoveryData,
+            ring::types::Doorbot, roku::types::RokuDiscoverRes, tplink::types::TPLinkDiscoveryData,
         },
     },
     base64::{engine::general_purpose::STANDARD as base64, Engine},
@@ -23,10 +21,8 @@ use {
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     use crate::integrations::{
-        alexa::login,
         openai::open_api_command,
-        roku::{roku_discover, roku_get_active_app},
-        tplink::{discover_devices},
+        roku::{roku_discover},
     };
 }}
 
@@ -275,7 +271,9 @@ pub async fn handle_login(
 
 #[server(HandleAssistantCommand)]
 pub async fn handle_assistant_command(text: String) -> Result<String, ServerFnError> {
-    open_api_command(text).await
+    use sqlx::{Pool, Sqlite};
+    let pool = use_context::<Pool<Sqlite>>().unwrap();
+    open_api_command(text, pool).await
 }
 
 #[component]
@@ -392,7 +390,20 @@ pub struct RingCamera {
 #[server(GetRingValues)]
 pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
     use crate::integrations::ring::client::RingRestClient;
+    use sqlx::{Pool, Row, Sqlite};
+
     let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
+    let pool = use_context::<Pool<Sqlite>>().unwrap();
+
+    let rows = sqlx::query("SELECT id, name, ip, state FROM devices")
+        .fetch_all(&pool)
+        .await?;
+
+    for row in rows {
+        let value: String = row.get("ip");
+        println!("test {value}");
+    }
+
     let mut locations = ring_rest_client.get_locations().await;
     let devices = ring_rest_client.get_devices().await;
     let mut cameras = Vec::with_capacity(20);
@@ -404,7 +415,7 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
         .chain(devices.authorized_doorbots.into_iter())
         .collect::<Vec<_>>();
 
-    let tplink_devices = discover_devices().await.unwrap();
+    let tplink_devices = Vec::new();
     let roku_devices = roku_discover().await;
 
     // let roku_app = roku_get_active_app().await;
@@ -450,6 +461,12 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
     // let username = "";
     // let password = "";
     // login(username, password).await.unwrap();
+
+    // let sqlx = use_context::<Pool<Sqlite>>().unwrap();
+    // let rows = sqlx::query("SELECT id, name, ip, state FROM devices")
+    //     .fetch_all(&sqlx)
+    //     .await
+    //     .unwrap();
 
     Ok(RingValues {
         location_name: location.name,

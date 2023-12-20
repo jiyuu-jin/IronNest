@@ -1,8 +1,4 @@
-use {
-    crate::integrations::{iron_nest::types::Device, tplink::discover_devices},
-    leptos::ServerFnError,
-    serde_json::json,
-};
+use {crate::integrations::iron_nest::types::Device, leptos::ServerFnError, serde_json::json};
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
   use {
@@ -18,6 +14,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
         },
         Client,
     },
+    sqlx::{Pool, Sqlite, Row},
 };
 
 pub enum AssistantFunction {
@@ -56,26 +53,26 @@ impl AssistantFunction {
 }
 }}
 
-pub async fn open_api_command(text: String) -> Result<String, ServerFnError> {
+pub async fn open_api_command(text: String, pool: Pool<Sqlite>) -> Result<String, ServerFnError> {
     println!("calling assistant with {:?}", text);
     let client = Client::new();
 
-    let tp_link_devices = discover_devices().await;
     let mut tp_link_ips: Vec<String> = Vec::new();
     let mut devices: Vec<Device> = Vec::new();
 
-    for device in tp_link_devices.iter() {
-        for data in device {
-            if let Some(ip) = data.ip {
-                tp_link_ips.push(ip.to_string());
-                devices.push(Device {
-                    id: 0,
-                    name: data.alias.to_string(),
-                    ip: ip.to_string(),
-                    state: data.relay_state.to_string(),
-                })
-            }
-        }
+    let rows = sqlx::query("SELECT id, name, ip, state FROM devices")
+        .fetch_all(&pool)
+        .await?;
+
+    for row in rows {
+        devices.push(Device {
+            id: row.get("id"),
+            name: row.get("name"),
+            ip: row.get("ip"),
+            state: row.get("state"),
+        });
+
+        tp_link_ips.push(row.get("ip"));
     }
 
     let initial_system_prompt = format!(

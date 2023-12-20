@@ -11,7 +11,7 @@ use {
 
 pub async fn roku_discover() -> Vec<RokuDiscoverRes> {
     let search_target = SearchTarget::RootDevice;
-    let mut responses = ssdp_client::search(&search_target, Duration::from_secs(3), 2, None)
+    let mut responses = ssdp_client::search(&search_target, Duration::from_secs(1), 2, None)
         .await
         .unwrap();
     let mut devices = Vec::with_capacity(20);

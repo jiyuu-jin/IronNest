@@ -1,6 +1,11 @@
 use {
-    iron_nest::{handlers::roku_keypress_handler, integrations::ring::RingRestClient},
+    iron_nest::{
+        handlers::roku_keypress_handler,
+        integrations::{iron_nest::types::Device, ring::RingRestClient, tplink::discover_devices},
+    },
     log::{error, info},
+    sqlx::{Pool, Sqlite},
+    std::{thread, time::Duration},
 };
 
 cfg_if::cfg_if! {
@@ -12,6 +17,7 @@ cfg_if::cfg_if! {
                 response::{IntoResponse, Response},
                 routing::{get,},
                 Router,
+                Extension,
             },
             dotenv::dotenv,
             http::Request,
@@ -31,6 +37,7 @@ cfg_if::cfg_if! {
         pub struct AppState {
             pub leptos_options: LeptosOptions,
             pub ring_rest_client: Arc<RingRestClient>,
+            pub pool: Pool<Sqlite>,
         }
 
         async fn server_fn_handler(
@@ -48,6 +55,7 @@ cfg_if::cfg_if! {
                 raw_query,
                 move || {
                     provide_context(app_state.ring_rest_client.clone());
+                    provide_context(app_state.pool.clone());
                 },
                 request,
             )
@@ -73,7 +81,6 @@ cfg_if::cfg_if! {
             dotenv().ok();
             let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
 
-            // Create the `devices` table
             sqlx::query(
                 "CREATE TABLE devices (
                     id INTEGER PRIMARY KEY,
@@ -97,6 +104,7 @@ cfg_if::cfg_if! {
             let app_state = AppState {
                 leptos_options,
                 ring_rest_client: ring_rest_client.clone(),
+                pool: pool.clone()
             };
 
             let iron_nest_router = Router::new()
@@ -113,7 +121,8 @@ cfg_if::cfg_if! {
                 .leptos_routes_with_handler(routes, get(leptos_routes_handler))
                 .nest("/api", iron_nest_router)
                 .fallback(file_and_error_handler)
-                .with_state(app_state);
+                .with_state(app_state)
+                .layer(Extension(pool.clone()));
 
             let ring_auth_refresh_job = tokio::task::spawn(async move {
                 let six_hours = chrono::Duration::hours(6).to_std().unwrap();
@@ -131,10 +140,53 @@ cfg_if::cfg_if! {
                 axum::Server::bind(&addr).serve(app.into_make_service())
             };
 
+            thread::spawn(move || {
+                println!("Running discovery thread");
+                let rt = tokio::runtime::Runtime::new().unwrap();
+                rt.block_on(async {
+                    loop {
+                        let tp_link_devices = discover_devices().await;
+                        let mut devices: Vec<Device> = Vec::new();
+
+                        for device in tp_link_devices.iter() {
+                            for data in device {
+                                if let Some(ip) = &data.ip {
+                                    devices.push(Device {
+                                        id: 0,
+                                        name: data.alias.clone(),
+                                        ip: ip.clone().to_string(),
+                                        state: data.relay_state.to_string(),
+                                    });
+                                }
+                            }
+                        }
+
+                        insert_devices_into_db(&pool, &devices).await.unwrap();
+                        tokio::time::sleep(Duration::from_secs(300)).await;
+                    }
+                });
+            });
+
             tokio::select! {
                 e = http_server => error!("HTTP server exiting with error {e:?}"),
                 e = ring_auth_refresh_job => error!("Ring auth refresh job exiting with error {e:?}"),
             }
         }
     }
+}
+
+async fn insert_devices_into_db(
+    pool: &SqlitePool,
+    devices: &Vec<Device>,
+) -> Result<(), sqlx::Error> {
+    for device in devices {
+        sqlx::query("INSERT INTO devices (name, ip, state) VALUES (?, ?, ?)")
+            .bind(&device.name)
+            .bind(&device.ip)
+            .bind(&device.state)
+            .execute(pool)
+            .await?;
+    }
+
+    Ok(())
 }
