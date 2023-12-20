@@ -10,6 +10,8 @@ IronNest is a home automation system designed to integrate with various smart de
 - Obtain socket tickets from Ring.
 - Built using Axum framework for a lightweight and efficient server.
 
+![image](https://github.com/jiyuu-jin/IronNest/assets/19313806/c4426aed-3793-4e03-9973-87893cf2d8d3)
+
 ## Project Structure
 
 The project has the following main files:
