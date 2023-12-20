@@ -1,14 +1,15 @@
 # IronNest
 
-IronNest is a home automation system designed to integrate with various smart devices. The current implementation integrates with the Ring API to control ring devices.
+IronNest is a home automation system designed to integrate with various smart devices. The current implementation integrates with the Ring, Alex, TP-Link, and Roku, all controllable by GPT-3.5-turbo-1106.
 
 ## Features
 
 - Integration with Ring doorbells, cameras, etc.
 - Fetch authentication tokens from Ring.
-- Get details of Ring devices.
+- Get details of Ring, Alexa, oOku & TP-Link devices.
 - Obtain socket tickets from Ring.
-- Built using Axum framework for a lightweight and efficient server.
+- Autmotic local network discovery of devices.
+- Chain multiple commands and control devices by `type`, `name`, or by `ip`.
 
 ![image](https://github.com/jiyuu-jin/IronNest/assets/19313806/c4426aed-3793-4e03-9973-87893cf2d8d3)
 
@@ -16,17 +17,9 @@ IronNest is a home automation system designed to integrate with various smart de
 
 The project has the following main files:
 - `main.rs`: The main entry point, sets up the server, routes, and middleware.
-- `utils.rs`: Contains utility functions and the `RingRestClient` for making requests to the Ring API.
-- `handlers`: Contains handlers for various routes.
-- `types`: Contains data structures and types used across the project.
-
-## Environment Setup
-
-Before running the project, ensure you have the following environment variables set:
-- `RING_REFRESH_TOKEN`: Your Ring refresh token.
-- `RING_AUTH_TOKEN`: Your Ring authentication token.
-
-These can be set in a `.env` file at the root of your project.
+- `intergations.rs`: Contains the utility functions & types for an intergartion such as the `RingRestClient` for making requests to the Ring API.
+  - `client`: Contains and integrations client & authentication logic.
+  - `types`: Contains an intergartions data structures and types.
 
 ## Dependencies
 
@@ -43,9 +36,9 @@ just dev
 
 ## Endpoints
 
-- `GET /`: Health check endpoint. Returns "Iron Nest is running!".
-- `GET /api/ring`: Fetches details related to the Ring doorbell.
-- `GET /api/ring/auth`: Authenticates with the Ring API.
+- `GET /`: Main dashboard displaying any number of intergartions".
+- `GET /api/ring/keypress`: Submit ring keypresses.
+- `GET /login`: Authenticates with the Ring API.
 
 ## Contributions
 
@@ -57,4 +50,4 @@ Contributions to IronNest are welcome! Please fork the repository, make your cha
 
 ## Acknowledgements
 
-Special thanks to the Rust community and the creators of the Axum framework for providing valuable resources.
+Special thanks to the Rust community and the creators of the Axum & Leptos frameworks for providing such valuable resources.
