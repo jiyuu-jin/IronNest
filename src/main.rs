@@ -89,7 +89,8 @@ cfg_if::cfg_if! {
                     id INTEGER PRIMARY KEY,
                     name TEXT NOT NULL,
                     ip TEXT NOT NULL UNIQUE,
-                    state TEXT NOT NULL
+                    battery_percentage TEXT,
+                    power_state TEXT NOT NULL
                 )",
             )
             .execute(&*shared_pool.clone())
@@ -207,7 +208,7 @@ async fn insert_devices_into_db(
     devices: &Vec<Device>,
 ) -> Result<(), sqlx::Error> {
     for device in devices {
-        sqlx::query("INSERT INTO devices (name, ip, state) VALUES (?, ?, ?)")
+        sqlx::query("INSERT INTO devices (name, ip, power_state) VALUES (?, ?, ?)")
             .bind(&device.name)
             .bind(&device.ip)
             .bind(&device.state)

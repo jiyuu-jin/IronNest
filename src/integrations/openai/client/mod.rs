@@ -53,15 +53,15 @@ impl AssistantFunction {
 }
 }}
 
-pub async fn open_api_command(text: String, pool: Pool<Sqlite>) -> Result<String, ServerFnError> {
+pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<String, ServerFnError> {
     println!("calling assistant with {:?}", text);
     let client = Client::new();
 
     let mut tp_link_ips: Vec<String> = Vec::new();
     let mut devices: Vec<Device> = Vec::new();
 
-    let rows = sqlx::query("SELECT id, name, ip, state FROM devices")
-        .fetch_all(&pool)
+    let rows = sqlx::query("SELECT id, name, ip, power_state FROM devices")
+        .fetch_all(pool)
         .await?;
 
     for row in rows {
@@ -69,7 +69,7 @@ pub async fn open_api_command(text: String, pool: Pool<Sqlite>) -> Result<String
             id: row.get("id"),
             name: row.get("name"),
             ip: row.get("ip"),
-            state: row.get("state"),
+            state: row.get("power_state"),
         });
 
         tp_link_ips.push(row.get("ip"));
