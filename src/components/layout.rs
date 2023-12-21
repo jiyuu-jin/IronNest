@@ -1,9 +1,10 @@
-use crate::components::navbar::Navbar;
-
 use {
     crate::{
-        components::pages::{
-            dashboard_page::DashboardPage, login_page::LoginPage, websocket_page::WebSocketPage,
+        components::{
+            navbar::Navbar,
+            pages::{
+                dashboard_page::DashboardPage, login_page::LoginPage, websocket_page::WebSocketPage,
+            },
         },
         error_template::{AppError, ErrorTemplate},
     },
@@ -118,7 +119,7 @@ pub fn App() -> impl IntoView {
                 </div>
             </div>
 
-            <Navbar />
+            <Navbar/>
 
             <div class="sticky top-0 z-40 flex items-center gap-x-6 bg-gray-900 px-4 py-4 shadow-sm sm:px-6 lg:hidden">
                 <button type="button" class="-m-2.5 p-2.5 text-gray-400 lg:hidden toggle-sidebar">

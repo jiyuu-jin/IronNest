@@ -19,21 +19,22 @@ pub fn CommandBox() -> impl IntoView {
     let value = handle_assistant.value();
 
     view! {
-      <ActionForm action=handle_assistant class="space-y-6">
-        <textarea
-            name="text"
-            type="text"
-            class="resize rounded-md border-2 p-2 h-32 w-full border-blue-500"
-            placeholder="Enter text and hit enter"
-        ></textarea>
-        <div class="flex-shrink-0">
-            <button
-                type="submit"
-                class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-            >
-                Submit command
-            </button>
-        </div>
-      </ActionForm> {value}
+        <ActionForm action=handle_assistant class="space-y-6">
+            <textarea
+                name="text"
+                type="text"
+                class="resize rounded-md border-2 p-2 h-32 w-full border-blue-500"
+                placeholder="Enter text and hit enter"
+            ></textarea>
+            <div class="flex-shrink-0">
+                <button
+                    type="submit"
+                    class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                >
+                    Submit command
+                </button>
+            </div>
+        </ActionForm>
+        {value}
     }
 }

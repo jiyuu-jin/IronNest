@@ -1,9 +1,8 @@
-use crate::components::{
-    command_box::CommandBox, device_list::DeviceList, ring_cameras::RingCameras,
-};
-
 use {
-    crate::integrations::{iron_nest::types::Device, ring::types::RingValues},
+    crate::{
+        components::{command_box::CommandBox, device_list::DeviceList, ring_cameras::RingCameras},
+        integrations::{iron_nest::types::Device, ring::types::RingValues},
+    },
     leptos::*,
     std::sync::Arc,
 };
@@ -75,14 +74,14 @@ pub fn DashboardPage() -> impl IntoView {
         <main class="lg:pl-20">
             <div class="xl:pl-96">
                 <div class="px-4 py-10 sm:px-6 lg:px-8 lg:py-6">
-                    <RingCameras ring_values=ring_values />
-                    <CommandBox />
+                    <RingCameras ring_values=ring_values/>
+                    <CommandBox/>
                 </div>
             </div>
         </main>
 
         <aside class="fixed inset-y-0 left-20 hidden w-96 overflow-y-auto border-r border-gray-200 px-4 py-6 sm:px-6 lg:px-8 xl:block space-y-0.5">
-            <DeviceList ring_values=ring_values />
+            <DeviceList ring_values=ring_values/>
         </aside>
     }
 }
