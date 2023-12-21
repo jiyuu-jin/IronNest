@@ -1,5 +1,4 @@
 use cfg_if::cfg_if;
-use components::layout::App;
 pub mod app;
 pub mod components;
 pub mod error_template;
@@ -13,6 +12,7 @@ cfg_if! { if #[cfg(feature = "ssr")] {
 cfg_if! { if #[cfg(feature = "hydrate")] {
     use leptos::*;
     use wasm_bindgen::prelude::wasm_bindgen;
+    use components::layout::App;
 
     #[wasm_bindgen]
     pub fn hydrate() {

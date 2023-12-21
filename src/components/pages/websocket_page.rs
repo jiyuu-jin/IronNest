@@ -1,7 +1,7 @@
-use crate::components::pages::dashboard_page::get_ring_values;
-
 use {
-    crate::integrations::ring::types::RingValues,
+    crate::{
+        components::pages::dashboard_page::get_ring_values, integrations::ring::types::RingValues,
+    },
     js_sys::Reflect,
     leptos::*,
     leptos_reactive::create_effect,

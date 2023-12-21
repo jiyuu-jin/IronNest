@@ -1,7 +1,12 @@
-use crate::integrations::ring::types::RingValues;
-use crate::{app::HandleAssistantCommand, integrations::iron_nest::types::Device};
-use std::sync::Arc;
-use {leptos::*, leptos_router::*};
+use {
+    crate::{
+        app::HandleAssistantCommand,
+        integrations::{iron_nest::types::Device, ring::types::RingValues},
+    },
+    leptos::*,
+    leptos_router::*,
+    std::sync::Arc,
+};
 
 #[server(GetRingValues)]
 pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {

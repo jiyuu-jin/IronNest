@@ -1,5 +1,6 @@
 use {
     iron_nest::{
+        components::layout::App,
         handlers::roku_keypress_handler,
         integrations::{
             iron_nest::{client::insert_devices_into_db, types::Device},
@@ -26,7 +27,6 @@ cfg_if::cfg_if! {
             dotenv::dotenv,
             http::Request,
             iron_nest::{
-                app::App,
                 fileserv::file_and_error_handler,
             },
             leptos::{get_configuration, logging::log, provide_context, LeptosOptions},
