@@ -2,7 +2,7 @@ use {
     crate::{
         error_template::{AppError, ErrorTemplate},
         integrations::{
-            ring::types::Doorbot, roku::types::RokuDiscoverRes, tplink::types::TPLinkDiscoveryData,
+            iron_nest::types::Device, ring::types::Doorbot, roku::types::RokuDiscoverRes,
         },
     },
     base64::{engine::general_purpose::STANDARD as base64, Engine},
@@ -368,9 +368,7 @@ pub struct RingValues {
     pub ws_url: String,
     pub location_name: String,
     pub cameras: Vec<RingCamera>,
-    pub tplink_devices: Vec<TPLinkDiscoveryData>,
-    pub roku_devices: Vec<RokuDiscoverRes>,
-    // pub roku_app: ActionApp,
+    pub devices: Vec<Device>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -395,38 +393,32 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
     };
 
     let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
-    let pool = use_context::<Pool<Sqlite>>().unwrap();
+    let pool = use_context::<Arc<Pool<Sqlite>>>().unwrap();
 
     let rows = sqlx::query("SELECT id, name, ip, state FROM devices")
-        .fetch_all(&pool)
+        .fetch_all(&*pool)
         .await?;
 
+    let mut devices = Vec::new();
     for row in rows {
-        let value: String = row.get("ip");
-        println!("test {value}");
+        devices.push(Device {
+            id: row.get("id"),
+            name: row.get("name"),
+            ip: row.get("ip"),
+            state: row.get("state"),
+        });
     }
 
     let mut locations = ring_rest_client.get_locations().await;
-    let devices = ring_rest_client.get_devices().await;
+    let ring_devices = ring_rest_client.get_devices().await;
     let mut cameras = Vec::with_capacity(20);
     let location = locations.user_locations.remove(0);
 
-    let doorbots = devices
+    let doorbots = ring_devices
         .doorbots
         .into_iter()
-        .chain(devices.authorized_doorbots.into_iter())
+        .chain(ring_devices.authorized_doorbots.into_iter())
         .collect::<Vec<_>>();
-
-    let tplink_devices = Vec::new();
-    let roku_devices = roku_discover().await;
-
-    // let roku_app = roku_get_active_app().await;
-    // println!("xml {}", roku_app.app[0].value);
-
-    // let media_text = get_media_player().await;
-    // println!("media xml: {}", media_text);
-
-    // get_active_channel().await;
 
     pub async fn get_ring_camera(
         ring_rest_client: &Arc<RingRestClient>,
@@ -460,22 +452,11 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
 
     let ws_url = "".to_string();
 
-    // let username = "";
-    // let password = "";
-    // login(username, password).await.unwrap();
-
-    // let sqlx = use_context::<Pool<Sqlite>>().unwrap();
-    // let rows = sqlx::query("SELECT id, name, ip, state FROM devices")
-    //     .fetch_all(&sqlx)
-    //     .await
-    //     .unwrap();
-
     Ok(RingValues {
         location_name: location.name,
         cameras,
         ws_url,
-        tplink_devices,
-        roku_devices,
+        devices,
     })
 }
 
@@ -570,10 +551,10 @@ fn DashboardPage() -> impl IntoView {
         </main>
 
         <aside class="fixed inset-y-0 left-20 hidden w-96 overflow-y-auto border-r border-gray-200 px-4 py-6 sm:px-6 lg:px-8 xl:block space-y-0.5">
-            <h2 class="text-lg">"TP-Link Devices"</h2>
+            <h2 class="text-lg">"Devices"</h2>
             <hr/>
             <Suspense fallback=|| {
-                view! { <p>"Loading TP-Link devices..."</p> }
+                view! { <p>"Loading devices..."</p> }
             }>
                 {move || {
                     ring_values
@@ -583,48 +564,15 @@ fn DashboardPage() -> impl IntoView {
                                 view! {
                                     <ul class="tplink-device-list space-y-2">
                                         {data
-                                            .tplink_devices
+                                            .devices
                                             .iter()
                                             .map(|device| {
                                                 view! {
                                                     <li class="tplink-device">
-                                                        <div class="device-alias">{&device.alias}</div>
-                                                        <div class="device-name">{&device.dev_name}</div>
+                                                        <div class="device-alias">{&device.name}</div>
+                                                        <div class="device-name">{&device.ip}</div>
                                                         <div class="device-state">
-                                                            {format!("State: {}", &device.relay_state)}
-                                                        </div>
-                                                    </li>
-                                                }
-                                            })
-                                            .collect::<Vec<_>>()}
-                                    </ul>
-                                }
-                            })
-                        })
-                }}
-
-            </Suspense>
-            <br/>
-            <h2 class="text-lg">"Roku Devices"</h2>
-            <hr/>
-            <Suspense fallback=|| {
-                view! { <p>"Loading Roku devices..."</p> }
-            }>
-                {move || {
-                    ring_values
-                        .get()
-                        .map(|data| {
-                            data.map(|data| {
-                                view! {
-                                    <ul class="roku-device-list space-y-2">
-                                        {data
-                                            .roku_devices
-                                            .iter()
-                                            .map(|device| {
-                                                view! {
-                                                    <li class="roku-device">
-                                                        <div class="device-info">
-                                                            {"Location: "} {&device.location} <br/> {"App: "}
+                                                            {format!("State: {}", &device.state)}
                                                         </div>
                                                     </li>
                                                 }

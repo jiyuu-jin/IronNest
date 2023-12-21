@@ -1,7 +1,10 @@
 use {
     iron_nest::{
         handlers::roku_keypress_handler,
-        integrations::{iron_nest::types::Device, ring::RingRestClient, tplink::discover_devices},
+        integrations::{
+            iron_nest::types::Device, ring::RingRestClient, roku::roku_discover,
+            tplink::discover_devices,
+        },
     },
     log::{error, info},
     sqlx::{Pool, Sqlite},
@@ -17,7 +20,6 @@ cfg_if::cfg_if! {
                 response::{IntoResponse, Response},
                 routing::{get,},
                 Router,
-                Extension,
             },
             dotenv::dotenv,
             http::Request,
@@ -37,7 +39,7 @@ cfg_if::cfg_if! {
         pub struct AppState {
             pub leptos_options: LeptosOptions,
             pub ring_rest_client: Arc<RingRestClient>,
-            pub pool: Pool<Sqlite>,
+            pub pool: Arc<Pool<Sqlite>>,
         }
 
         async fn server_fn_handler(
@@ -80,16 +82,17 @@ cfg_if::cfg_if! {
         async fn main() {
             dotenv().ok();
             let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+            let shared_pool = Arc::new(pool);
 
             sqlx::query(
                 "CREATE TABLE devices (
                     id INTEGER PRIMARY KEY,
                     name TEXT NOT NULL,
-                    ip TEXT NOT NULL,
+                    ip TEXT NOT NULL UNIQUE,
                     state TEXT NOT NULL
                 )",
             )
-            .execute(&pool)
+            .execute(&*shared_pool.clone())
             .await.unwrap();
 
             simple_logger::init_with_level(log::Level::Debug).expect("couldn't initialize logging");
@@ -104,7 +107,7 @@ cfg_if::cfg_if! {
             let app_state = AppState {
                 leptos_options,
                 ring_rest_client: ring_rest_client.clone(),
-                pool: pool.clone()
+                pool: shared_pool.clone(),
             };
 
             let iron_nest_router = Router::new()
@@ -121,8 +124,7 @@ cfg_if::cfg_if! {
                 .leptos_routes_with_handler(routes, get(leptos_routes_handler))
                 .nest("/api", iron_nest_router)
                 .fallback(file_and_error_handler)
-                .with_state(app_state)
-                .layer(Extension(pool.clone()));
+                .with_state(app_state);
 
             let ring_auth_refresh_job = tokio::task::spawn(async move {
                 let six_hours = chrono::Duration::hours(6).to_std().unwrap();
@@ -140,8 +142,9 @@ cfg_if::cfg_if! {
                 axum::Server::bind(&addr).serve(app.into_make_service())
             };
 
+            let shared_pool_clone = shared_pool.clone();
             thread::spawn(move || {
-                println!("Running discovery thread");
+                println!("Running discovery thread for tp-link devices");
                 let rt = tokio::runtime::Runtime::new().unwrap();
                 rt.block_on(async {
                     loop {
@@ -161,7 +164,31 @@ cfg_if::cfg_if! {
                             }
                         }
 
-                        insert_devices_into_db(&pool, &devices).await.unwrap();
+                        insert_devices_into_db(shared_pool_clone.clone(), &devices).await.unwrap();
+                        tokio::time::sleep(Duration::from_secs(300)).await;
+                    }
+                });
+            });
+
+            let shared_pool_clone = shared_pool.clone();
+            thread::spawn(move || {
+                println!("Running discovery thread for roku devices");
+                let rt = tokio::runtime::Runtime::new().unwrap();
+                rt.block_on(async {
+                    loop {
+                        let roku_devices = roku_discover().await;
+                        let mut devices: Vec<Device> = Vec::new();
+
+                        for device in roku_devices.iter() {
+                            devices.push(Device {
+                                id: 0,
+                                name: "Roku Tv".to_string(),
+                                ip: device.location.to_string(),
+                                state: 0.to_string(),
+                            });
+                        }
+
+                        insert_devices_into_db(shared_pool_clone.clone(), &devices).await.unwrap();
                         tokio::time::sleep(Duration::from_secs(300)).await;
                     }
                 });
@@ -176,7 +203,7 @@ cfg_if::cfg_if! {
 }
 
 async fn insert_devices_into_db(
-    pool: &SqlitePool,
+    pool: Arc<Pool<Sqlite>>,
     devices: &Vec<Device>,
 ) -> Result<(), sqlx::Error> {
     for device in devices {
@@ -184,7 +211,7 @@ async fn insert_devices_into_db(
             .bind(&device.name)
             .bind(&device.ip)
             .bind(&device.state)
-            .execute(pool)
+            .execute(&*pool)
             .await?;
     }
 
