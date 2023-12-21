@@ -2,7 +2,9 @@ use {
     iron_nest::{
         handlers::roku_keypress_handler,
         integrations::{
-            iron_nest::types::Device, ring::RingRestClient, roku::roku_discover,
+            iron_nest::{client::insert_devices_into_db, types::Device},
+            ring::RingRestClient,
+            roku::roku_discover,
             tplink::discover_devices,
         },
     },
@@ -186,7 +188,12 @@ cfg_if::cfg_if! {
                             });
                         }
 
-                        insert_devices_into_db(shared_pool_clone.clone(), &devices).await.unwrap();
+                        match insert_devices_into_db(shared_pool_clone.clone(), &devices).await {
+                            Ok(_) => {},
+                            Err(e) => {
+                                print!("{e}");
+                            }
+                        };
                         tokio::time::sleep(Duration::from_secs(300)).await;
                     }
                 });
@@ -198,20 +205,4 @@ cfg_if::cfg_if! {
             }
         }
     }
-}
-
-async fn insert_devices_into_db(
-    pool: Arc<Pool<Sqlite>>,
-    devices: &Vec<Device>,
-) -> Result<(), sqlx::Error> {
-    for device in devices {
-        sqlx::query("INSERT INTO devices (name, ip, power_state) VALUES (?, ?, ?)")
-            .bind(&device.name)
-            .bind(&device.ip)
-            .bind(&device.state)
-            .execute(&*pool)
-            .await?;
-    }
-
-    Ok(())
 }
