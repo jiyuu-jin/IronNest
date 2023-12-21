@@ -1,18 +1,14 @@
 use {
     crate::{
         error_template::{AppError, ErrorTemplate},
-        integrations::{
-            iron_nest::types::Device, ring::types::Doorbot, roku::types::RokuDiscoverRes,
-        },
+        integrations::{iron_nest::types::Device, ring::types::RingValues},
     },
-    base64::{engine::general_purpose::STANDARD as base64, Engine},
     js_sys::Reflect,
     leptos::*,
     leptos_meta::*,
     leptos_reactive::create_effect,
     leptos_router::*,
     leptos_use::{core::ConnectionReadyState, use_websocket, UseWebsocketReturn},
-    serde::{Deserialize, Serialize},
     serde_json::json,
     std::sync::Arc,
     wasm_bindgen::{closure::Closure, JsValue},
@@ -22,7 +18,6 @@ use {
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     use crate::integrations::{
         openai::open_api_command,
-        roku::{roku_discover},
     };
 }}
 
@@ -272,8 +267,8 @@ pub async fn handle_login(
 #[server(HandleAssistantCommand)]
 pub async fn handle_assistant_command(text: String) -> Result<String, ServerFnError> {
     use sqlx::{Pool, Sqlite};
-    let pool = use_context::<Pool<Sqlite>>().unwrap();
-    open_api_command(text, pool).await
+    let pool = use_context::<Arc<Pool<Sqlite>>>().unwrap();
+    open_api_command(text, &*pool).await
 }
 
 #[component]
@@ -363,39 +358,17 @@ fn LoginPage() -> impl IntoView {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct RingValues {
-    pub ws_url: String,
-    pub location_name: String,
-    pub cameras: Vec<RingCamera>,
-    pub devices: Vec<Device>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct RingCameraSnapshot {
-    pub image: String,
-    pub timestamp: String,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct RingCamera {
-    pub id: u64,
-    pub description: String,
-    pub snapshot: RingCameraSnapshot,
-    pub health: u64,
-}
-
 #[server(GetRingValues)]
 pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
     use {
-        crate::integrations::ring::client::RingRestClient,
+        crate::integrations::ring::{client::RingRestClient, get_ring_camera},
         sqlx::{Pool, Row, Sqlite},
     };
 
     let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
     let pool = use_context::<Arc<Pool<Sqlite>>>().unwrap();
 
-    let rows = sqlx::query("SELECT id, name, ip, state FROM devices")
+    let rows = sqlx::query("SELECT id, name, ip, power_state FROM devices")
         .fetch_all(&*pool)
         .await?;
 
@@ -405,12 +378,14 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
             id: row.get("id"),
             name: row.get("name"),
             ip: row.get("ip"),
-            state: row.get("state"),
+            state: row.get("power_state"),
         });
     }
 
-    let mut locations = ring_rest_client.get_locations().await;
-    let ring_devices = ring_rest_client.get_devices().await;
+    let (mut locations, ring_devices) = tokio::join!(
+        ring_rest_client.get_locations(),
+        ring_rest_client.get_devices()
+    );
     let mut cameras = Vec::with_capacity(20);
     let location = locations.user_locations.remove(0);
 
@@ -420,28 +395,10 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
         .chain(ring_devices.authorized_doorbots.into_iter())
         .collect::<Vec<_>>();
 
-    pub async fn get_ring_camera(
-        ring_rest_client: &Arc<RingRestClient>,
-        device: &Doorbot,
-    ) -> RingCamera {
-        let device_string = device.id.to_string();
-        let snapshot_res = ring_rest_client.get_camera_snapshot(&device_string).await;
-        let image_base64 = base64.encode(snapshot_res.1);
-
-        RingCamera {
-            id: device.id,
-            description: device.description.to_string(),
-            snapshot: RingCameraSnapshot {
-                image: image_base64,
-                timestamp: snapshot_res.0,
-            },
-            health: device.health.battery_percentage,
-        }
-    }
-
     for doorbot in doorbots.iter() {
         cameras.push(get_ring_camera(&ring_rest_client, doorbot).await)
     }
+
     // let front_camera_events = ring_rest_client
     //     .get_camera_events(location_id, &front_camera.id)
     //     .await;
