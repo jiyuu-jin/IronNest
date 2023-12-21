@@ -1,4 +1,7 @@
-use serde::{Deserialize, Serialize};
+use {
+    crate::integrations::iron_nest::types::Device,
+    serde::{Deserialize, Serialize},
+};
 
 #[derive(Deserialize, Debug)]
 pub struct OauthRes {
@@ -119,4 +122,26 @@ pub struct VideoItem {
     pub duration: i32,
     pub device_placement: Option<String>,
     pub owner_id: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RingCameraSnapshot {
+    pub image: String,
+    pub timestamp: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RingCamera {
+    pub id: u64,
+    pub description: String,
+    pub snapshot: RingCameraSnapshot,
+    pub health: u64,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RingValues {
+    pub ws_url: String,
+    pub location_name: String,
+    pub cameras: Vec<RingCamera>,
+    pub devices: Vec<Device>,
 }

@@ -1,13 +1,20 @@
 use {
     super::types::{
-        AuthResponse, CameraEventsRes, DevicesRes, LocationsRes, SocketTicketRes, VideoSearchRes,
+        AuthResponse, CameraEventsRes, DevicesRes, Doorbot, LocationsRes, RingCamera,
+        RingCameraSnapshot, SocketTicketRes, VideoSearchRes,
     },
+    base64::{engine::general_purpose::STANDARD as base64, Engine},
     chrono::{DateTime, TimeZone, Utc},
     chrono_tz::US::Eastern,
     log::{info, warn},
     reqwest::{self, Client, Method},
     serde::{Deserialize, Serialize},
-    std::{collections::HashMap, fs::File, str, sync::RwLock},
+    std::{
+        collections::HashMap,
+        fs::File,
+        str,
+        sync::{Arc, RwLock},
+    },
     uuid::Uuid,
 };
 
@@ -276,5 +283,24 @@ impl RingRestClient {
         println!("{recordings_url}");
         let res = self.request(recordings_url, Method::POST).await;
         println!("subscribe motion events: {res}");
+    }
+}
+
+pub async fn get_ring_camera(
+    ring_rest_client: &Arc<RingRestClient>,
+    device: &Doorbot,
+) -> RingCamera {
+    let device_string = device.id.to_string();
+    let snapshot_res = ring_rest_client.get_camera_snapshot(&device_string).await;
+    let image_base64 = base64.encode(snapshot_res.1);
+
+    RingCamera {
+        id: device.id,
+        description: device.description.to_string(),
+        snapshot: RingCameraSnapshot {
+            image: image_base64,
+            timestamp: snapshot_res.0,
+        },
+        health: device.health.battery_percentage,
     }
 }
