@@ -6,21 +6,6 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     };
 }}
 
-#[server(HandleLogin)]
-pub async fn handle_login(
-    username: String,
-    password: String,
-    tfa: String,
-) -> Result<String, ServerFnError> {
-    use crate::integrations::ring::client::RingRestClient;
-    let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
-    let result = ring_rest_client
-        .request_auth_token(&username, &password, &tfa)
-        .await;
-
-    Ok(result)
-}
-
 #[server(HandleAssistantCommand)]
 pub async fn handle_assistant_command(text: String) -> Result<String, ServerFnError> {
     use sqlx::{Pool, Sqlite};

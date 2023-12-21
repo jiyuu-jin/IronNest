@@ -1,4 +1,19 @@
-use {crate::app::HandleLogin, leptos::*, leptos_router::*};
+use {leptos::*, leptos_router::*, std::sync::Arc};
+
+#[server(HandleLogin)]
+pub async fn handle_login(
+    username: String,
+    password: String,
+    tfa: String,
+) -> Result<String, ServerFnError> {
+    use crate::integrations::ring::client::RingRestClient;
+    let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
+    let result = ring_rest_client
+        .request_auth_token(&username, &password, &tfa)
+        .await;
+
+    Ok(result)
+}
 
 #[component]
 pub fn LoginPage() -> impl IntoView {
