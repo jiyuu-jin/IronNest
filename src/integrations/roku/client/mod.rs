@@ -96,7 +96,7 @@ pub async fn roku_ws() {
     let (ws_stream, _) = connect_async(url).await.expect("Failed to connect");
 
     // Split the stream into a sender and receiver
-    let (mut write, mut read) = ws_stream.split();
+    let (mut write, read) = ws_stream.split();
 
     write
         .send(Message::Text("Hello WebSocket".into()))

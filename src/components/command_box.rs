@@ -1,4 +1,4 @@
-use {leptos::*, leptos_router::ActionForm, std::sync::Arc};
+use {leptos::*, leptos_router::ActionForm};
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     use crate::integrations::{
@@ -8,7 +8,10 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
 #[server(HandleAssistantCommand)]
 pub async fn handle_assistant_command(text: String) -> Result<String, ServerFnError> {
-    use sqlx::{Pool, Sqlite};
+    use {
+        sqlx::{Pool, Sqlite},
+        std::sync::Arc,
+    };
     let pool = use_context::<Arc<Pool<Sqlite>>>().unwrap();
     open_api_command(text, &*pool).await
 }

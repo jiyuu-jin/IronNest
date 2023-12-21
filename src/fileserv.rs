@@ -1,16 +1,19 @@
-use {crate::components::layout::App, cfg_if::cfg_if};
+use cfg_if::cfg_if;
 
 cfg_if! { if #[cfg(feature = "ssr")] {
-    use axum::{
-        body::{boxed, Body, BoxBody},
-        extract::State,
-        response::IntoResponse,
-        http::{Request, Response, StatusCode, Uri},
+    use {
+        axum::{
+            body::{boxed, Body, BoxBody},
+            extract::State,
+            response::IntoResponse,
+            http::{Request, Response, StatusCode, Uri},
+            response::Response as AxumResponse,
+        },
+        crate::components::layout::App,
+        tower::ServiceExt,
+        tower_http::services::ServeDir,
+        leptos::*
     };
-    use axum::response::Response as AxumResponse;
-    use tower::ServiceExt;
-    use tower_http::services::ServeDir;
-    use leptos::*;
 
     pub async fn file_and_error_handler(uri: Uri, State(options): State<LeptosOptions>, req: Request<Body>) -> AxumResponse {
         let root = options.site_root.clone();
@@ -26,8 +29,7 @@ cfg_if! { if #[cfg(feature = "ssr")] {
 
     async fn get_static_file(uri: Uri, root: &str) -> Result<Response<BoxBody>, (StatusCode, String)> {
         let req = Request::builder().uri(uri.clone()).body(Body::empty()).unwrap();
-        // `ServeDir` implements `tower::Service` so we can call it with `tower::ServiceExt::oneshot`
-        // This path is relative to the cargo root
+
         match ServeDir::new(root).oneshot(req).await {
             Ok(res) => Ok(res.map(boxed)),
             Err(err) => Err((
