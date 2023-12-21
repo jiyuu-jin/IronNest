@@ -26,7 +26,6 @@ cfg_if::cfg_if! {
             iron_nest::{
                 app::App,
                 fileserv::file_and_error_handler,
-                handlers::{ring_handler, roku_handler},
             },
             leptos::{get_configuration, logging::log, provide_context, LeptosOptions},
             leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes},
@@ -112,8 +111,6 @@ cfg_if::cfg_if! {
             };
 
             let iron_nest_router = Router::new()
-                .route("/dashboard", get(ring_handler))
-                .route("/roku", get(roku_handler))
                 .route("/roku/:device_id/keypress/:key", get(roku_keypress_handler))
                 .with_state(ring_rest_client.clone());
 
