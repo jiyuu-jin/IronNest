@@ -4,7 +4,7 @@ use {
         RingCameraSnapshot, SocketTicketRes, VideoSearchRes,
     },
     base64::{engine::general_purpose::STANDARD as base64, Engine},
-    chrono::{DateTime, TimeZone, Utc},
+    chrono::{DateTime, Duration, Local, TimeZone, Utc},
     chrono_tz::US::Eastern,
     log::{info, warn},
     reqwest::{self, Client, Method},
@@ -257,23 +257,15 @@ impl RingRestClient {
     }
 
     pub async fn get_recordings(&self, id: &u64) -> VideoSearchRes {
-        let now = Utc::now();
-        let date_from = now
-            .date_naive()
-            .and_hms_opt(0, 0, 0)
-            .unwrap()
-            .timestamp_millis();
-        let date_to = now
-            .date_naive()
-            .and_hms_opt(23, 59, 59)
-            .unwrap()
-            .timestamp_millis();
+        let date_from = get_start_of_today();
+        let date_to = get_end_of_today();
 
-        let recordings_url = &format!(
-        "{CLIENT_API_BASE_URL}video_search/history?doorbot_id={id}&date_from={date_from}&date_to={date_to}&order=asc&api_version=11"
-    );
+        let recordings_url = format!(
+            "{}video_search/history?doorbot_id={}&date_from={}&date_to={}&order=asc&api_version=11",
+            CLIENT_API_BASE_URL, id, date_from, date_to
+        );
 
-        let res = self.request(recordings_url, Method::GET).await;
+        let res = self.request(&recordings_url, Method::GET).await;
         serde_json::from_str::<VideoSearchRes>(&res)
             .unwrap_or_else(|_| panic!("camera_event_res: {res}"))
     }
@@ -290,9 +282,11 @@ pub async fn get_ring_camera(
     ring_rest_client: &Arc<RingRestClient>,
     device: &Doorbot,
 ) -> RingCamera {
-    let device_string = device.id.to_string();
-    let snapshot_res = ring_rest_client.get_camera_snapshot(&device_string).await;
+    let snapshot_res = ring_rest_client
+        .get_camera_snapshot(&device.id.to_string())
+        .await;
     let image_base64 = base64.encode(snapshot_res.1);
+    let videos = ring_rest_client.get_recordings(&device.id).await;
 
     RingCamera {
         id: device.id,
@@ -302,5 +296,16 @@ pub async fn get_ring_camera(
             timestamp: snapshot_res.0,
         },
         health: device.health.battery_percentage,
+        videos,
     }
+}
+
+fn get_start_of_today() -> i64 {
+    let local_midnight = Local::today().and_hms(0, 0, 0);
+    let utc_midnight = local_midnight.with_timezone(&Utc);
+    utc_midnight.timestamp_millis()
+}
+
+fn get_end_of_today() -> i64 {
+    get_start_of_today() + Duration::days(1).num_milliseconds() - 1
 }

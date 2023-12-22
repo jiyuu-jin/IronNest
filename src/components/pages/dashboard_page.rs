@@ -48,14 +48,6 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
         cameras.push(get_ring_camera(&ring_rest_client, doorbot).await)
     }
 
-    // let front_camera_events = ring_rest_client
-    //     .get_camera_events(location_id, &front_camera.id)
-    //     .await;
-
-    // let back_camera_events = ring_rest_client
-    //     .get_camera_events(location_id, &back_camera.id)
-    //     .await;
-
     let ws_url = "".to_string();
 
     Ok(RingValues {

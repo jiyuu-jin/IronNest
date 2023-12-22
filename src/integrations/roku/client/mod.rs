@@ -53,7 +53,7 @@ pub async fn roku_send_keypress(key: &str) -> serde_json::Value {
 }
 
 pub async fn roku_search(query: &str) -> serde_json::Value {
-    post(format!("search/browse?{query}={query}&matchAny=true").as_str()).await
+    post(format!("search/browse?{query}=&matchAny=true").as_str()).await
 }
 
 pub async fn roku_launch_app(app_id: &str) -> serde_json::Value {

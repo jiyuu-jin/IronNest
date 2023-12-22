@@ -97,12 +97,12 @@ pub struct SocketTicketRes {
     pub ticket: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct VideoSearchRes {
     pub video_search: Vec<VideoItem>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Clone, Serialize, Debug)]
 pub struct VideoItem {
     pub ding_id: String,
     pub created_at: u64,
@@ -136,6 +136,7 @@ pub struct RingCamera {
     pub description: String,
     pub snapshot: RingCameraSnapshot,
     pub health: u64,
+    pub videos: VideoSearchRes,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
