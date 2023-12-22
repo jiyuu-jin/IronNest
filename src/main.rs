@@ -165,7 +165,7 @@ cfg_if::cfg_if! {
                         }
 
                         insert_devices_into_db(shared_pool_clone.clone(), &devices).await.unwrap();
-                        tokio::time::sleep(Duration::from_secs(300)).await;
+                        tokio::time::sleep(Duration::from_secs(30)).await;
                     }
                 });
             });
@@ -194,7 +194,7 @@ cfg_if::cfg_if! {
                                 print!("{e}");
                             }
                         };
-                        tokio::time::sleep(Duration::from_secs(300)).await;
+                        tokio::time::sleep(Duration::from_secs(30)).await;
                     }
                 });
             });
