@@ -6,7 +6,15 @@ use {
 #[component]
 pub fn RingCameras(ring_values: Resource<(), Result<RingValues, ServerFnError>>) -> impl IntoView {
     let start_of_day_timestamp = get_start_of_day_timestamp();
-    let (selected_video_url, set_selected_video_url) = create_signal(String::new());
+
+    // @TODO learn leptos and fix hardcoded state logic
+    let mut signals = Vec::new();
+    for _ in 0..2 {
+        let (signal, set_signal) = create_signal(String::new());
+        signals.push((signal, set_signal));
+    }
+    let (selected_video_url_1, set_selected_video_url_1) = signals[0];
+    let (selected_video_url_2, set_selected_video_url_2) = signals[1];
 
     view! {
         <Suspense fallback=|| {
@@ -18,15 +26,15 @@ pub fn RingCameras(ring_values: Resource<(), Result<RingValues, ServerFnError>>)
                         Ok(data) => {
                             view! {
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
-                                    {data
-                                        .cameras
-                                        .iter()
-                                        .map(|camera| {
+                                        {data.cameras.iter().enumerate().map(|(index, camera)| {
+                                            let is_index_zero = index.to_string() == '0'.to_string();
                                             let video_timeline = create_video_timeline(
                                                 camera.videos.video_search.clone(),
                                                 start_of_day_timestamp,
-                                                set_selected_video_url.clone(),
+                                                if is_index_zero {set_selected_video_url_1.clone() } else {set_selected_video_url_2.clone()},
                                             );
+                                            let selected_video_url = if is_index_zero { selected_video_url_1 } else {selected_video_url_2};
+
                                             view! {
                                                 <div>
                                                     <h2>
