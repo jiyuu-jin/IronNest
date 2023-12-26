@@ -6,12 +6,13 @@ use {
             iron_nest::{client::insert_devices_into_db, types::Device},
             ring::RingRestClient,
             roku::roku_discover,
-            tplink::discover_devices,
+            tplink::{discover_devices, types::DeviceData},
         },
     },
     log::{error, info},
     sqlx::{Pool, Sqlite},
     std::{thread, time::Duration},
+    tokio::runtime,
 };
 
 cfg_if::cfg_if! {
@@ -145,30 +146,49 @@ cfg_if::cfg_if! {
             let shared_pool_clone = shared_pool.clone();
             thread::spawn(move || {
                 println!("Running discovery thread for tp-link devices");
-                let rt = tokio::runtime::Runtime::new().unwrap();
+                let rt = runtime::Runtime::new().unwrap();
                 rt.block_on(async {
                     loop {
-                        let tp_link_devices = discover_devices().await;
-                        let mut devices: Vec<Device> = Vec::new();
+                        match discover_devices().await {
+                            Ok(tp_link_devices) => {
+                                let mut devices: Vec<Device> = Vec::new();
 
-                        for device in tp_link_devices.iter() {
-                            for data in device {
-                                if let Some(ip) = &data.ip {
-                                    devices.push(Device {
-                                        id: 0,
-                                        name: data.alias.clone(),
-                                        ip: ip.clone().to_string(),
-                                        state: data.relay_state.to_string(),
-                                    });
+                                for device_data in tp_link_devices {
+                                    match device_data {
+                                        DeviceData::SmartPlug(data) => {
+                                            if let Some(ip) = data.ip {
+                                                devices.push(Device {
+                                                    id: 0, // Generate a unique ID
+                                                    name: data.alias,
+                                                    ip: ip.to_string(),
+                                                    state: data.relay_state.to_string(),
+                                                });
+                                            }
+                                        }
+                                        DeviceData::SmartLight(data) => {
+                                            if let Some(ip) = data.ip {
+                                                devices.push(Device {
+                                                    id: 0, // Generate a unique ID
+                                                    name: data.alias,
+                                                    ip: ip.to_string(),
+                                                    state: data.light_state.on_off.to_string(),
+                                                });
+                                            }
+                                        }
+                                    }
                                 }
+
+                                insert_devices_into_db(shared_pool_clone.clone(), &devices).await.unwrap();
+                            },
+                            Err(e) => {
+                                eprintln!("Error discovering devices: {}", e);
                             }
                         }
-
-                        insert_devices_into_db(shared_pool_clone.clone(), &devices).await.unwrap();
-                        tokio::time::sleep(Duration::from_secs(30)).await;
+                        tokio::time::sleep(Duration::from_secs(10)).await;
                     }
                 });
             });
+
 
             let shared_pool_clone = shared_pool.clone();
             thread::spawn(move || {

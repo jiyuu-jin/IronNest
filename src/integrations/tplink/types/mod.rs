@@ -17,7 +17,9 @@ pub struct TPLinkDiscoverySysInfo {
 #[serde(untagged)]
 pub enum GetSysInfo {
     TPLinkDiscoveryData(TPLinkDiscoveryData),
+    TPLinkSmartLightData(TPLinkSmartLightData),
     Empty(()),
+    CatchAll(serde_json::Value), // Catch-all variant
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -46,4 +48,48 @@ pub struct TPLinkDiscoveryData {
     pub sw_ver: String,
     pub updating: u64,
     pub ip: Option<IpAddr>,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub enum DeviceData {
+    SmartPlug(TPLinkDiscoveryData),
+    SmartLight(TPLinkSmartLightData),
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct TPLinkSmartLightData {
+    pub alias: String,
+    pub light_state: LightState,
+    pub is_dimmable: u8,
+    pub is_color: u8,
+    pub ip: Option<IpAddr>,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct ControlProtocols {
+    pub name: String,
+    pub version: String,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct LightState {
+    pub on_off: u8,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct DefaultOnState {
+    pub mode: String,
+    pub hue: u32,
+    pub saturation: u32,
+    pub color_temp: u32,
+    pub brightness: u32,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct PreferredState {
+    pub index: u8,
+    pub hue: u32,
+    pub saturation: u32,
+    pub color_temp: u32,
+    pub brightness: u32,
 }

@@ -1,5 +1,5 @@
 use {
-    super::types::{GetSysInfo, TPLinkDiscoveryData, TPLinkDiscoveryRes, TPLinkDiscoverySysInfo},
+    super::types::{DeviceData, GetSysInfo, TPLinkDiscoveryRes, TPLinkDiscoverySysInfo},
     log::{info, trace, warn},
     serde_json::{json, Value},
     std::{
@@ -16,7 +16,7 @@ use {
 
 const KEY: u8 = 0xAB;
 
-pub async fn discover_devices() -> Result<Vec<TPLinkDiscoveryData>, Box<dyn Error>> {
+pub async fn discover_devices() -> Result<Vec<DeviceData>, Box<dyn Error>> {
     let port = 9999;
     let socket = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, port))
         .await
@@ -34,7 +34,7 @@ pub async fn discover_devices() -> Result<Vec<TPLinkDiscoveryData>, Box<dyn Erro
     let broadcast_addr = (Ipv4Addr::BROADCAST, port);
     socket.send_to(&discover_msg, broadcast_addr).await.unwrap();
 
-    let mut buf = [0; 1024];
+    let mut buf = [0; 2048];
     let timeout_duration = Duration::from_millis(900);
 
     let mut devices = Vec::with_capacity(20);
@@ -45,17 +45,38 @@ pub async fn discover_devices() -> Result<Vec<TPLinkDiscoveryData>, Box<dyn Erro
                 let incoming_msg_result =
                     serde_json::from_slice::<TPLinkDiscoveryRes>(&incoming_data[..num_bytes]);
 
+                let valid_length = incoming_data
+                    .iter()
+                    .take_while(|&&byte| std::str::from_utf8(&[byte]).is_ok())
+                    .count();
+
+                let valid_data = &incoming_data[..valid_length];
+                let test_string =
+                    std::str::from_utf8(valid_data).expect("Failed to convert to UTF-8");
+
+                println!("-------------------------");
+                println!("device: {:?}", test_string);
                 match incoming_msg_result {
                     Ok(msg) => match msg.system.get_sysinfo {
                         GetSysInfo::TPLinkDiscoveryData(mut get_sysinfo) => {
-                            info!("Received from {}: {}", src_addr, get_sysinfo.alias);
+                            // Handle smart plug data
+                            info!("Smart Plug from {}: {}", src_addr, get_sysinfo.alias);
                             get_sysinfo.ip = Some(src_addr.ip());
-                            devices.push(get_sysinfo);
+                            devices.push(DeviceData::SmartPlug(get_sysinfo));
+                        }
+                        GetSysInfo::TPLinkSmartLightData(mut get_sysinfo) => {
+                            // Handle smart light data
+                            info!("Smart Light from {}: {}", src_addr, get_sysinfo.alias);
+                            get_sysinfo.ip = Some(src_addr.ip());
+                            devices.push(DeviceData::SmartLight(get_sysinfo));
                         }
                         GetSysInfo::Empty(()) => trace!("ignoring GetSysInfo::Empty(())"),
+                        GetSysInfo::CatchAll(raw_json) => {
+                            warn!("Catch-all variant triggered, raw JSON: {:?}", raw_json);
+                        }
                     },
                     Err(e) => {
-                        warn!("Error parsing broadcast response: {e}");
+                        warn!("Error parsing broadcast response: {e}, {:?}", test_string);
                     }
                 }
             }
@@ -69,7 +90,6 @@ pub async fn discover_devices() -> Result<Vec<TPLinkDiscoveryData>, Box<dyn Erro
             }
         }
     }
-
     Ok(devices)
 }
 
