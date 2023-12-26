@@ -26,15 +26,26 @@ pub fn RingCameras(ring_values: Resource<(), Result<RingValues, ServerFnError>>)
                         Ok(data) => {
                             view! {
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
-                                        {data.cameras.iter().enumerate().map(|(index, camera)| {
+                                    {data
+                                        .cameras
+                                        .iter()
+                                        .enumerate()
+                                        .map(|(index, camera)| {
                                             let is_index_zero = index.to_string() == '0'.to_string();
                                             let video_timeline = create_video_timeline(
                                                 camera.videos.video_search.clone(),
                                                 start_of_day_timestamp,
-                                                if is_index_zero {set_selected_video_url_1.clone() } else {set_selected_video_url_2.clone()},
+                                                if is_index_zero {
+                                                    set_selected_video_url_1.clone()
+                                                } else {
+                                                    set_selected_video_url_2.clone()
+                                                },
                                             );
-                                            let selected_video_url = if is_index_zero { selected_video_url_1 } else {selected_video_url_2};
-
+                                            let selected_video_url = if is_index_zero {
+                                                selected_video_url_1
+                                            } else {
+                                                selected_video_url_2
+                                            };
                                             view! {
                                                 <div>
                                                     <h2>
@@ -52,6 +63,7 @@ pub fn RingCameras(ring_values: Resource<(), Result<RingValues, ServerFnError>>)
                                                                 <video
                                                                     style="width: 100%"
                                                                     src=selected_video_url.get().clone()
+                                                                    autoplay=true
                                                                     controls=true
                                                                 ></video>
                                                             </div>
