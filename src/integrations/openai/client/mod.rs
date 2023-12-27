@@ -1,4 +1,8 @@
-use {crate::integrations::iron_nest::types::Device, leptos::ServerFnError, serde_json::json};
+use {
+    crate::integrations::{iron_nest::types::Device, tplink::tplink_set_light_brightness},
+    leptos::ServerFnError,
+    serde_json::json,
+};
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
   use {
@@ -22,6 +26,7 @@ pub enum AssistantFunction {
     TPLinkTurnOn { ip: String },
     TPLinkTurnOff { ip: String },
     TPLinkToggleLight { ip: String, state: u8},
+    TPLinkSetLightBrightness {ip: String, brightness: u8},
     RokuSearch { query: String },
     RokuLaunchApp { app_id: String },
 }
@@ -41,10 +46,13 @@ impl AssistantFunction {
                 tplink_turn_plug_off(&ip).await;
                 Ok(format!("TP-link plug turned off"))
             }
-            AssistantFunction::TPLinkToggleLight { ip, state} => {
-                println!("called with {ip} - {state}");
+            AssistantFunction::TPLinkToggleLight { ip, state } => {
                 tplink_toggle_light(&ip, state).await;
                 Ok(format!("TP-link switch turned off"))
+            }
+            AssistantFunction::TPLinkSetLightBrightness { ip, brightness } => {
+                tplink_set_light_brightness(&ip, brightness).await;
+                Ok(format!("TP-link switch brightness set"))
             }
             AssistantFunction::RokuSearch { query } => {
                 roku_search(&query).await;
@@ -63,31 +71,39 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
     println!("calling assistant with {:?}", text);
     let client = Client::new();
 
-    let mut tp_link_ips: Vec<String> = Vec::new();
+    let mut tp_link_plug_ips: Vec<String> = Vec::new();
+    let mut tp_link_light_ips: Vec<String> = Vec::new();
+    let mut roku_ips: Vec<String> = Vec::new();
     let mut devices: Vec<Device> = Vec::new();
 
-    let rows = sqlx::query("SELECT id, name, ip, power_state FROM devices")
+    let rows = sqlx::query("SELECT id, name, device_type, ip, power_state FROM devices")
         .fetch_all(pool)
         .await?;
 
     for row in rows {
         let state_value: i64 = row.get("power_state");
         let state: u8 = state_value.try_into().expect("Value out of range for u64");
+        let ip: String = row.get("ip");
 
         devices.push(Device {
             id: row.get("id"),
             name: row.get("name"),
-            ip: row.get("ip"),
+            device_type: row.get("device_type"),
+            ip: ip.to_string(),
             state,
         });
 
-        // @TODO separate ips by device type
-        tp_link_ips.push(row.get("ip"));
+        let device_type: String = row.get("device_type");
+        match device_type.as_str() {
+            "roku" => roku_ips.push(ip.to_string()),
+            "smart-plug" => tp_link_plug_ips.push(ip),
+            "smart-light" => tp_link_light_ips.push(ip),
+            _ => (),
+        }
     }
 
     let initial_system_prompt = format!(
         "You are a home assistant named Iron Nest.
-        Call tplink_toggle_light for lights.
         Here are the following device names:
         {:?}
         Respond to the following input: {text}",
@@ -138,7 +154,7 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
                         "properties": {
                             "ip": { 
                                 "type": "string", 
-                                "enum": tp_link_ips,
+                                "enum": tp_link_plug_ips,
                             },
                         },
                         "required": ["ip"],
@@ -157,7 +173,7 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
                         "properties": {
                             "ip": { 
                                 "type": "string", 
-                                "enum": tp_link_ips,
+                                "enum": tp_link_plug_ips,
                             },
                         },
                         "required": ["ip"],
@@ -166,66 +182,88 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
             )
             .build().unwrap(),
         ChatCompletionToolArgs::default()
-                .r#type(ChatCompletionToolType::Function)
-                .function(
-                    ChatCompletionFunctionsArgs::default()
-                        .name("tplink_toggle_light")
-                        .description("Turn on or off tplink smart light")
-                        .parameters(json!({
-                            "type": "object",
-                            "properties": {
-                                "ip": { 
-                                    "type": "string", 
-                                    "enum": tp_link_ips,
-                                },
-                                "state": {
-                                    "type": "number",
-                                    "enum": [0, 1],
-                                }
+            .r#type(ChatCompletionToolType::Function)
+            .function(
+                ChatCompletionFunctionsArgs::default()
+                    .name("tplink_toggle_light")
+                    .description("Turn on or off tplink smart light")
+                    .parameters(json!({
+                        "type": "object",
+                        "properties": {
+                            "ip": { 
+                                "type": "string", 
+                                "enum": tp_link_light_ips,
                             },
-                            "required": ["ip", "state"],
-                        }))
-                        .build().unwrap()
-                )
-                .build().unwrap(),
-            ChatCompletionToolArgs::default()
-                .r#type(ChatCompletionToolType::Function)
-                .function(
-                    ChatCompletionFunctionsArgs::default()
-                        .name("roku_search")
-                        .description("Open the Roku search page with the given search params")
-                        .parameters(json!({
-                            "type": "object",
-                            "properties": {
-                                "query": {
-                                    "type": "string",
-                                    "description": "The value to search for on the roku",
-                                },
-                            },
-                            "required": [],
-                        }))
-                        .build().unwrap()
-                )
-                .build().unwrap(),
-                ChatCompletionToolArgs::default()
-                    .r#type(ChatCompletionToolType::Function)
-                    .function(
-                        ChatCompletionFunctionsArgs::default()
-                            .name("roku_launch_app")
-                            .description("")
-                            .parameters(json!({
-                                "type": "object",
-                                "properties": {
-                                    "app_id": {
-                                        "type": "string",
-                                        "description": "Roku app_id or name, e,g YouTube or 837",
-                                    },
-                                },
-                                "required": [],
-                            }))
-                            .build().unwrap()
-                    )
+                            "state": {
+                                "type": "number",
+                                "enum": [0, 1],
+                            }
+                        },
+                        "required": ["ip", "state"],
+                    }))
                     .build().unwrap()
+            )
+            .build().unwrap(),
+        ChatCompletionToolArgs::default()
+            .r#type(ChatCompletionToolType::Function)
+            .function(
+                ChatCompletionFunctionsArgs::default()
+                    .name("tplink_set_light_brightness")
+                    .description("Set tplink smart light brightness (1 - 100)")
+                    .parameters(json!({
+                        "type": "object",
+                        "properties": {
+                            "ip": { 
+                                "type": "string", 
+                                "enum": tp_link_light_ips,
+                            },
+                            "brightness": {
+                                "type": "number",
+                            }
+                        },
+                        "required": ["ip", "brightness"],
+                    }))
+                    .build().unwrap()
+            )
+            .build().unwrap(),
+        ChatCompletionToolArgs::default()
+            .r#type(ChatCompletionToolType::Function)
+            .function(
+                ChatCompletionFunctionsArgs::default()
+                    .name("roku_search")
+                    .description("Open the Roku search page with the given search params")
+                    .parameters(json!({
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "The value to search for on the roku",
+                            },
+                        },
+                        "required": [],
+                    }))
+                    .build().unwrap()
+            )
+            .build().unwrap(),
+        ChatCompletionToolArgs::default()
+            .r#type(ChatCompletionToolType::Function)
+            .function(
+                ChatCompletionFunctionsArgs::default()
+                    .name("roku_launch_app")
+                    .description("")
+                    .parameters(json!({
+                        "type": "object",
+                        "properties": {
+                            "app_id": {
+                                "type": "string",
+                                "description": "Roku app_id or name, e,g YouTube or 837",
+                            },
+                        },
+                        "required": [],
+                    }))
+                    .build().unwrap()
+            )
+            .build().unwrap()
     ])
     .build().unwrap();
 
@@ -260,11 +298,11 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
                         .to_string();
                     AssistantFunction::RokuKeyPress { key }
                 }
-                "tplink_turn_on" => {
+                "tplink_turn_plug_on" => {
                     let ip = function_args["ip"].to_string();
                     AssistantFunction::TPLinkTurnOn { ip }
                 }
-                "tplink_turn_off" => {
+                "tplink_turn_plug_off" => {
                     let ip = function_args["ip"].to_string();
                     AssistantFunction::TPLinkTurnOff { ip }
                 }
@@ -272,6 +310,11 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
                     let ip = function_args["ip"].to_string();
                     let state: u8 = function_args["state"].to_string().parse().unwrap();
                     AssistantFunction::TPLinkToggleLight { ip, state }
+                }
+                "tplink_set_light_brightness" => {
+                    let ip = function_args["ip"].to_string();
+                    let brightness: u8 = function_args["brightness"].to_string().parse().unwrap();
+                    AssistantFunction::TPLinkSetLightBrightness { ip, brightness }
                 }
                 "roku_search" => {
                     let query = function_args["query"].to_string();
