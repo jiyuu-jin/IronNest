@@ -5,5 +5,5 @@ pub struct Device {
     pub id: i64,
     pub name: String,
     pub ip: String,
-    pub state: String,
+    pub state: u8,
 }
