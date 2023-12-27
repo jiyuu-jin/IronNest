@@ -4,7 +4,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
   use {
     crate::integrations::{
         roku::{roku_launch_app, roku_search, roku_send_keypress},
-        tplink::{tplink_turn_off, tplink_turn_on},
+        tplink::{tplink_turn_plug_off, tplink_turn_plug_on, tplink_toggle_light},
     },
     async_openai::{
         types::{
@@ -21,6 +21,7 @@ pub enum AssistantFunction {
     RokuKeyPress { key: String },
     TPLinkTurnOn { ip: String },
     TPLinkTurnOff { ip: String },
+    TPLinkToggleLight { ip: String, state: u8},
     RokuSearch { query: String },
     RokuLaunchApp { app_id: String },
 }
@@ -33,11 +34,16 @@ impl AssistantFunction {
                 Ok(format!("Roku Key Pressed: {}", key))
             }
             AssistantFunction::TPLinkTurnOn { ip } => {
-                tplink_turn_on(&ip).await;
-                Ok(format!("TP-link switch turned on"))
+                tplink_turn_plug_on(&ip).await;
+                Ok(format!("TP-link plug turned on"))
             }
             AssistantFunction::TPLinkTurnOff { ip } => {
-                tplink_turn_off(&ip).await;
+                tplink_turn_plug_off(&ip).await;
+                Ok(format!("TP-link plug turned off"))
+            }
+            AssistantFunction::TPLinkToggleLight { ip, state} => {
+                println!("called with {ip} - {state}");
+                tplink_toggle_light(&ip, state).await;
                 Ok(format!("TP-link switch turned off"))
             }
             AssistantFunction::RokuSearch { query } => {
@@ -65,18 +71,23 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
         .await?;
 
     for row in rows {
+        let state_value: i64 = row.get("power_state");
+        let state: u8 = state_value.try_into().expect("Value out of range for u64");
+
         devices.push(Device {
             id: row.get("id"),
             name: row.get("name"),
             ip: row.get("ip"),
-            state: row.get("power_state"),
+            state,
         });
 
+        // @TODO separate ips by device type
         tp_link_ips.push(row.get("ip"));
     }
 
     let initial_system_prompt = format!(
         "You are a home assistant named Iron Nest.
+        Call tplink_toggle_light for lights.
         Here are the following device names:
         {:?}
         Respond to the following input: {text}",
@@ -120,8 +131,8 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
             .r#type(ChatCompletionToolType::Function)
             .function(
                 ChatCompletionFunctionsArgs::default()
-                    .name("tplink_turn_on")
-                    .description("Turn on tplink switch")
+                    .name("tplink_turn_plug_on")
+                    .description("Turn on tplink smart plug")
                     .parameters(json!({
                         "type": "object",
                         "properties": {
@@ -139,8 +150,8 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
             .r#type(ChatCompletionToolType::Function)
             .function(
                 ChatCompletionFunctionsArgs::default()
-                    .name("tplink_turn_off")
-                    .description("Turn off tplink switch")
+                    .name("tplink_turn_plug_off")
+                    .description("Turn off tplink smart plug")
                     .parameters(json!({
                         "type": "object",
                         "properties": {
@@ -154,6 +165,29 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
                     .build().unwrap()
             )
             .build().unwrap(),
+        ChatCompletionToolArgs::default()
+                .r#type(ChatCompletionToolType::Function)
+                .function(
+                    ChatCompletionFunctionsArgs::default()
+                        .name("tplink_toggle_light")
+                        .description("Turn on or off tplink smart light")
+                        .parameters(json!({
+                            "type": "object",
+                            "properties": {
+                                "ip": { 
+                                    "type": "string", 
+                                    "enum": tp_link_ips,
+                                },
+                                "state": {
+                                    "type": "number",
+                                    "enum": [0, 1],
+                                }
+                            },
+                            "required": ["ip", "state"],
+                        }))
+                        .build().unwrap()
+                )
+                .build().unwrap(),
             ChatCompletionToolArgs::default()
                 .r#type(ChatCompletionToolType::Function)
                 .function(
@@ -233,6 +267,11 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
                 "tplink_turn_off" => {
                     let ip = function_args["ip"].to_string();
                     AssistantFunction::TPLinkTurnOff { ip }
+                }
+                "tplink_toggle_light" => {
+                    let ip = function_args["ip"].to_string();
+                    let state: u8 = function_args["state"].to_string().parse().unwrap();
+                    AssistantFunction::TPLinkToggleLight { ip, state }
                 }
                 "roku_search" => {
                     let query = function_args["query"].to_string();

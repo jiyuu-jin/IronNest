@@ -92,7 +92,7 @@ cfg_if::cfg_if! {
                     name TEXT NOT NULL,
                     ip TEXT NOT NULL UNIQUE,
                     battery_percentage TEXT,
-                    power_state TEXT NOT NULL
+                    power_state INT8 NOT NULL
                 )",
             )
             .execute(&*shared_pool.clone())
@@ -158,20 +158,20 @@ cfg_if::cfg_if! {
                                         DeviceData::SmartPlug(data) => {
                                             if let Some(ip) = data.ip {
                                                 devices.push(Device {
-                                                    id: 0, // Generate a unique ID
+                                                    id: 0,
                                                     name: data.alias,
                                                     ip: ip.to_string(),
-                                                    state: data.relay_state.to_string(),
+                                                    state: data.relay_state,
                                                 });
                                             }
                                         }
                                         DeviceData::SmartLight(data) => {
                                             if let Some(ip) = data.ip {
                                                 devices.push(Device {
-                                                    id: 0, // Generate a unique ID
+                                                    id: 0,
                                                     name: data.alias,
                                                     ip: ip.to_string(),
-                                                    state: data.light_state.on_off.to_string(),
+                                                    state: data.light_state.on_off,
                                                 });
                                             }
                                         }
@@ -184,7 +184,7 @@ cfg_if::cfg_if! {
                                 eprintln!("Error discovering devices: {}", e);
                             }
                         }
-                        tokio::time::sleep(Duration::from_secs(10)).await;
+                        tokio::time::sleep(Duration::from_secs(30)).await;
                     }
                 });
             });
@@ -204,7 +204,7 @@ cfg_if::cfg_if! {
                                 id: 0,
                                 name: "Roku Tv".to_string(),
                                 ip: device.location.to_string(),
-                                state: 0.to_string(),
+                                state: 0,
                             });
                         }
 

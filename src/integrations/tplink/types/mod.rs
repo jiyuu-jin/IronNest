@@ -42,7 +42,7 @@ pub struct TPLinkDiscoveryData {
     pub obd_src: String,
     pub oemId: String,
     pub on_time: i64,
-    pub relay_state: u64,
+    pub relay_state: u8,
     pub rssi: i64,
     pub status: String,
     pub sw_ver: String,

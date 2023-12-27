@@ -4,13 +4,16 @@ use {
         integrations::{iron_nest::types::Device, ring::types::RingValues},
     },
     leptos::*,
-    std::sync::Arc,
+    std::{mem::zeroed, sync::Arc},
 };
 
 #[server(GetRingValues)]
 pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
     use {
-        crate::integrations::ring::{client::RingRestClient, get_ring_camera},
+        crate::integrations::{
+            ring::{client::RingRestClient, get_ring_camera},
+            tplink::tplink_toggle_light,
+        },
         sqlx::{Pool, Row, Sqlite},
     };
 
@@ -23,11 +26,14 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
 
     let mut devices = Vec::new();
     for row in rows {
+        let state_value: i64 = row.get("power_state");
+        let state: u8 = state_value.try_into().expect("Value out of range for u8");
+
         devices.push(Device {
             id: row.get("id"),
             name: row.get("name"),
             ip: row.get("ip"),
-            state: row.get("power_state"),
+            state,
         });
     }
 

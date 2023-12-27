@@ -35,7 +35,7 @@ pub async fn discover_devices() -> Result<Vec<DeviceData>, Box<dyn Error>> {
     socket.send_to(&discover_msg, broadcast_addr).await.unwrap();
 
     let mut buf = [0; 2048];
-    let timeout_duration = Duration::from_millis(900);
+    let timeout_duration = Duration::from_millis(1000);
 
     let mut devices = Vec::with_capacity(20);
     loop {
@@ -45,17 +45,6 @@ pub async fn discover_devices() -> Result<Vec<DeviceData>, Box<dyn Error>> {
                 let incoming_msg_result =
                     serde_json::from_slice::<TPLinkDiscoveryRes>(&incoming_data[..num_bytes]);
 
-                let valid_length = incoming_data
-                    .iter()
-                    .take_while(|&&byte| std::str::from_utf8(&[byte]).is_ok())
-                    .count();
-
-                let valid_data = &incoming_data[..valid_length];
-                let test_string =
-                    std::str::from_utf8(valid_data).expect("Failed to convert to UTF-8");
-
-                println!("-------------------------");
-                println!("device: {:?}", test_string);
                 match incoming_msg_result {
                     Ok(msg) => match msg.system.get_sysinfo {
                         GetSysInfo::TPLinkDiscoveryData(mut get_sysinfo) => {
@@ -76,7 +65,16 @@ pub async fn discover_devices() -> Result<Vec<DeviceData>, Box<dyn Error>> {
                         }
                     },
                     Err(e) => {
-                        warn!("Error parsing broadcast response: {e}, {:?}", test_string);
+                        let valid_length = incoming_data
+                            .iter()
+                            .take_while(|&&byte| std::str::from_utf8(&[byte]).is_ok())
+                            .count();
+
+                        let valid_data = &incoming_data[..valid_length];
+                        let string_value =
+                            std::str::from_utf8(valid_data).expect("Failed to convert to UTF-8");
+
+                        warn!("Error parsing broadcast response: {e}, {:?}", string_value);
                     }
                 }
             }
@@ -93,7 +91,7 @@ pub async fn discover_devices() -> Result<Vec<DeviceData>, Box<dyn Error>> {
     Ok(devices)
 }
 
-pub async fn send(ip: &str, state: i64) -> io::Result<()> {
+pub async fn send(ip: &str, json: serde_json::Value) -> io::Result<()> {
     let trimmed_ip = ip.trim_matches('"');
     let _ip: IpAddr = match trimmed_ip.parse() {
         Ok(addr) => addr,
@@ -105,8 +103,8 @@ pub async fn send(ip: &str, state: i64) -> io::Result<()> {
 
     let mut stream = TcpStream::connect((_ip, 9999)).await?;
 
-    let msg_bytes = serde_json::to_vec(&json!({"system":{"set_relay_state":{"state": state}}}))
-        .expect("Should be able to serialize hardcoded data w/o error");
+    let msg_bytes =
+        serde_json::to_vec(&json).expect("Should be able to serialize hardcoded data w/o error");
     let discover_msg = encrypt_with_header(&msg_bytes, KEY);
 
     stream.write_all(&discover_msg).await.unwrap();
@@ -120,12 +118,22 @@ pub async fn send(ip: &str, state: i64) -> io::Result<()> {
     Ok(())
 }
 
-pub async fn tplink_turn_on(ip: &str) {
-    send(ip, 1).await.unwrap();
+pub async fn tplink_turn_plug_on(ip: &str) {
+    send(ip, json!({"system":{"set_relay_state":{"state": 1}}}))
+        .await
+        .unwrap();
 }
 
-pub async fn tplink_turn_off(ip: &str) {
-    send(ip, 0).await.unwrap();
+pub async fn tplink_turn_plug_off(ip: &str) {
+    send(ip, json!({"system":{"set_relay_state":{"state": 0}}}))
+        .await
+        .unwrap();
+}
+
+pub async fn tplink_toggle_light(ip: &str, state: u8) {
+    send(ip, json!({"smartlife.iot.smartbulb.lightingservice":{"transition_light_state":{"on_off":state,"transition_period":0}}}))
+        .await
+        .unwrap();
 }
 
 fn encrypt_with_header(input: &[u8], first_key: u8) -> Vec<u8> {
