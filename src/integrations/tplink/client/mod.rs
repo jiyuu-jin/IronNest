@@ -35,7 +35,7 @@ pub async fn discover_devices() -> Result<Vec<DeviceData>, Box<dyn Error>> {
     socket.send_to(&discover_msg, broadcast_addr).await.unwrap();
 
     let mut buf = [0; 2048];
-    let timeout_duration = Duration::from_millis(1000);
+    let timeout_duration = Duration::from_millis(2000);
 
     let mut devices = Vec::with_capacity(20);
     loop {
@@ -48,13 +48,11 @@ pub async fn discover_devices() -> Result<Vec<DeviceData>, Box<dyn Error>> {
                 match incoming_msg_result {
                     Ok(msg) => match msg.system.get_sysinfo {
                         GetSysInfo::TPLinkDiscoveryData(mut get_sysinfo) => {
-                            // Handle smart plug data
                             info!("Smart Plug from {}: {}", src_addr, get_sysinfo.alias);
                             get_sysinfo.ip = Some(src_addr.ip());
                             devices.push(DeviceData::SmartPlug(get_sysinfo));
                         }
                         GetSysInfo::TPLinkSmartLightData(mut get_sysinfo) => {
-                            // Handle smart light data
                             info!("Smart Light from {}: {}", src_addr, get_sysinfo.alias);
                             get_sysinfo.ip = Some(src_addr.ip());
                             devices.push(DeviceData::SmartLight(get_sysinfo));
@@ -132,6 +130,12 @@ pub async fn tplink_turn_plug_off(ip: &str) {
 
 pub async fn tplink_toggle_light(ip: &str, state: u8) {
     send(ip, json!({"smartlife.iot.smartbulb.lightingservice":{"transition_light_state":{"on_off":state,"transition_period":0}}}))
+        .await
+        .unwrap();
+}
+
+pub async fn tplink_set_light_brightness(ip: &str, brightness: u8) {
+    send(ip, json!({"smartlife.iot.smartbulb.lightingservice":{"transition_light_state":{"brightness":brightness,"transition_period":0}}}))
         .await
         .unwrap();
 }

@@ -4,23 +4,20 @@ use {
         integrations::{iron_nest::types::Device, ring::types::RingValues},
     },
     leptos::*,
-    std::{mem::zeroed, sync::Arc},
+    std::sync::Arc,
 };
 
 #[server(GetRingValues)]
 pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
     use {
-        crate::integrations::{
-            ring::{client::RingRestClient, get_ring_camera},
-            tplink::tplink_toggle_light,
-        },
+        crate::integrations::ring::{client::RingRestClient, get_ring_camera},
         sqlx::{Pool, Row, Sqlite},
     };
 
     let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
     let pool = use_context::<Arc<Pool<Sqlite>>>().unwrap();
 
-    let rows = sqlx::query("SELECT id, name, ip, power_state FROM devices")
+    let rows = sqlx::query("SELECT id, name, device_type, ip, power_state FROM devices")
         .fetch_all(&*pool)
         .await?;
 
@@ -32,6 +29,7 @@ pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
         devices.push(Device {
             id: row.get("id"),
             name: row.get("name"),
+            device_type: row.get("device_type"),
             ip: row.get("ip"),
             state,
         });

@@ -21,7 +21,9 @@ pub fn DeviceList(ring_values: Resource<(), Result<RingValues, ServerFnError>>) 
                                         .map(|device| {
                                             view! {
                                                 <li class="tplink-device">
-                                                    <div class="device-alias">{&device.name}</div>
+                                                    <div class="device-alias">
+                                                        {&device.name} - {format!("({})", &device.device_type)}
+                                                    </div>
                                                     <div class="device-name">{&device.ip}</div>
                                                     <div class="device-state">
                                                         {format!("State: {}", &device.state)}

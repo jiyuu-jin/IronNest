@@ -90,6 +90,7 @@ cfg_if::cfg_if! {
                 "CREATE TABLE devices (
                     id INTEGER PRIMARY KEY,
                     name TEXT NOT NULL,
+                    device_type TEXT NOT NULL,
                     ip TEXT NOT NULL UNIQUE,
                     battery_percentage TEXT,
                     power_state INT8 NOT NULL
@@ -160,6 +161,7 @@ cfg_if::cfg_if! {
                                                 devices.push(Device {
                                                     id: 0,
                                                     name: data.alias,
+                                                    device_type: "smart-plug".to_string(),
                                                     ip: ip.to_string(),
                                                     state: data.relay_state,
                                                 });
@@ -170,6 +172,7 @@ cfg_if::cfg_if! {
                                                 devices.push(Device {
                                                     id: 0,
                                                     name: data.alias,
+                                                    device_type: "smart-light".to_string(),
                                                     ip: ip.to_string(),
                                                     state: data.light_state.on_off,
                                                 });
@@ -203,6 +206,7 @@ cfg_if::cfg_if! {
                             devices.push(Device {
                                 id: 0,
                                 name: "Roku Tv".to_string(),
+                                device_type: "roku".to_string(),
                                 ip: device.location.to_string(),
                                 state: 0,
                             });
