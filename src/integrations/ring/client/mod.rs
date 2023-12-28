@@ -250,7 +250,7 @@ impl RingRestClient {
         let utc_time = DateTime::<Utc>::from_timestamp((time_ms / 1000.) as i64, 0).unwrap();
         let est_time = utc_time.with_timezone(&Eastern);
 
-        let formatted_time = est_time.format("%Y-%m-%d %H:%M:%S").to_string();
+        let formatted_time = est_time.format("%Y-%m-%d %I:%M:%S %p").to_string();
 
         println!("{}", res.status());
         (formatted_time, res.bytes().await.unwrap())
