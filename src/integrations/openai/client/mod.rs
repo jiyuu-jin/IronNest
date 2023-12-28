@@ -6,15 +6,19 @@ use {
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
   use {
+    futures::StreamExt,
     crate::integrations::{
         roku::{roku_launch_app, roku_search, roku_send_keypress},
         tplink::{tplink_turn_plug_off, tplink_turn_plug_on, tplink_toggle_light},
     },
     async_openai::{
         types::{
-            ChatCompletionFunctionsArgs, ChatCompletionRequestToolMessageArgs,
+            ChatCompletionFunctionsArgs,
             ChatCompletionRequestUserMessageArgs, ChatCompletionToolArgs, ChatCompletionToolType,
-            CreateChatCompletionRequestArgs,
+            CreateChatCompletionRequestArgs,ChatCompletionMessageToolCall,
+            ChatCompletionRequestAssistantMessageArgs,
+            ChatCompletionRequestToolMessageArgs,
+            ChatCompletionRequestMessage
         },
         Client,
     },
@@ -115,7 +119,7 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
     .model("gpt-3.5-turbo-1106")
     .messages([
         ChatCompletionRequestUserMessageArgs::default()
-            .content(initial_system_prompt)
+            .content(initial_system_prompt.to_string())
             .build()?
             .into()
     ])
@@ -285,8 +289,9 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
         serde_json::to_string(&response_message).unwrap()
     );
 
+    let mut function_responses: Vec<(ChatCompletionMessageToolCall, String)> = Vec::new();
+
     let value = if let Some(tool_calls) = response_message.tool_calls {
-        let mut handles = Vec::new();
         for tool_call in tool_calls.iter() {
             let function_name = tool_call.function.name.to_string();
             let function_args: serde_json::Value = tool_call.function.arguments.parse().unwrap();
@@ -328,45 +333,63 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
             };
 
             let function_response = assistant_function.execute().await?;
-            handles.push((tool_call.id.to_string(), function_response));
+            function_responses.push((tool_call.clone(), function_response));
         }
 
-        let mut message = vec![ChatCompletionRequestUserMessageArgs::default()
-            .content(text)
-            .build()?
-            .into()];
+        let mut messages: Vec<ChatCompletionRequestMessage> =
+            vec![ChatCompletionRequestUserMessageArgs::default()
+                .content(initial_system_prompt)
+                .build()?
+                .into()];
 
-        // let tool_calls: Vec<ChatCompletionMessageToolCall> = handles
-        //     .iter()
-        //     .map(|(tool_call, _response_content)| tool_call.clone())
-        //     .collect();
+        let tool_calls: Vec<ChatCompletionMessageToolCall> = function_responses
+            .iter()
+            .map(|(tool_call, _response_content)| tool_call.clone())
+            .collect();
 
-        for handle in handles {
-            message.push(
+        let assistant_messages: ChatCompletionRequestMessage =
+            ChatCompletionRequestAssistantMessageArgs::default()
+                .tool_calls(tool_calls)
+                .build()?
+                .into();
+
+        let tool_messages: Vec<ChatCompletionRequestMessage> = function_responses
+            .iter()
+            .map(|(tool_call, response_content)| {
                 ChatCompletionRequestToolMessageArgs::default()
-                    .tool_call_id(handle.0)
-                    .content(handle.1)
-                    .build()?
-                    .into(),
-            )
-        }
+                    .content(response_content.to_string())
+                    .tool_call_id(tool_call.id.clone())
+                    .build()
+                    .unwrap()
+                    .into()
+            })
+            .collect();
 
-        println!("{}", serde_json::to_string(&message).unwrap());
+        messages.push(assistant_messages);
+        messages.extend(tool_messages);
 
-        let request = CreateChatCompletionRequestArgs::default()
+        let subsequent_request = CreateChatCompletionRequestArgs::default()
             .max_tokens(512u16)
             .model("gpt-3.5-turbo-1106")
-            .messages(message)
+            .messages(messages)
             .build()?;
 
-        let response = client.chat().create(request).await.unwrap();
-        format!(
-            "{:?}",
-            match response.choices[0].message.content {
-                None => "No output found!",
-                Some(ref x) => x,
+        let mut stream = client.chat().create_stream(subsequent_request).await?;
+        let mut response_content = String::new();
+
+        while let Some(result) = stream.next().await {
+            match result {
+                Ok(response) => {
+                    for chat_choice in response.choices.iter() {
+                        if let Some(ref content) = chat_choice.delta.content {
+                            response_content.push_str(content);
+                        }
+                    }
+                }
+                Err(err) => println!("{err}"),
             }
-        )
+        }
+        response_content
     } else {
         "".to_string()
     };

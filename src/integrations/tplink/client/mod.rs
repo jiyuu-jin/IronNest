@@ -35,7 +35,7 @@ pub async fn discover_devices() -> Result<Vec<DeviceData>, Box<dyn Error>> {
     socket.send_to(&discover_msg, broadcast_addr).await.unwrap();
 
     let mut buf = [0; 2048];
-    let timeout_duration = Duration::from_millis(2000);
+    let timeout_duration = Duration::from_millis(2500);
 
     let mut devices = Vec::with_capacity(20);
     loop {

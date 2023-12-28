@@ -1,7 +1,7 @@
 use {
     crate::{
         components::{command_box::CommandBox, device_list::DeviceList, ring_cameras::RingCameras},
-        integrations::{iron_nest::types::Device, ring::types::RingValues},
+        integrations::ring::types::RingValues,
     },
     leptos::*,
     std::sync::Arc,
@@ -10,7 +10,10 @@ use {
 #[server(GetRingValues)]
 pub async fn get_ring_values() -> Result<RingValues, ServerFnError> {
     use {
-        crate::integrations::ring::{client::RingRestClient, get_ring_camera},
+        crate::integrations::{
+            iron_nest::types::Device,
+            ring::{client::RingRestClient, get_ring_camera, types::RingValues},
+        },
         sqlx::{Pool, Row, Sqlite},
     };
 

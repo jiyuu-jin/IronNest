@@ -187,11 +187,10 @@ cfg_if::cfg_if! {
                                 eprintln!("Error discovering devices: {}", e);
                             }
                         }
-                        tokio::time::sleep(Duration::from_secs(30)).await;
+                        tokio::time::sleep(Duration::from_secs(20)).await;
                     }
                 });
             });
-
 
             let shared_pool_clone = shared_pool.clone();
             thread::spawn(move || {
