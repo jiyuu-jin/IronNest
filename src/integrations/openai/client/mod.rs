@@ -18,57 +18,73 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
             CreateChatCompletionRequestArgs,ChatCompletionMessageToolCall,
             ChatCompletionRequestAssistantMessageArgs,
             ChatCompletionRequestToolMessageArgs,
-            ChatCompletionRequestMessage
+            ChatCompletionRequestMessage,
+            CreateSpeechRequestArgs,
+            Voice,
+            SpeechModel,
         },
         Client,
+        config::OpenAIConfig,
     },
-    sqlx::{Pool, Sqlite, Row},
-};
+        sqlx::{Pool, Sqlite, Row},
+    };
+    use rodio::{Decoder, OutputStream, Sink};
+    use std::io::Cursor;
 
-pub enum AssistantFunction {
-    RokuKeyPress { key: String },
-    TPLinkTurnOn { ip: String },
-    TPLinkTurnOff { ip: String },
-    TPLinkToggleLight { ip: String, state: u8},
-    TPLinkSetLightBrightness {ip: String, brightness: u8},
-    RokuSearch { query: String },
-    RokuLaunchApp { app_id: String },
-}
+    pub enum AssistantFunction {
+        RokuKeyPress { key: String },
+        TPLinkTurnOn { ip: String },
+        TPLinkTurnOff { ip: String },
+        TPLinkToggleLight { ip: String, state: u8},
+        TPLinkSetLightBrightness {ip: String, brightness: u8},
+        RokuSearch { query: String },
+        RokuLaunchApp { app_id: String },
+    }
 
-impl AssistantFunction {
-    async fn execute(self) -> Result<String, ServerFnError> {
-        match self {
-            AssistantFunction::RokuKeyPress { key } => {
-                roku_send_keypress(&key).await;
-                Ok(format!("Roku Key Pressed: {}", key))
-            }
-            AssistantFunction::TPLinkTurnOn { ip } => {
-                tplink_turn_plug_on(&ip).await;
-                Ok(format!("TP-link plug turned on"))
-            }
-            AssistantFunction::TPLinkTurnOff { ip } => {
-                tplink_turn_plug_off(&ip).await;
-                Ok(format!("TP-link plug turned off"))
-            }
-            AssistantFunction::TPLinkToggleLight { ip, state } => {
-                tplink_toggle_light(&ip, state).await;
-                Ok(format!("TP-link switch turned off"))
-            }
-            AssistantFunction::TPLinkSetLightBrightness { ip, brightness } => {
-                tplink_set_light_brightness(&ip, brightness).await;
-                Ok(format!("TP-link switch brightness set"))
-            }
-            AssistantFunction::RokuSearch { query } => {
-                roku_search(&query).await;
-                Ok(format!("Roku search sent"))
-            }
-            AssistantFunction::RokuLaunchApp { app_id } => {
-                roku_launch_app(&app_id).await;
-                Ok(format!("Roku app launched"))
+    impl AssistantFunction {
+        async fn execute(self) -> Result<String, ServerFnError> {
+            match self {
+                AssistantFunction::RokuKeyPress { key } => {
+                    roku_send_keypress(&key).await;
+                    Ok(format!("Roku Key Pressed: {}", key))
+                }
+                AssistantFunction::TPLinkTurnOn { ip } => {
+                    tplink_turn_plug_on(&ip).await;
+                    Ok(format!("TP-link plug turned on"))
+                }
+                AssistantFunction::TPLinkTurnOff { ip } => {
+                    tplink_turn_plug_off(&ip).await;
+                    Ok(format!("TP-link plug turned off"))
+                }
+                AssistantFunction::TPLinkToggleLight { ip, state } => {
+                    tplink_toggle_light(&ip, state).await;
+                    Ok(format!("TP-link switch turned off"))
+                }
+                AssistantFunction::TPLinkSetLightBrightness { ip, brightness } => {
+                    tplink_set_light_brightness(&ip, brightness).await;
+                    Ok(format!("TP-link switch brightness set"))
+                }
+                AssistantFunction::RokuSearch { query } => {
+                    roku_search(&query).await;
+                    Ok(format!("Roku search sent"))
+                }
+                AssistantFunction::RokuLaunchApp { app_id } => {
+                    roku_launch_app(&app_id).await;
+                    Ok(format!("Roku app launched"))
+                }
             }
         }
     }
-}
+
+    impl Device {
+        pub fn format_for_openapi(&self) -> String {
+            format!("{} - {} - {} - {}\n", self.name, self.device_type, self.ip, self.state)
+        }
+    }
+
+    pub fn format_devices(devices: Vec<Device>) -> String {
+        devices.iter().map(|device| device.format_for_openapi()).collect()
+    }
 }}
 
 pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<String, ServerFnError> {
@@ -113,6 +129,9 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
         Respond to the following input: {text}",
         devices
     );
+
+    let prompt_length = initial_system_prompt.len();
+    println!("Prompt Length: {prompt_length}");
 
     let request = CreateChatCompletionRequestArgs::default()
     .max_tokens(512u16)
@@ -389,10 +408,36 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
                 Err(err) => println!("{err}"),
             }
         }
+        whisper_tts(client, &response_content).await.unwrap();
         response_content
     } else {
         "".to_string()
     };
 
     Ok(value)
+}
+
+pub async fn whisper_tts(client: Client<OpenAIConfig>, text: &str) -> Result<(), ServerFnError> {
+    let request = CreateSpeechRequestArgs::default()
+        .input(text)
+        .voice(Voice::Nova)
+        .model(SpeechModel::Tts1)
+        .build()?;
+
+    let response = client.audio().speech(request).await?;
+    let speech_bytes = response.bytes;
+
+    // Start the audio output stream.
+    let (_stream, stream_handle) = OutputStream::try_default()?;
+
+    // Create a cursor around the speech bytes and decode them.
+    let cursor = Cursor::new(speech_bytes);
+    let source = Decoder::new_mp3(cursor)?;
+
+    // Play the audio and wait for it to finish.
+    let sink = Sink::try_new(&stream_handle)?;
+    sink.append(source);
+    sink.sleep_until_end();
+
+    Ok(())
 }
