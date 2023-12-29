@@ -4,7 +4,7 @@ use {
         handlers::roku_keypress_handler,
         integrations::{
             iron_nest::{client::insert_devices_into_db, types::Device},
-            ring::RingRestClient,
+            ring::{get_ring_camera, RingRestClient},
             roku::roku_discover,
             tplink::{discover_devices, types::DeviceData},
         },
@@ -128,6 +128,7 @@ cfg_if::cfg_if! {
                 .fallback(file_and_error_handler)
                 .with_state(app_state);
 
+            let auth_ring_rest_client = ring_rest_client.clone();
             let ring_auth_refresh_job = tokio::task::spawn(async move {
                 let six_hours = chrono::Duration::hours(6).to_std().unwrap();
                 let mut interval = tokio::time::interval(six_hours);
@@ -135,7 +136,45 @@ cfg_if::cfg_if! {
                     interval.tick().await;
 
                     info!("Refreshing Ring auth token");
-                    ring_rest_client.refresh_auth_token().await;
+                    auth_ring_rest_client.refresh_auth_token().await;
+                }
+            });
+
+            let shared_pool_clone1 = shared_pool.clone();
+            let discovery_ring_client = ring_rest_client.clone();
+            let ring_device_discovery_job = tokio::task::spawn(async move {
+                let five_minutes = chrono::Duration::minutes(5).to_std().unwrap();
+                let mut interval = tokio::time::interval(five_minutes);
+
+                loop {
+                    interval.tick().await;
+
+                    info!("Refreshing Ring Device Data");
+                    let ring_devices = discovery_ring_client.get_devices().await;
+
+                    let doorbots = ring_devices
+                    .doorbots
+                    .into_iter()
+                    .chain(ring_devices.authorized_doorbots.into_iter())
+                    .collect::<Vec<_>>();
+
+                    let mut cameras = Vec::with_capacity(20);
+                    for doorbot in doorbots.iter() {
+                        cameras.push(get_ring_camera(&ring_rest_client, doorbot).await)
+                    }
+
+                    let mut devices = Vec::with_capacity(20);
+                    for camera in cameras.iter() {
+                        devices.push(Device{
+                            id: 0,
+                            name: camera.description.to_string(),
+                            ip: camera.id.to_string(),
+                            device_type: "ring-doorbell".to_string(),
+                            state: 1,
+                        });
+                    }
+
+                    insert_devices_into_db(shared_pool_clone1.clone(), &devices).await.unwrap();
                 }
             });
 
@@ -144,7 +183,7 @@ cfg_if::cfg_if! {
                 axum::Server::bind(&addr).serve(app.into_make_service())
             };
 
-            let shared_pool_clone = shared_pool.clone();
+            let shared_pool_clone2 = shared_pool.clone();
             thread::spawn(move || {
                 println!("Running discovery thread for tp-link devices");
                 let rt = runtime::Runtime::new().unwrap();
@@ -181,7 +220,7 @@ cfg_if::cfg_if! {
                                     }
                                 }
 
-                                insert_devices_into_db(shared_pool_clone.clone(), &devices).await.unwrap();
+                                insert_devices_into_db(shared_pool_clone2.clone(), &devices).await.unwrap();
                             },
                             Err(e) => {
                                 eprintln!("Error discovering devices: {}", e);
@@ -225,6 +264,7 @@ cfg_if::cfg_if! {
             tokio::select! {
                 e = http_server => error!("HTTP server exiting with error {e:?}"),
                 e = ring_auth_refresh_job => error!("Ring auth refresh job exiting with error {e:?}"),
+                e = ring_device_discovery_job => error!("Ring device discovery job exiting with error {e:?}")
             }
         }
     }
