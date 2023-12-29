@@ -9,7 +9,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     futures::StreamExt,
     crate::integrations::{
         roku::{roku_launch_app, roku_search, roku_send_keypress},
-        tplink::{tplink_turn_plug_off, tplink_turn_plug_on, tplink_toggle_light},
+        tplink::{tplink_turn_plug_off, tplink_turn_plug_on, tplink_turn_light_on_off},
     },
     async_openai::{
         types::{
@@ -57,7 +57,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
                     Ok(format!("TP-link plug turned off"))
                 }
                 AssistantFunction::TPLinkToggleLight { ip, state } => {
-                    tplink_toggle_light(&ip, state).await;
+                    tplink_turn_light_on_off(&ip, state).await;
                     Ok(format!("TP-link switch turned off"))
                 }
                 AssistantFunction::TPLinkSetLightBrightness { ip, brightness } => {
@@ -208,7 +208,7 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
             .r#type(ChatCompletionToolType::Function)
             .function(
                 ChatCompletionFunctionsArgs::default()
-                    .name("tplink_toggle_light")
+                    .name("tplink_turn_light_on_off")
                     .description("Turn on or off tplink smart light")
                     .parameters(json!({
                         "type": "object",
@@ -330,7 +330,7 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
                     let ip = function_args["ip"].to_string();
                     AssistantFunction::TPLinkTurnOff { ip }
                 }
-                "tplink_toggle_light" => {
+                "tplink_turn_light_on_off" => {
                     let ip = function_args["ip"].to_string();
                     let state: u8 = function_args["state"].to_string().parse().unwrap();
                     AssistantFunction::TPLinkToggleLight { ip, state }

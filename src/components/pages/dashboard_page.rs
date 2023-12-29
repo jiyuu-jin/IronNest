@@ -79,7 +79,7 @@ pub fn DashboardPage() -> impl IntoView {
             </div>
         </main>
 
-        <aside class="fixed inset-y-0 left-20 hidden w-96 overflow-y-auto border-r border-gray-200 px-4 py-6 sm:px-6 lg:px-8 xl:block space-y-0.5">
+        <aside class="bg-gray-100 fixed inset-y-0 left-20 hidden w-96 overflow-y-auto border-r border-gray-200 px-4 py-6 sm:px-6 lg:px-8 xl:block space-y-0.5">
             <DeviceList ring_values=ring_values/>
         </aside>
     }

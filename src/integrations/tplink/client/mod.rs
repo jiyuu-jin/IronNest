@@ -128,7 +128,7 @@ pub async fn tplink_turn_plug_off(ip: &str) {
         .unwrap();
 }
 
-pub async fn tplink_toggle_light(ip: &str, state: u8) {
+pub async fn tplink_turn_light_on_off(ip: &str, state: u8) {
     send(ip, json!({"smartlife.iot.smartbulb.lightingservice":{"transition_light_state":{"on_off":state,"transition_period":0}}}))
         .await
         .unwrap();
