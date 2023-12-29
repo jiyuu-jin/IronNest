@@ -3,7 +3,8 @@ use {
         components::{
             navbar::Navbar,
             pages::{
-                dashboard_page::DashboardPage, login_page::LoginPage, websocket_page::WebSocketPage,
+                dashboard_page::DashboardPage, devices_page::DevicesPage, login_page::LoginPage,
+                settings_page::SettingsPage, websocket_page::WebSocketPage,
             },
         },
         error_template::{AppError, ErrorTemplate},
@@ -155,6 +156,8 @@ pub fn App() -> impl IntoView {
                     <Routes>
                         <Route path="/login" view=LoginPage/>
                         <Route path="/" view=DashboardPage/>
+                        <Route path="/settings" view=SettingsPage/>
+                        <Route path="/devices" view=DevicesPage/>
                         <Route path="/websocket" view=WebSocketPage/>
                     </Routes>
                 </main>

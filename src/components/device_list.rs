@@ -5,7 +5,7 @@ pub fn DeviceList(ring_values: Resource<(), Result<RingValues, ServerFnError>>) 
     view! {
         <div>
             <h2 class="text-lg">"Devices"</h2>
-            <hr class="mb-2" />
+            <hr class="mb-2"/>
             <Suspense fallback=|| {
                 view! { <p>"Loading devices..."</p> }
             }>

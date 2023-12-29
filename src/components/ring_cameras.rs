@@ -19,12 +19,27 @@ pub fn RingCameras(ring_values: Resource<(), Result<RingValues, ServerFnError>>)
     view! {
         <Suspense fallback=|| {
             view! {
-                <div class="mb-2" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
-                    <button style="min-height:360px;" type="button" class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-12 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 content-center">
-                        <span class="mt-2 block text-xl font-semibold text-gray-900">"Camera Loading..."</span>
+                <div
+                    class="mb-2"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;"
+                >
+                    <button
+                        style="min-height:360px;"
+                        type="button"
+                        class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-12 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 content-center"
+                    >
+                        <span class="mt-2 block text-xl font-semibold text-gray-900">
+                            "Camera Loading..."
+                        </span>
                     </button>
-                    <button style="max-height:360px;" type="button" class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-12 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                        <span class="mt-2 block text-xl font-semibold text-gray-900">"Camera Loading..."</span>
+                    <button
+                        style="max-height:360px;"
+                        type="button"
+                        class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-12 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                    >
+                        <span class="mt-2 block text-xl font-semibold text-gray-900">
+                            "Camera Loading..."
+                        </span>
                     </button>
                 </div>
             }
@@ -105,9 +120,18 @@ pub fn RingCameras(ring_values: Resource<(), Result<RingValues, ServerFnError>>)
                         }
                         Err(_) => {
                             view! {
-                                <div class="mb-2" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
-                                    <button style="max-height:360px;" type="button" class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-12 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                                        <span class="mt-2 block text-xl font-semibold text-gray-900">"Loading data or none available."</span>
+                                <div
+                                    class="mb-2"
+                                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;"
+                                >
+                                    <button
+                                        style="max-height:360px;"
+                                        type="button"
+                                        class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-12 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                                    >
+                                        <span class="mt-2 block text-xl font-semibold text-gray-900">
+                                            "Loading data or none available."
+                                        </span>
                                     </button>
                                 </div>
                             }
@@ -116,9 +140,18 @@ pub fn RingCameras(ring_values: Resource<(), Result<RingValues, ServerFnError>>)
                 }
                 None => {
                     view! {
-                        <div class="mb-2" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
-                            <button style="max-height:360px;" type="button" class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-12 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                                <span class="mt-2 block text-xl font-semibold text-gray-900">"Loading data or none available."</span>
+                        <div
+                            class="mb-2"
+                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;"
+                        >
+                            <button
+                                style="max-height:360px;"
+                                type="button"
+                                class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-12 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                            >
+                                <span class="mt-2 block text-xl font-semibold text-gray-900">
+                                    "Loading data or none available."
+                                </span>
                             </button>
                         </div>
                     }
