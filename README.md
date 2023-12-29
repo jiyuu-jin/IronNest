@@ -11,7 +11,8 @@ IronNest is a home automation system designed to integrate with various smart de
 - Automatic local network discovery of devices.
 - Chain multiple commands and control devices by `type`, `name`, or by `ip`.
 
-![image](https://github.com/jiyuu-jin/IronNest/assets/19313806/c4426aed-3793-4e03-9973-87893cf2d8d3)
+<img width="1725" alt="image" src="https://github.com/jiyuu-jin/IronNest/assets/19313806/9d20d16e-49a2-4101-ad4c-49e04312ace0">
+
 
 ## Project Structure
 
