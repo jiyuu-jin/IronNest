@@ -1,5 +1,5 @@
 use {
-    super::types::{ActionApp, RokuDiscoverRes},
+    super::types::{ActionApp, RokuDeviceInfo, RokuDiscoverRes},
     futures::prelude::*,
     serde_json::json,
     serde_xml_rs::from_str,
@@ -35,16 +35,21 @@ pub async fn roku_discover() -> Vec<RokuDiscoverRes> {
     devices
 }
 
-pub async fn roku_get_apps() -> String {
-    get("query/apps").await
+pub async fn roku_get_apps(ip: String) -> String {
+    get(ip, "query/apps").await
 }
 
-pub async fn roku_get_media_player() -> String {
-    get("query/media-player").await
+pub async fn roku_get_media_player(ip: String) -> String {
+    get(ip, "query/media-player").await
 }
 
-pub async fn roku_get_active_app() -> ActionApp {
-    let app_text = get("query/active-app").await;
+pub async fn roku_get_active_app(ip: String) -> ActionApp {
+    let app_text = get(ip, "query/active-app").await;
+    from_str(&app_text).unwrap()
+}
+
+pub async fn roku_get_device_info(ip: String) -> RokuDeviceInfo {
+    let app_text = get(ip, "query/device-info").await;
     from_str(&app_text).unwrap()
 }
 
@@ -74,8 +79,8 @@ pub async fn post(query: &str) -> serde_json::Value {
     })
 }
 
-pub async fn get(query: &str) -> String {
-    let roku_url = format!("http://10.0.0.217:8060/{query}");
+pub async fn get(ip: String, query: &str) -> String {
+    let roku_url = format!("http://{ip}:8060/{query}");
     let client = reqwest::Client::new();
 
     client

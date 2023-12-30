@@ -21,3 +21,11 @@ pub struct App {
     #[serde(rename = "$value")]
     pub value: String,
 }
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub struct RokuDeviceInfo {
+    #[serde(rename = "user-device-name")]
+    pub user_device_name: String,
+    #[serde(rename = "power-mode")]
+    pub power_mode: String,
+}

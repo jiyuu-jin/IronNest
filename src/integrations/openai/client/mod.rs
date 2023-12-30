@@ -104,6 +104,10 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
         let state_value: i64 = row.get("power_state");
         let state: u8 = state_value.try_into().expect("Value out of range for u64");
         let ip: String = row.get("ip");
+        // let battery_percentage_value: i64 = row.get("battery_percentage");
+        // let battery_percentage: u64 = battery_percentage_value
+        //     .try_into()
+        //     .expect("Value out of range for u64");
 
         devices.push(Device {
             id: row.get("id"),
@@ -111,6 +115,7 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
             device_type: row.get("device_type"),
             ip: ip.to_string(),
             state,
+            battery_percentage: 0,
         });
 
         let device_type: String = row.get("device_type");
@@ -127,7 +132,7 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
         Here are the following device names:
         {:?}
         Respond to the following input: {text}",
-        devices
+        format_devices(devices)
     );
 
     let prompt_length = initial_system_prompt.len();
