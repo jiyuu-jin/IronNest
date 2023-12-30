@@ -1,10 +1,12 @@
 use {
-    crate::integrations::ring::types::{RingValues, VideoItem},
+    super::pages::dashboard_page::DashboardValues, crate::integrations::ring::types::VideoItem,
     leptos::*,
 };
 
 #[component]
-pub fn RingCameras(ring_values: Resource<(), Result<RingValues, ServerFnError>>) -> impl IntoView {
+pub fn RingCameras(
+    ring_values: Resource<(), Result<DashboardValues, ServerFnError>>,
+) -> impl IntoView {
     let start_of_day_timestamp = get_start_of_day_timestamp();
 
     // @TODO learn leptos and fix hardcoded state logic
@@ -227,7 +229,6 @@ fn calculate_width(duration: i32, timeline_width: i32) -> i32 {
     let width_percentage = (duration_ms as f64 / 86_400_000f64) * 100.0; // Calculate width as a percentage of the day
     let calculated_width = (width_percentage * timeline_width as f64 / 100.0) as i32;
 
-    // Ensure a minimum width (e.g., 2 pixels) for visibility
     let min_width = 5;
     if calculated_width < min_width {
         min_width

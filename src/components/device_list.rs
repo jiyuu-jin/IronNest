@@ -1,7 +1,9 @@
-use {crate::integrations::ring::types::RingValues, leptos::*};
+use {super::pages::dashboard_page::DashboardValues, leptos::*};
 
 #[component]
-pub fn DeviceList(ring_values: Resource<(), Result<RingValues, ServerFnError>>) -> impl IntoView {
+pub fn DeviceList(
+    ring_values: Resource<(), Result<DashboardValues, ServerFnError>>,
+) -> impl IntoView {
     view! {
         <div>
             <h2 class="text-lg">"Devices"</h2>
@@ -38,6 +40,7 @@ pub fn DeviceList(ring_values: Resource<(), Result<RingValues, ServerFnError>>) 
                             })
                         })
                 }}
+
             </Suspense>
         </div>
     }

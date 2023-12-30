@@ -1,7 +1,6 @@
 use {
-    crate::{
-        components::pages::dashboard_page::get_ring_values, integrations::ring::types::RingValues,
-    },
+    super::dashboard_page::DashboardValues,
+    crate::components::pages::dashboard_page::get_dashboard_values,
     js_sys::Reflect,
     leptos::*,
     leptos_reactive::create_effect,
@@ -13,7 +12,7 @@ use {
 
 #[component]
 pub fn WebSocketPage() -> impl IntoView {
-    let ring_values = create_resource(|| (), |_| get_ring_values());
+    let ring_values = create_resource(|| (), |_| get_dashboard_values());
 
     view! {
         <h1>"WebSocket"</h1>
@@ -36,7 +35,7 @@ pub fn WebSocketPage() -> impl IntoView {
 }
 
 #[component]
-fn WebSocketComponent(ring_values: RingValues) -> impl IntoView {
+fn WebSocketComponent(ring_values: DashboardValues) -> impl IntoView {
     let UseWebsocketReturn {
         ready_state,
         message,
