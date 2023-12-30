@@ -7,4 +7,5 @@ pub struct Device {
     pub device_type: String,
     pub ip: String,
     pub state: u8,
+    pub battery_percentage: u64,
 }
