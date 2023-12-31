@@ -2,6 +2,7 @@ use {
     super::types::Device,
     sqlx::{Pool, Sqlite},
     std::sync::Arc,
+    tokio_cron_scheduler::{Job, JobScheduler},
     url::Url,
 };
 
@@ -31,4 +32,18 @@ pub fn extract_ip(url_str: &str) -> Result<String, url::ParseError> {
         Some(host) => Ok(host.to_string()),
         None => Err(url::ParseError::EmptyHost),
     }
+}
+
+pub async fn schedule_task(function_name: String) {
+    let sched = JobScheduler::new().await.unwrap();
+
+    sched
+        .add(
+            Job::new("1/10 * * * * *", move |_uuid, _l| {
+                println!("Calling {}", function_name);
+            })
+            .unwrap(),
+        )
+        .await
+        .unwrap();
 }
