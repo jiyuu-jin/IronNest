@@ -32,20 +32,20 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     use std::io::Cursor;
 
     pub enum AssistantFunction {
-        RokuKeyPress { key: String },
+        RokuKeyPress { ip: String, key: String },
         TPLinkTurnOn { ip: String },
         TPLinkTurnOff { ip: String },
         TPLinkToggleLight { ip: String, state: u8},
         TPLinkSetLightBrightness {ip: String, brightness: u8},
-        RokuSearch { query: String },
-        RokuLaunchApp { app_id: String },
+        RokuSearch { ip: String, query: String },
+        RokuLaunchApp { ip: String, app_id: String },
     }
 
     impl AssistantFunction {
         async fn execute(self) -> Result<String, ServerFnError> {
             match self {
-                AssistantFunction::RokuKeyPress { key } => {
-                    roku_send_keypress(&key).await;
+                AssistantFunction::RokuKeyPress { ip, key } => {
+                    roku_send_keypress(&ip, &key).await;
                     Ok(format!("Roku Key Pressed: {}", key))
                 }
                 AssistantFunction::TPLinkTurnOn { ip } => {
@@ -64,12 +64,12 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
                     tplink_set_light_brightness(&ip, brightness).await;
                     Ok(format!("TP-link switch brightness set"))
                 }
-                AssistantFunction::RokuSearch { query } => {
-                    roku_search(&query).await;
+                AssistantFunction::RokuSearch { ip, query } => {
+                    roku_search(&ip, &query).await;
                     Ok(format!("Roku search sent"))
                 }
-                AssistantFunction::RokuLaunchApp { app_id } => {
-                    roku_launch_app(&app_id).await;
+                AssistantFunction::RokuLaunchApp { ip, app_id } => {
+                    roku_launch_app(&ip, &app_id).await;
                     Ok(format!("Roku app launched"))
                 }
             }
@@ -157,6 +157,10 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
                     .parameters(json!({
                         "type": "object",
                         "properties": {
+                            "ip": { 
+                                "type": "string", 
+                                "enum": roku_ips,
+                            },
                             "key": { 
                                 "type": "string", 
                                 "enum": [ 
@@ -166,7 +170,7 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
                                 ]
                             },
                         },
-                        "required": ["key"],
+                        "required": ["key", "ip"],
                     }))
                     .build().unwrap()
             )
@@ -325,7 +329,11 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
                         .to_string()
                         .trim_matches('"')
                         .to_string();
-                    AssistantFunction::RokuKeyPress { key }
+                    let ip = function_args["ip"]
+                        .to_string()
+                        .trim_matches('"')
+                        .to_string();
+                    AssistantFunction::RokuKeyPress { ip, key }
                 }
                 "tplink_turn_plug_on" => {
                     let ip = function_args["ip"].to_string();
@@ -347,11 +355,13 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
                 }
                 "roku_search" => {
                     let query = function_args["query"].to_string();
-                    AssistantFunction::RokuSearch { query }
+                    let ip = function_args["ip"].to_string();
+                    AssistantFunction::RokuSearch { ip, query }
                 }
                 "roku_launch_app" => {
                     let app_id = function_args["app_id"].to_string();
-                    AssistantFunction::RokuLaunchApp { app_id }
+                    let ip = function_args["ip"].to_string();
+                    AssistantFunction::RokuLaunchApp { ip, app_id }
                 }
                 &_ => return Err(ServerFnError::ServerError("Function not found".to_string())),
             };

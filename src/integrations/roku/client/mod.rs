@@ -35,38 +35,39 @@ pub async fn roku_discover() -> Vec<RokuDiscoverRes> {
     devices
 }
 
-pub async fn roku_get_apps(ip: String) -> String {
+pub async fn roku_get_apps(ip: &str) -> String {
     get(ip, "query/apps").await
 }
 
-pub async fn roku_get_media_player(ip: String) -> String {
+pub async fn roku_get_media_player(ip: &str) -> String {
     get(ip, "query/media-player").await
 }
 
-pub async fn roku_get_active_app(ip: String) -> ActionApp {
+pub async fn roku_get_active_app(ip: &str) -> ActionApp {
     let app_text = get(ip, "query/active-app").await;
     from_str(&app_text).unwrap()
 }
 
-pub async fn roku_get_device_info(ip: String) -> RokuDeviceInfo {
+pub async fn roku_get_device_info(ip: &str) -> RokuDeviceInfo {
     let app_text = get(ip, "query/device-info").await;
     from_str(&app_text).unwrap()
 }
 
-pub async fn roku_send_keypress(key: &str) -> serde_json::Value {
-    post(format!("keypress/{key}").as_str()).await
+pub async fn roku_send_keypress(ip: &str, key: &str) -> serde_json::Value {
+    post(ip, format!("keypress/{key}").as_str()).await
 }
 
-pub async fn roku_search(query: &str) -> serde_json::Value {
-    post(format!("search/browse?{query}=&matchAny=true").as_str()).await
+pub async fn roku_search(ip: &str, query: &str) -> serde_json::Value {
+    post(ip, format!("search/browse?{query}=&matchAny=true").as_str()).await
 }
 
-pub async fn roku_launch_app(app_id: &str) -> serde_json::Value {
-    post(format!("launch/{app_id}").as_str()).await
+pub async fn roku_launch_app(ip: &str, app_id: &str) -> serde_json::Value {
+    post(ip, format!("launch/{app_id}").as_str()).await
 }
 
-pub async fn post(query: &str) -> serde_json::Value {
-    let roku_url = format!("http://10.0.0.217:8060/{query}");
+pub async fn post(ip: &str, query: &str) -> serde_json::Value {
+    let roku_url = format!("http://{ip}:8060/{query}");
+    println!("roku url: {roku_url}");
     let client = reqwest::Client::new();
 
     match client.post(&roku_url).send().await {
@@ -79,7 +80,7 @@ pub async fn post(query: &str) -> serde_json::Value {
     })
 }
 
-pub async fn get(ip: String, query: &str) -> String {
+pub async fn get(ip: &str, query: &str) -> String {
     let roku_url = format!("http://{ip}:8060/{query}");
     let client = reqwest::Client::new();
 
