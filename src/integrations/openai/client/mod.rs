@@ -1,16 +1,13 @@
 use {
-    crate::integrations::{iron_nest::types::Device, tplink::tplink_set_light_brightness},
+    crate::integrations::iron_nest::{execute_function, types::Device},
     leptos::ServerFnError,
+    log::info,
     serde_json::json,
 };
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
   use {
     futures::StreamExt,
-    crate::integrations::{
-        roku::{roku_launch_app, roku_search, roku_send_keypress},
-        tplink::{tplink_turn_plug_off, tplink_turn_plug_on, tplink_turn_light_on_off},
-    },
     async_openai::{
         types::{
             ChatCompletionFunctionsArgs,
@@ -30,51 +27,6 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     };
     use rodio::{Decoder, OutputStream, Sink};
     use std::io::Cursor;
-
-    pub enum AssistantFunction {
-        RokuKeyPress { ip: String, key: String },
-        TPLinkTurnOn { ip: String },
-        TPLinkTurnOff { ip: String },
-        TPLinkToggleLight { ip: String, state: u8},
-        TPLinkSetLightBrightness {ip: String, brightness: u8},
-        RokuSearch { ip: String, query: String },
-        RokuLaunchApp { ip: String, app_id: String },
-    }
-
-    impl AssistantFunction {
-        async fn execute(self) -> Result<String, ServerFnError> {
-            match self {
-                AssistantFunction::RokuKeyPress { ip, key } => {
-                    roku_send_keypress(&ip, &key).await;
-                    Ok(format!("Roku Key Pressed: {}", key))
-                }
-                AssistantFunction::TPLinkTurnOn { ip } => {
-                    tplink_turn_plug_on(&ip).await;
-                    Ok(format!("TP-link plug turned on"))
-                }
-                AssistantFunction::TPLinkTurnOff { ip } => {
-                    tplink_turn_plug_off(&ip).await;
-                    Ok(format!("TP-link plug turned off"))
-                }
-                AssistantFunction::TPLinkToggleLight { ip, state } => {
-                    tplink_turn_light_on_off(&ip, state).await;
-                    Ok(format!("TP-link switch turned off"))
-                }
-                AssistantFunction::TPLinkSetLightBrightness { ip, brightness } => {
-                    tplink_set_light_brightness(&ip, brightness).await;
-                    Ok(format!("TP-link switch brightness set"))
-                }
-                AssistantFunction::RokuSearch { ip, query } => {
-                    roku_search(&ip, &query).await;
-                    Ok(format!("Roku search sent"))
-                }
-                AssistantFunction::RokuLaunchApp { ip, app_id } => {
-                    roku_launch_app(&ip, &app_id).await;
-                    Ok(format!("Roku app launched"))
-                }
-            }
-        }
-    }
 
     impl Device {
         pub fn format_for_openapi(&self) -> String {
@@ -135,8 +87,7 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
         format_devices(devices)
     );
 
-    let prompt_length = initial_system_prompt.len();
-    println!("Prompt Length: {prompt_length}");
+    info!("Prompt Length: {}", initial_system_prompt.len());
 
     let request = CreateChatCompletionRequestArgs::default()
     .max_tokens(512u16)
@@ -312,62 +263,15 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
         .message
         .clone();
 
-    println!(
-        "response message {}",
-        serde_json::to_string(&response_message).unwrap()
-    );
-
     let mut function_responses: Vec<(ChatCompletionMessageToolCall, String)> = Vec::new();
 
     let value = if let Some(tool_calls) = response_message.tool_calls {
         for tool_call in tool_calls.iter() {
             let function_name = tool_call.function.name.to_string();
             let function_args: serde_json::Value = tool_call.function.arguments.parse().unwrap();
-            let assistant_function = match function_name.as_str() {
-                "roku_send_keypress" => {
-                    let key = function_args["key"]
-                        .to_string()
-                        .trim_matches('"')
-                        .to_string();
-                    let ip = function_args["ip"]
-                        .to_string()
-                        .trim_matches('"')
-                        .to_string();
-                    AssistantFunction::RokuKeyPress { ip, key }
-                }
-                "tplink_turn_plug_on" => {
-                    let ip = function_args["ip"].to_string();
-                    AssistantFunction::TPLinkTurnOn { ip }
-                }
-                "tplink_turn_plug_off" => {
-                    let ip = function_args["ip"].to_string();
-                    AssistantFunction::TPLinkTurnOff { ip }
-                }
-                "tplink_turn_light_on_off" => {
-                    let ip = function_args["ip"].to_string();
-                    let state: u8 = function_args["state"].to_string().parse().unwrap();
-                    AssistantFunction::TPLinkToggleLight { ip, state }
-                }
-                "tplink_set_light_brightness" => {
-                    let ip = function_args["ip"].to_string();
-                    let brightness: u8 = function_args["brightness"].to_string().parse().unwrap();
-                    AssistantFunction::TPLinkSetLightBrightness { ip, brightness }
-                }
-                "roku_search" => {
-                    let query = function_args["query"].to_string();
-                    let ip = function_args["ip"].to_string();
-                    AssistantFunction::RokuSearch { ip, query }
-                }
-                "roku_launch_app" => {
-                    let app_id = function_args["app_id"].to_string();
-                    let ip = function_args["ip"].to_string();
-                    AssistantFunction::RokuLaunchApp { ip, app_id }
-                }
-                &_ => return Err(ServerFnError::ServerError("Function not found".to_string())),
-            };
+            let function_response = execute_function(function_name, function_args).await;
 
-            let function_response = assistant_function.execute().await?;
-            function_responses.push((tool_call.clone(), function_response));
+            function_responses.push((tool_call.clone(), function_response.to_string()));
         }
 
         let mut messages: Vec<ChatCompletionRequestMessage> =
@@ -442,14 +346,10 @@ pub async fn whisper_tts(client: Client<OpenAIConfig>, text: &str) -> Result<(),
     let response = client.audio().speech(request).await?;
     let speech_bytes = response.bytes;
 
-    // Start the audio output stream.
     let (_stream, stream_handle) = OutputStream::try_default()?;
-
-    // Create a cursor around the speech bytes and decode them.
     let cursor = Cursor::new(speech_bytes);
     let source = Decoder::new_mp3(cursor)?;
 
-    // Play the audio and wait for it to finish.
     let sink = Sink::try_new(&stream_handle)?;
     sink.append(source);
     sink.sleep_until_end();

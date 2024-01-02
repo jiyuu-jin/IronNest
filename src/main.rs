@@ -3,9 +3,9 @@ use {
         components::layout::App,
         handlers::roku_keypress_handler,
         integrations::{
-            iron_nest::{client::insert_devices_into_db, types::Device},
+            iron_nest::{client::insert_devices_into_db, extract_ip, types::Device},
             ring::{get_ring_camera, RingRestClient},
-            roku::roku_discover,
+            roku::{roku_discover, roku_get_device_info},
             tplink::{discover_devices, types::DeviceData},
         },
     },
@@ -92,8 +92,19 @@ cfg_if::cfg_if! {
                     name TEXT NOT NULL,
                     device_type TEXT NOT NULL,
                     ip TEXT NOT NULL UNIQUE,
-                    battery_percentage TEXT,
+                    battery_percentage BIGINT UNSIGNED,
                     power_state INT8 NOT NULL
+                )",
+            )
+            .execute(&*shared_pool.clone())
+            .await.unwrap();
+
+            sqlx::query(
+                "CREATE TABLE events (
+                    id INTEGER PRIMARY KEY,
+                    schedule TEXT NOT NULL,
+                    function TEXT NOT NULL,
+                    parameters TEXT NOT NULL
                 )",
             )
             .execute(&*shared_pool.clone())
@@ -171,6 +182,7 @@ cfg_if::cfg_if! {
                             ip: camera.id.to_string(),
                             device_type: "ring-doorbell".to_string(),
                             state: 1,
+                            battery_percentage: camera.health,
                         });
                     }
 
@@ -203,6 +215,7 @@ cfg_if::cfg_if! {
                                                     device_type: "smart-plug".to_string(),
                                                     ip: ip.to_string(),
                                                     state: data.relay_state,
+                                                    battery_percentage: 0,
                                                 });
                                             }
                                         }
@@ -214,12 +227,12 @@ cfg_if::cfg_if! {
                                                     device_type: "smart-light".to_string(),
                                                     ip: ip.to_string(),
                                                     state: data.light_state.on_off,
+                                                    battery_percentage: 0,
                                                 });
                                             }
                                         }
                                     }
                                 }
-
                                 insert_devices_into_db(shared_pool_clone2.clone(), &devices).await.unwrap();
                             },
                             Err(e) => {
@@ -241,12 +254,16 @@ cfg_if::cfg_if! {
                         let mut devices: Vec<Device> = Vec::new();
 
                         for device in roku_devices.iter() {
+                            let ip = extract_ip(&device.location).unwrap();
+                            let device_info = roku_get_device_info(&ip).await;
+                            let state = if device_info.power_mode == "PowerOn" { 1 } else {0};
                             devices.push(Device {
                                 id: 0,
-                                name: "Roku Tv".to_string(),
+                                name: device_info.user_device_name,
                                 device_type: "roku".to_string(),
-                                ip: device.location.to_string(),
-                                state: 0,
+                                ip,
+                                state,
+                                battery_percentage: 0,
                             });
                         }
 
