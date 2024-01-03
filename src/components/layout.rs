@@ -3,7 +3,8 @@ use {
         components::{
             navbar::Navbar,
             pages::{
-                dashboard_page::DashboardPage, devices_page::DevicesPage, login_page::LoginPage,
+                accounts_page::AccountsPage, dashboard_page::DashboardPage,
+                devices_page::DevicesPage, ring_login_page::RingLoginPage,
                 settings_page::SettingsPage, websocket_page::WebSocketPage,
             },
         },
@@ -93,7 +94,7 @@ pub fn App() -> impl IntoView {
                                     </li>
                                     <li>
                                         <a
-                                            href="#"
+                                            href="/accounts"
                                             class="text-gray-400 hover:text-white hover:bg-gray-800 group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold"
                                         >
                                             <svg
@@ -124,7 +125,7 @@ pub fn App() -> impl IntoView {
 
             <div class="sticky top-0 z-40 flex items-center gap-x-6 bg-gray-900 px-4 py-4 shadow-sm sm:px-6 lg:hidden">
                 <button type="button" class="-m-2.5 p-2.5 text-gray-400 lg:hidden toggle-sidebar">
-                    <span class="sr-only">Open sidebar</span>
+                    <span class="sr-only">"Open sidebar"</span>
                     <svg
                         class="h-6 w-6"
                         fill="none"
@@ -142,7 +143,7 @@ pub fn App() -> impl IntoView {
                 </button>
                 <div class="flex-1 text-sm font-semibold leading-6 text-white">Dashboard</div>
                 <a href="#">
-                    <span class="sr-only">Your profile</span>
+                    <span class="sr-only">"Icon"</span>
                     <img class="h-8 w-8 rounded-full bg-gray-800" src="/icon.png" alt=""/>
                 </a>
             </div>
@@ -154,8 +155,9 @@ pub fn App() -> impl IntoView {
             }>
                 <main>
                     <Routes>
-                        <Route path="/login" view=LoginPage/>
                         <Route path="/" view=DashboardPage/>
+                        <Route path="/accounts" view=AccountsPage/>
+                        <Route path="/accounts/:integration" view=RingLoginPage/>
                         <Route path="/settings" view=SettingsPage/>
                         <Route path="/devices" view=DevicesPage/>
                         <Route path="/websocket" view=WebSocketPage/>

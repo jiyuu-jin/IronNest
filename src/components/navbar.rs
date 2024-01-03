@@ -55,7 +55,7 @@ pub fn Navbar() -> impl IntoView {
                     </li>
                     <li>
                         <a
-                            href="/login"
+                            href="/accounts"
                             class="text-gray-400 hover:text-white hover:bg-gray-800 group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold"
                         >
                             <svg

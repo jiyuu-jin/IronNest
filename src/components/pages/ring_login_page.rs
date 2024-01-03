@@ -16,7 +16,7 @@ pub async fn handle_login(
 }
 
 #[component]
-pub fn LoginPage() -> impl IntoView {
+pub fn RingLoginPage() -> impl IntoView {
     let handle_login = create_server_action::<HandleLogin>();
     let value = handle_login.value();
 
@@ -26,10 +26,10 @@ pub fn LoginPage() -> impl IntoView {
                 <img
                     class="mx-auto h-20 w-auto"
                     src="https://cdn.shopify.com/s/files/1/2393/8647/files/31291831386201.jpg?v=1701174026"
-                    alt="Your Company"
+                    alt="IronNest"
                 />
                 <h2 class="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
-                    Sign in to your account
+                    "Sign in to your account"
                 </h2>
             </div>
 
@@ -37,7 +37,7 @@ pub fn LoginPage() -> impl IntoView {
                 <ActionForm action=handle_login class="space-y-6">
                     <div>
                         <label for="email" class="block text-sm font-medium leading-6 text-white">
-                            Email address
+                            "Email address"
                         </label>
                         <div class="mt-2">
                             <input
