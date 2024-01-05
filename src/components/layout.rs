@@ -21,6 +21,8 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
 
     view! {
+        <Stylesheet id="leptos" href="/pkg/iron_nest.css"/>
+
         <Script src="https://cdn.tailwindcss.com"/>
         <Script>
             "window.addEventListener('DOMContentLoaded', () => {
@@ -121,38 +123,40 @@ pub fn App() -> impl IntoView {
                 </div>
             </div>
 
-            <Navbar/>
-
-            <div class="sticky top-0 z-40 flex items-center gap-x-6 bg-gray-900 px-4 py-4 shadow-sm sm:px-6 lg:hidden">
-                <button type="button" class="-m-2.5 p-2.5 text-gray-400 lg:hidden toggle-sidebar">
-                    <span class="sr-only">"Open sidebar"</span>
-                    <svg
-                        class="h-6 w-6"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke-width="1.5"
-                        stroke="currentColor"
-                        aria-hidden="true"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-                        ></path>
-                    </svg>
-                </button>
-                <div class="flex-1 text-sm font-semibold leading-6 text-white">Dashboard</div>
-                <a href="#">
-                    <span class="sr-only">"Icon"</span>
-                    <img class="h-8 w-8 rounded-full bg-gray-800" src="/icon.png" alt=""/>
-                </a>
-            </div>
-
             <Router fallback=|| {
                 let mut outside_errors = Errors::default();
                 outside_errors.insert_with_default_key(AppError::NotFound);
                 view! { <ErrorTemplate outside_errors/> }.into_view()
             }>
+                <Navbar/>
+
+                <div class="sticky top-0 z-40 flex items-center gap-x-6 bg-gray-900 px-4 py-4 shadow-sm sm:px-6 lg:hidden">
+                    <button
+                        type="button"
+                        class="-m-2.5 p-2.5 text-gray-400 lg:hidden toggle-sidebar"
+                    >
+                        <span class="sr-only">"Open sidebar"</span>
+                        <svg
+                            class="h-6 w-6"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="1.5"
+                            stroke="currentColor"
+                            aria-hidden="true"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                            ></path>
+                        </svg>
+                    </button>
+                    <div class="flex-1 text-sm font-semibold leading-6 text-white">Dashboard</div>
+                    <a href="#">
+                        <span class="sr-only">"Icon"</span>
+                        <img class="h-8 w-8 rounded-full bg-gray-800" src="/icon.png" alt=""/>
+                    </a>
+                </div>
                 <main>
                     <Routes>
                         <Route path="/" view=DashboardPage/>

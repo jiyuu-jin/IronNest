@@ -1,4 +1,4 @@
-use leptos::*;
+use {leptos::*, leptos_router::A};
 
 #[component]
 pub fn Navbar() -> impl IntoView {
@@ -10,9 +10,9 @@ pub fn Navbar() -> impl IntoView {
             <nav class="mt-8">
                 <ul role="list" class="flex flex-col items-center space-y-1">
                     <li>
-                        <a
+                        <A
                             href="/"
-                            class="bg-gray-800 text-white group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold"
+                            class="nav-link text-gray-400 group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold"
                         >
                             <svg
                                 class="h-6 w-6 shrink-0"
@@ -29,12 +29,12 @@ pub fn Navbar() -> impl IntoView {
                                 ></path>
                             </svg>
                             <span class="sr-only">Dashboard</span>
-                        </a>
+                        </A>
                     </li>
                     <li>
-                        <a
+                        <A
                             href="/devices"
-                            class="text-gray-400 hover:text-white hover:bg-gray-800 group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold"
+                            class="nav-link text-gray-400 hover:text-white hover:bg-gray-800 group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold"
                         >
                             <svg
                                 class="h-6 w-6 shrink-0"
@@ -51,12 +51,12 @@ pub fn Navbar() -> impl IntoView {
                                 ></path>
                             </svg>
                             <span class="sr-only">Accounts</span>
-                        </a>
+                        </A>
                     </li>
                     <li>
-                        <a
+                        <A
                             href="/accounts"
-                            class="text-gray-400 hover:text-white hover:bg-gray-800 group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold"
+                            class="nav-link text-gray-400 hover:text-white hover:bg-gray-800 group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold"
                         >
                             <svg
                                 class="h-6 w-6 shrink-0"
@@ -73,12 +73,12 @@ pub fn Navbar() -> impl IntoView {
                                 ></path>
                             </svg>
                             <span class="sr-only">Accounts</span>
-                        </a>
+                        </A>
                     </li>
                     <li>
-                        <a
+                        <A
                             href="/settings"
-                            class="text-gray-400 hover:text-white hover:bg-gray-800 group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold"
+                            class="nav-link text-gray-400 hover:text-white hover:bg-gray-800 group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold"
                         >
                             <svg
                                 class="h-6 w-6 shrink-0"
@@ -100,7 +100,7 @@ pub fn Navbar() -> impl IntoView {
                                 ></path>
                             </svg>
                             <span class="sr-only">Integrations</span>
-                        </a>
+                        </A>
                     </li>
                 </ul>
             </nav>

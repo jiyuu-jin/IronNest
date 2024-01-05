@@ -1,6 +1,7 @@
-body {
-	font-family: sans-serif;
-	text-align: center;
+.nav-link[aria-current="page"] {
+	font-weight: bold;
+	background-color: rgb(31 41 55 / var(--tw-bg-opacity));
+	color: rgb(255 255 255 / var(--tw-text-opacity));
 }
 
 .tplink-device-list {
@@ -9,22 +10,11 @@ body {
 	margin: 0;
 }
 
-.tplink-device {
-	background: #1c1e26; /* Dark background */
-	border: 1px solid #2a2d3d; /* Slightly lighter border */
-	padding: 10px;
-	margin-bottom: 10px;
-	border-radius: 5px;
-	color: #fff; /* White text */
-	font-family: 'Arial', sans-serif;
-}
-
 .tplink-device div {
 	margin: 5px 0;
 }
 
 .device-alias {
-	font-weight: bold;
 	font-size: 1.1em;
 }
 
