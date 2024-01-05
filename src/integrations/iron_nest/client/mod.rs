@@ -123,3 +123,44 @@ pub async fn execute_function(function_name: String, function_args: serde_json::
         &_ => todo!(),
     }
 }
+
+pub async fn create_db_tables(pool: Arc<Pool<Sqlite>>) {
+    sqlx::query(
+        "CREATE TABLE devices (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            device_type TEXT NOT NULL,
+            ip TEXT NOT NULL UNIQUE,
+            battery_percentage INT8,
+            power_state INT8 NOT NULL
+        )",
+    )
+    .execute(&*pool.clone())
+    .await
+    .unwrap();
+
+    sqlx::query(
+        "CREATE TABLE cameras (
+            id INT8 PRIMARY KEY,
+            description TEXT NOT NULL,
+            snapshot_image TEXT NOT NULL,
+            snapshot_timestamp TEXT NOT NULL,
+            health TEXT NOT NULL
+        )",
+    )
+    .execute(&*pool.clone())
+    .await
+    .unwrap();
+
+    sqlx::query(
+        "CREATE TABLE events (
+            id INTEGER PRIMARY KEY,
+            schedule TEXT NOT NULL,
+            function TEXT NOT NULL,
+            parameters TEXT NOT NULL
+        )",
+    )
+    .execute(&*pool.clone())
+    .await
+    .unwrap();
+}

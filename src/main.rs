@@ -1,3 +1,5 @@
+use iron_nest::integrations::iron_nest::create_db_tables;
+
 use {
     iron_nest::{
         components::layout::App,
@@ -86,30 +88,7 @@ cfg_if::cfg_if! {
             let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
             let shared_pool = Arc::new(pool);
 
-            sqlx::query(
-                "CREATE TABLE devices (
-                    id INTEGER PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    device_type TEXT NOT NULL,
-                    ip TEXT NOT NULL UNIQUE,
-                    battery_percentage INT8,
-                    power_state INT8 NOT NULL
-                )",
-            )
-            .execute(&*shared_pool.clone())
-            .await.unwrap();
-
-            sqlx::query(
-                "CREATE TABLE events (
-                    id INTEGER PRIMARY KEY,
-                    schedule TEXT NOT NULL,
-                    function TEXT NOT NULL,
-                    parameters TEXT NOT NULL
-                )",
-            )
-            .execute(&*shared_pool.clone())
-            .await.unwrap();
-
+            create_db_tables(shared_pool.clone()).await;
             simple_logger::init_with_level(log::Level::Debug).expect("couldn't initialize logging");
 
             let conf = get_configuration(None).await.unwrap();
