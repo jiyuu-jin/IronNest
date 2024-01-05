@@ -92,7 +92,7 @@ cfg_if::cfg_if! {
                     name TEXT NOT NULL,
                     device_type TEXT NOT NULL,
                     ip TEXT NOT NULL UNIQUE,
-                    battery_percentage BIGINT UNSIGNED,
+                    battery_percentage INT8,
                     power_state INT8 NOT NULL
                 )",
             )

@@ -29,18 +29,20 @@ pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
     let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
     let pool = use_context::<Arc<Pool<Sqlite>>>().unwrap();
 
-    let rows = sqlx::query("SELECT id, name, device_type, ip, power_state FROM devices")
-        .fetch_all(&*pool)
-        .await?;
+    let rows = sqlx::query(
+        "SELECT id, name, device_type, ip, power_state, battery_percentage FROM devices",
+    )
+    .fetch_all(&*pool)
+    .await?;
 
     let mut devices = Vec::new();
     for row in rows {
         let state_value: u8 = row.get("power_state");
         let state: u8 = state_value.try_into().expect("Value out of range for u8");
-        // let battery_percentage_value: i64 = row.get("battery_percentage");
-        // let battery_percentage: u64 = battery_percentage_value
-        //     .try_into()
-        //     .expect("Value out of range for u64");
+        let battery_percentage_value: i64 = row.get("battery_percentage");
+        let battery_percentage: u64 = battery_percentage_value
+            .try_into()
+            .expect("Value out of range for u64");
 
         devices.push(Device {
             id: row.get("id"),
@@ -48,7 +50,7 @@ pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
             device_type: row.get("device_type"),
             ip: row.get("ip"),
             state,
-            battery_percentage: 0,
+            battery_percentage: battery_percentage,
         });
     }
 
