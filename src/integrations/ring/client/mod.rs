@@ -256,7 +256,7 @@ impl RingRestClient {
         (formatted_time, res.bytes().await.unwrap())
     }
 
-    pub async fn get_recordings(&self, id: &u64) -> VideoSearchRes {
+    pub async fn get_recordings(&self, id: &i64) -> VideoSearchRes {
         let date_from = get_start_of_today();
         let date_to = get_end_of_today();
 

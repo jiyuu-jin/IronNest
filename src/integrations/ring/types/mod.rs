@@ -56,12 +56,12 @@ pub struct LocationsRes {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DoorBotHealth {
-    pub battery_percentage: u64,
+    pub battery_percentage: i64,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Doorbot {
-    pub id: u64,
+    pub id: i64,
     pub description: String,
     pub health: DoorBotHealth,
 }
@@ -132,10 +132,10 @@ pub struct RingCameraSnapshot {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RingCamera {
-    pub id: u64,
+    pub id: i64,
     pub description: String,
     pub snapshot: RingCameraSnapshot,
-    pub health: u64,
+    pub health: i64,
     pub videos: VideoSearchRes,
 }
 
