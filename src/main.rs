@@ -1,13 +1,12 @@
-use iron_nest::integrations::iron_nest::types::DeviceType;
-
 use {
     iron_nest::{
         components::layout::App,
         handlers::roku_keypress_handler,
         integrations::{
             iron_nest::{
-                client::insert_devices_into_db, create_db_tables, extract_ip,
-                insert_cameras_into_db, types::Device,
+                client::insert_devices_into_db,
+                create_db_tables, extract_ip, insert_cameras_into_db,
+                types::{Device, DeviceType},
             },
             ring::{get_ring_camera, RingRestClient},
             roku::{roku_discover, roku_get_device_info},
@@ -79,6 +78,7 @@ cfg_if::cfg_if! {
                 app_state.leptos_options.clone(),
                 move || {
                     provide_context(app_state.ring_rest_client.clone());
+                    provide_context(app_state.pool.clone());
                 },
                 App,
             );
@@ -243,7 +243,7 @@ cfg_if::cfg_if! {
                             devices.push(Device {
                                 id: 0,
                                 name: device_info.user_device_name,
-                                device_type: DeviceType::RingDoorbell,
+                                device_type: DeviceType::RokuTv,
                                 ip,
                                 power_state,
                                 battery_percentage: 0,
