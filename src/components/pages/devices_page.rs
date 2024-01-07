@@ -67,39 +67,40 @@ pub fn DevicesPage() -> impl IntoView {
                                     devices
                                         .get()
                                         .map(|data| {
-                                            data.map(|data| data
-                                                .iter()
-                                                .map(|device| {
-                                                    view! {
-                                                        <tr>
-                                                            <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">
-                                                                {&device.name}
-                                                            </td>
-                                                            <th
-                                                                scope="col"
-                                                                class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
-                                                            >
-                                                                {device.device_type.to_string()}
-                                                            </th>
-                                                            <th
-                                                                scope="col"
-                                                                class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
-                                                            >
-                                                                {&device.ip}
-                                                            </th>
-                                                            <th
-                                                                scope="col"
-                                                                class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
-                                                            >
-                                                                {device.power_state}
-                                                            </th>
-                                                        </tr>
-                                                    }
-                                                })
-                                                .collect::<Vec<_>>()
-                                            )
+                                            data.map(|data| {
+                                                data.iter()
+                                                    .map(|device| {
+                                                        view! {
+                                                            <tr>
+                                                                <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">
+                                                                    {&device.name}
+                                                                </td>
+                                                                <th
+                                                                    scope="col"
+                                                                    class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
+                                                                >
+                                                                    {device.device_type.to_string()}
+                                                                </th>
+                                                                <th
+                                                                    scope="col"
+                                                                    class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
+                                                                >
+                                                                    {&device.ip}
+                                                                </th>
+                                                                <th
+                                                                    scope="col"
+                                                                    class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
+                                                                >
+                                                                    {device.power_state}
+                                                                </th>
+                                                            </tr>
+                                                        }
+                                                    })
+                                                    .collect::<Vec<_>>()
+                                            })
                                         })
                                 }}
+
                             </Suspense>
                         </tbody>
                     </table>

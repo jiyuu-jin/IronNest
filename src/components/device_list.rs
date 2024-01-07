@@ -1,7 +1,6 @@
-use crate::integrations::iron_nest::types::DeviceType;
-
 use {
-    super::pages::dashboard_page::DashboardValues, crate::integrations::iron_nest::types::Device,
+    super::pages::dashboard_page::DashboardValues,
+    crate::integrations::iron_nest::types::{Device, DeviceType},
     leptos::*,
 };
 
@@ -47,6 +46,7 @@ pub fn DeviceListItem(device: Device) -> impl IntoView {
         DeviceType::SmartPlug => view! { <SmartPlugItem device=device/> },
         DeviceType::SmartLight => view! { <SmartLightItem device=device/> },
         DeviceType::RingDoorbell => view! { <RingDoorbellItem device=device/> },
+        DeviceType::RokuTv => view! { <RokuTvItem device=device/> },
     }
 }
 
@@ -69,14 +69,16 @@ pub fn SmartPlugItem(device: Device) -> impl IntoView {
     view! {
         <li class="col-span-1 divide-y divide-gray-200 rounded-lg bg-white shadow">
             <div class="flex w-full items-center justify-between space-x-6 p-6">
-            <div class="flex-1 truncate">
-                <div class="flex items-center space-x-3">
-                <h3 class="truncate text-sm font-medium text-gray-900">{&device.name}</h3>
-                <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">{format!("{}", &device.device_type)}</span>
+                <div class="flex-1 truncate">
+                    <div class="flex items-center space-x-3">
+                        <h3 class="truncate text-sm font-medium text-gray-900">{&device.name}</h3>
+                        <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                            {format!("{}", &device.device_type)}
+                        </span>
+                    </div>
+                    <p class="mt-1 truncate text-sm text-gray-500">{&device.ip}</p>
                 </div>
-                <p class="mt-1 truncate text-sm text-gray-500">{&device.ip}</p>
-            </div>
-            <label class="relative inline-flex items-center cursor-pointer ml-2 mt-2">
+                <label class="relative inline-flex items-center cursor-pointer ml-2 mt-2">
                     <input
                         type="checkbox"
                         value=""
@@ -84,12 +86,11 @@ pub fn SmartPlugItem(device: Device) -> impl IntoView {
                             let ip_clone = ip.clone();
                             println!("clicked!");
                             spawn_local(async move {
-                                handle_smart_plug_toggle(signal.get(), ip_clone)
-                                    .await
-                                    .unwrap();
+                                handle_smart_plug_toggle(signal.get(), ip_clone).await.unwrap();
                                 set_signal.set(!signal.get());
                             });
                         }
+
                         checked=signal
                         class="sr-only peer"
                     />
@@ -108,9 +109,13 @@ pub fn RingDoorbellItem(device: Device) -> impl IntoView {
                 <div class="flex-1 truncate">
                     <div class="flex items-center space-x-3">
                         <h3 class="truncate text-sm font-medium text-gray-900">{&device.name}</h3>
-                        <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">{format!("{}", &device.device_type)}</span>
+                        <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                            {format!("{}", &device.device_type)}
+                        </span>
                     </div>
-                    <p class="mt-1 truncate text-sm text-gray-500">{format!("Battery: {}", &device.battery_percentage)}</p>
+                    <p class="mt-1 truncate text-sm text-gray-500">
+                        {format!("Battery: {}", &device.battery_percentage)}
+                    </p>
                 </div>
             </div>
         </li>
@@ -132,14 +137,16 @@ pub fn SmartLightItem(device: Device) -> impl IntoView {
     view! {
         <li class="col-span-1 divide-y divide-gray-200 rounded-lg bg-white shadow">
             <div class="flex w-full items-center justify-between space-x-6 p-6">
-            <div class="flex-1 truncate">
-                <div class="flex items-center space-x-3">
-                <h3 class="truncate text-sm font-medium text-gray-900">{&device.name}</h3>
-                <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">{format!("{}", &device.device_type)}</span>
+                <div class="flex-1 truncate">
+                    <div class="flex items-center space-x-3">
+                        <h3 class="truncate text-sm font-medium text-gray-900">{&device.name}</h3>
+                        <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                            {format!("{}", &device.device_type)}
+                        </span>
+                    </div>
+                    <p class="mt-1 truncate text-sm text-gray-500">{&device.ip}</p>
                 </div>
-                <p class="mt-1 truncate text-sm text-gray-500">{&device.ip}</p>
-            </div>
-            <label class="relative inline-flex items-center cursor-pointer ml-2 mt-2">
+                <label class="relative inline-flex items-center cursor-pointer ml-2 mt-2">
                     <input
                         type="checkbox"
                         value=""
@@ -147,12 +154,62 @@ pub fn SmartLightItem(device: Device) -> impl IntoView {
                             let ip_clone = ip.clone();
                             println!("clicked!");
                             spawn_local(async move {
-                                handle_smart_plug_toggle(signal.get(), ip_clone)
-                                    .await
-                                    .unwrap();
+                                handle_smart_plug_toggle(signal.get(), ip_clone).await.unwrap();
                                 set_signal.set(!signal.get());
                             });
                         }
+
+                        checked=signal
+                        class="sr-only peer"
+                    />
+                    <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                </label>
+            </div>
+        </li>
+    }
+}
+
+#[server(HandleRokuTvToggle)]
+pub async fn handle_roku_tv_toggle(state: bool, ip: String) -> Result<(), ServerFnError> {
+    use crate::integrations::roku::roku_send_keypress;
+    if state {
+        roku_send_keypress(&ip, "PowerOff").await;
+    } else {
+        roku_send_keypress(&ip, "PowerOn").await;
+    }
+    Ok(())
+}
+
+#[component]
+pub fn RokuTvItem(device: Device) -> impl IntoView {
+    let ip = device.ip.to_string();
+    let (signal, set_signal) = create_signal(device.power_state == 1);
+
+    view! {
+        <li class="col-span-1 divide-y divide-gray-200 rounded-lg bg-white shadow">
+            <div class="flex w-full items-center justify-between space-x-6 p-6">
+                <div class="flex-1 truncate">
+                    <div class="flex items-center space-x-3">
+                        <h3 class="truncate text-sm font-medium text-gray-900">{&device.name}</h3>
+                        <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                            {format!("{}", &device.device_type)}
+                        </span>
+                    </div>
+                    <p class="mt-1 truncate text-sm text-gray-500">{&device.ip}</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer ml-2 mt-2">
+                    <input
+                        type="checkbox"
+                        value=""
+                        on:click=move |_| {
+                            let ip_clone = ip.clone();
+                            println!("clicked!");
+                            spawn_local(async move {
+                                handle_roku_tv_toggle(signal.get(), ip_clone).await.unwrap();
+                                set_signal.set(!signal.get());
+                            });
+                        }
+
                         checked=signal
                         class="sr-only peer"
                     />
