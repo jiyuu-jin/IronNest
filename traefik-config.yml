@@ -8,5 +8,5 @@ routers:
 
 services:
   iron-nest:
-    loadbalancer.server.url: "10.0.0.183"
+    loadbalancer.server.url: "10.0.0.186"
     loadbalancer.server.port: "8080"

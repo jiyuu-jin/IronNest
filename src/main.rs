@@ -264,7 +264,7 @@ cfg_if::cfg_if! {
             tokio::select! {
                 e = http_server => error!("HTTP server exiting with error {e:?}"),
                 e = ring_auth_refresh_job => error!("Ring auth refresh job exiting with error {e:?}"),
-                e = ring_device_discovery_job => error!("Ring device discovery job exiting with error {e:?}")
+                // e = ring_device_discovery_job => error!("Ring device discovery job exiting with error {e:?}")
             }
         }
     }
