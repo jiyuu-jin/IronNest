@@ -73,7 +73,20 @@ pub fn SmartPlugItem(device: Device) -> impl IntoView {
                     <div class="flex items-center space-x-3">
                         <h3 class="truncate text-sm font-medium text-gray-900">{&device.name}</h3>
                         <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
-                            {format!("{}", &device.device_type)}
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke-width="1.5"
+                                stroke="currentColor"
+                                class="w-6 h-6"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"
+                                ></path>
+                            </svg>
                         </span>
                     </div>
                     <p class="mt-1 truncate text-sm text-gray-500">{&device.ip}</p>
@@ -110,7 +123,20 @@ pub fn RingDoorbellItem(device: Device) -> impl IntoView {
                     <div class="flex items-center space-x-3">
                         <h3 class="truncate text-sm font-medium text-gray-900">{&device.name}</h3>
                         <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
-                            {format!("{}", &device.device_type)}
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke-width="1.5"
+                                stroke="currentColor"
+                                class="w-6 h-6"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"
+                                ></path>
+                            </svg>
                         </span>
                     </div>
                     <p class="mt-1 truncate text-sm text-gray-500">
@@ -141,7 +167,20 @@ pub fn SmartLightItem(device: Device) -> impl IntoView {
                     <div class="flex items-center space-x-3">
                         <h3 class="truncate text-sm font-medium text-gray-900">{&device.name}</h3>
                         <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
-                            {format!("{}", &device.device_type)}
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke-width="1.5"
+                                stroke="currentColor"
+                                class="w-6 h-6"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"
+                                ></path>
+                            </svg>
                         </span>
                     </div>
                     <p class="mt-1 truncate text-sm text-gray-500">{&device.ip}</p>
@@ -152,13 +191,11 @@ pub fn SmartLightItem(device: Device) -> impl IntoView {
                         value=""
                         on:click=move |_| {
                             let ip_clone = ip.clone();
-                            println!("clicked!");
                             spawn_local(async move {
-                                handle_smart_plug_toggle(signal.get(), ip_clone).await.unwrap();
+                                handle_smart_light_toggle(signal.get(), ip_clone).await.unwrap();
                                 set_signal.set(!signal.get());
                             });
                         }
-
                         checked=signal
                         class="sr-only peer"
                     />
@@ -192,7 +229,20 @@ pub fn RokuTvItem(device: Device) -> impl IntoView {
                     <div class="flex items-center space-x-3">
                         <h3 class="truncate text-sm font-medium text-gray-900">{&device.name}</h3>
                         <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
-                            {format!("{}", &device.device_type)}
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke-width="1.5"
+                                stroke="currentColor"
+                                class="w-6 h-6"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M6 20.25h12m-7.5-3v3m3-3v3m-10.125-3h17.25c.621 0 1.125-.504 1.125-1.125V4.875c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125Z"
+                                ></path>
+                            </svg>
                         </span>
                     </div>
                     <p class="mt-1 truncate text-sm text-gray-500">{&device.ip}</p>
@@ -203,7 +253,6 @@ pub fn RokuTvItem(device: Device) -> impl IntoView {
                         value=""
                         on:click=move |_| {
                             let ip_clone = ip.clone();
-                            println!("clicked!");
                             spawn_local(async move {
                                 handle_roku_tv_toggle(signal.get(), ip_clone).await.unwrap();
                                 set_signal.set(!signal.get());
