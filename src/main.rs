@@ -174,6 +174,7 @@ cfg_if::cfg_if! {
             });
 
             let http_server = {
+                log::info!("starting iron nest...");
                 log::info!("listening on http://{}", &addr);
                 axum::Server::bind(&addr).serve(app.into_make_service())
             };
