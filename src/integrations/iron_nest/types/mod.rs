@@ -1,5 +1,7 @@
-use serde::{Deserialize, Serialize};
-use std::fmt;
+use {
+    serde::{Deserialize, Serialize},
+    std::fmt,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ssr", derive(sqlx::prelude::Type))]
@@ -8,6 +10,7 @@ pub enum DeviceType {
     SmartPlug,
     SmartLight,
     RingDoorbell,
+    RokuTv,
 }
 
 impl fmt::Display for DeviceType {
@@ -16,6 +19,7 @@ impl fmt::Display for DeviceType {
             Self::SmartPlug => write!(f, "Smart Plug"),
             Self::SmartLight => write!(f, "Smart Light"),
             Self::RingDoorbell => write!(f, "Ring Doorbell"),
+            Self::RokuTv => write!(f, "Roku TV"),
         }
     }
 }

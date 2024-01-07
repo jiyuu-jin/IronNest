@@ -61,7 +61,11 @@ pub fn DevicesPage() -> impl IntoView {
                         </thead>
                         <tbody class="divide-y divide-gray-200 bg-white">
                             <Suspense fallback=|| {
-                                view! { <p>"Loading devices..."</p> }
+                                view! {
+                                    <tr>
+                                        <td>"Loading devices..."</td>
+                                    </tr>
+                                }
                             }>
                                 {move || {
                                     devices
