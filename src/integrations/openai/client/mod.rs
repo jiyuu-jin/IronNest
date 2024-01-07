@@ -25,7 +25,6 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     },
         sqlx::{Pool, Sqlite, Row},
     };
-    use rodio::{Decoder, OutputStream, Sink};
     use std::io::Cursor;
 
     impl Device {
@@ -344,15 +343,7 @@ pub async fn whisper_tts(client: Client<OpenAIConfig>, text: &str) -> Result<(),
         .build()?;
 
     let response = client.audio().speech(request).await?;
-    let speech_bytes = response.bytes;
-
-    let (_stream, stream_handle) = OutputStream::try_default()?;
-    let cursor = Cursor::new(speech_bytes);
-    let source = Decoder::new_mp3(cursor)?;
-
-    let sink = Sink::try_new(&stream_handle)?;
-    sink.append(source);
-    sink.sleep_until_end();
+    let _speech_bytes = response.bytes;
 
     Ok(())
 }
