@@ -1,5 +1,5 @@
 use {
-    super::types::{ActionApp, RokuDeviceInfo, RokuDiscoverRes},
+    super::types::{ActionApp, Apps, RokuDeviceInfo, RokuDiscoverRes},
     futures::prelude::*,
     serde_json::json,
     serde_xml_rs::from_str,
@@ -35,8 +35,9 @@ pub async fn roku_discover() -> Vec<RokuDiscoverRes> {
     devices
 }
 
-pub async fn roku_get_apps(ip: &str) -> String {
-    get(ip, "query/apps").await
+pub async fn roku_get_apps(ip: &str) -> Apps {
+    let apps = get(ip, "query/apps").await;
+    from_str(&apps).unwrap()
 }
 
 pub async fn roku_get_media_player(ip: &str) -> String {

@@ -29,3 +29,24 @@ pub struct RokuDeviceInfo {
     #[serde(rename = "power-mode")]
     pub power_mode: String,
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Apps {
+    #[serde(rename = "app", default)]
+    pub apps: Vec<AppsApp>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct AppsApp {
+    #[serde(rename = "$value")]
+    pub name: String,
+
+    #[serde(rename = "id")]
+    pub id: String,
+
+    #[serde(rename = "type")]
+    pub app_type: String,
+
+    #[serde(rename = "version")]
+    pub version: String,
+}
