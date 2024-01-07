@@ -41,7 +41,7 @@ pub fn App() -> impl IntoView {
         <Meta name="apple-mobile-web-app-capable" content="yes"/>
         <Meta name="mobile-web-app-capable" content="yes"/>
         <div>
-            <div class="relative z-50 lg:hidden sidebar" role="dialog" aria-modal="true">
+            <div class="relative z-50 hidden sidebar" role="dialog" aria-modal="true">
                 <div class="fixed inset-0 bg-gray-900/80"></div>
 
                 <div class="fixed inset-0 flex">
