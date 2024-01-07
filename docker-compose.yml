@@ -6,6 +6,7 @@ services:
     restart: always
     command:
       - "--providers.docker=true"
+      - "--configFile=/etc/traefik/traefik.yml"
       - "--entrypoints.websecure.address=:443"
       - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
       - "--certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL}"
@@ -17,15 +18,8 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
   iron_nest:
     build: .
-    ports:
-      - "8060:8060"
-      - "9999:9999"
+    network_mode: "host"
     volumes:
       - "./data/app/:/app/data/"
-    labels:
-      - "traefik.http.routers.iron-nest.rule=Host(`${TRAEFIK_HOST_URL}`)"
-      - "traefik.http.routers.iron-nest.entrypoints=websecure"
-      - "traefik.http.services.iron-nest.loadbalancer.server.port=8080"
-      - "traefik.http.routers.iron-nest.service=iron-nest"
-      - "traefik.http.routers.iron-nest.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.iron-nest.tls=true"
+      - "traefik.yaml:/etc/traefik/traefik.yml"
+      - "traefik-config.yml:/etc/traefik/traefik-config.yml"

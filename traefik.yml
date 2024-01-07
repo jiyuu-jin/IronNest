@@ -1,0 +1,3 @@
+providers:
+  file:
+    filename: /etc/traefik/traefik-config.yml

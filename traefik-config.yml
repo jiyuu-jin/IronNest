@@ -1,0 +1,12 @@
+routers:
+  iron-nest:
+    rule: Host(`{{env "TRAEFIK_HOST_URL"}}`)
+    service: iron-nest
+    entrypoints: websecure
+    tls:
+      certresolver: letsencrypt
+
+services:
+  iron-nest:
+    loadbalancer.server.url: "10.0.0.183"
+    loadbalancer.server.port: "8080"
