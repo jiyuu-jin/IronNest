@@ -1,11 +1,14 @@
-use iron_nest::integrations::iron_nest::create_db_tables;
+use iron_nest::integrations::iron_nest::types::DeviceType;
 
 use {
     iron_nest::{
         components::layout::App,
         handlers::roku_keypress_handler,
         integrations::{
-            iron_nest::{client::insert_devices_into_db, extract_ip, types::Device},
+            iron_nest::{
+                client::insert_devices_into_db, create_db_tables, extract_ip,
+                insert_cameras_into_db, types::Device,
+            },
             ring::{get_ring_camera, RingRestClient},
             roku::{roku_discover, roku_get_device_info},
             tplink::{discover_devices, types::DeviceData},
@@ -159,12 +162,13 @@ cfg_if::cfg_if! {
                             id: 0,
                             name: camera.description.to_string(),
                             ip: camera.id.to_string(),
-                            device_type: "ring-doorbell".to_string(),
-                            state: 1,
+                            device_type: DeviceType::RingDoorbell,
+                            power_state: 1,
                             battery_percentage: camera.health,
                         });
                     }
 
+                    insert_cameras_into_db(shared_pool_clone1.clone(), &cameras).await.unwrap();
                     insert_devices_into_db(shared_pool_clone1.clone(), &devices).await.unwrap();
                 }
             });
@@ -191,9 +195,9 @@ cfg_if::cfg_if! {
                                                 devices.push(Device {
                                                     id: 0,
                                                     name: data.alias,
-                                                    device_type: "smart-plug".to_string(),
+                                                    device_type: DeviceType::SmartPlug,
                                                     ip: ip.to_string(),
-                                                    state: data.relay_state,
+                                                    power_state: data.relay_state,
                                                     battery_percentage: 0,
                                                 });
                                             }
@@ -203,9 +207,9 @@ cfg_if::cfg_if! {
                                                 devices.push(Device {
                                                     id: 0,
                                                     name: data.alias,
-                                                    device_type: "smart-light".to_string(),
+                                                    device_type: DeviceType::SmartLight,
                                                     ip: ip.to_string(),
-                                                    state: data.light_state.on_off,
+                                                    power_state: data.light_state.on_off,
                                                     battery_percentage: 0,
                                                 });
                                             }
@@ -235,13 +239,13 @@ cfg_if::cfg_if! {
                         for device in roku_devices.iter() {
                             let ip = extract_ip(&device.location).unwrap();
                             let device_info = roku_get_device_info(&ip).await;
-                            let state = if device_info.power_mode == "PowerOn" { 1 } else {0};
+                            let power_state = if device_info.power_mode == "PowerOn" { 1 } else {0};
                             devices.push(Device {
                                 id: 0,
                                 name: device_info.user_device_name,
-                                device_type: "roku".to_string(),
+                                device_type: DeviceType::RingDoorbell,
                                 ip,
-                                state,
+                                power_state,
                                 battery_percentage: 0,
                             });
                         }
