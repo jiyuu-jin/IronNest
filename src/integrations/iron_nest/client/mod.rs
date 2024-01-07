@@ -1,12 +1,14 @@
 use {
     super::types::Device,
     crate::integrations::{
+        ring::types::RingCamera,
         roku::{roku_launch_app, roku_search, roku_send_keypress},
         tplink::{
             tplink_set_light_brightness, tplink_turn_light_on_off, tplink_turn_plug_off,
             tplink_turn_plug_on,
         },
     },
+    log::info,
     serde_json::{json, Value},
     sqlx::{Pool, Sqlite},
     std::sync::Arc,
@@ -27,7 +29,7 @@ pub async fn insert_devices_into_db(
         .bind(&device.device_type)
         .bind(&device.battery_percentage.to_string())
         .bind(&device.ip)
-        .bind(&device.state.to_string())
+        .bind(&device.power_state.to_string())
         .execute(&*pool)
         .await?;
     }
@@ -140,19 +142,6 @@ pub async fn create_db_tables(pool: Arc<Pool<Sqlite>>) {
     .unwrap();
 
     sqlx::query(
-        "CREATE TABLE cameras (
-            id INT8 PRIMARY KEY,
-            description TEXT NOT NULL,
-            snapshot_image TEXT NOT NULL,
-            snapshot_timestamp TEXT NOT NULL,
-            health TEXT NOT NULL
-        )",
-    )
-    .execute(&*pool.clone())
-    .await
-    .unwrap();
-
-    sqlx::query(
         "CREATE TABLE events (
             id INTEGER PRIMARY KEY,
             schedule TEXT NOT NULL,
@@ -163,4 +152,80 @@ pub async fn create_db_tables(pool: Arc<Pool<Sqlite>>) {
     .execute(&*pool.clone())
     .await
     .unwrap();
+
+    sqlx::query(
+        "CREATE TABLE ring_cameras (
+            id INT8 PRIMARY KEY,
+            description TEXT NOT NULL,
+            snapshot_image TEXT NOT NULL,
+            snapshot_timestamp INT8 NOT NULL,
+            health INT8 NOT NULL
+        )",
+    )
+    .execute(&*pool.clone())
+    .await
+    .unwrap();
+
+    sqlx::query(
+        "CREATE TABLE ring_video_item (
+            ding_id TEXT PRIMARY KEY,
+            created_at INT8 NOT NULL,
+            hq_url TEXT NOT NULL
+        )",
+    )
+    .execute(&*pool.clone())
+    .await
+    .unwrap();
+
+    sqlx::query(
+        "CREATE TABLE ring_camera_to_video_item (
+            camera_id INT8 NOT NULL,
+            ding_id TEXT NOT NULL,
+            PRIMARY KEY (camera_id, ding_id),
+            FOREIGN KEY (camera_id) REFERENCES ring_cameras(id),
+            FOREIGN KEY (ding_id) REFERENCES ring_video_item(ding_id)
+        )",
+    )
+    .execute(&*pool.clone())
+    .await
+    .unwrap();
+}
+
+pub async fn insert_cameras_into_db(
+    pool: Arc<Pool<Sqlite>>,
+    cameras: &Vec<RingCamera>,
+) -> Result<(), sqlx::Error> {
+    info!("Inserting camera into db");
+    for camera in cameras.iter() {
+        sqlx::query(
+            "INSERT OR REPLACE INTO ring_cameras (id, description, snapshot_image, snapshot_timestamp, health) VALUES (?, ?, ?, ?, ?)",
+        )
+        .bind(&camera.id)
+        .bind(&camera.description)
+        .bind(&camera.snapshot.image)
+        .bind(&camera.snapshot.timestamp)
+        .bind(&camera.health)
+        .execute(&*pool)
+        .await?;
+
+        for video_item in camera.videos.video_search.iter() {
+            sqlx::query(
+                "INSERT OR REPLACE INTO ring_video_item (ding_id, created_at, hq_url) VALUES (?, ?, ?)",
+            )
+            .bind(&video_item.ding_id)
+            .bind(&video_item.created_at.to_string())
+            .bind(&video_item.hq_url)
+            .execute(&*pool)
+            .await?;
+
+            sqlx::query(
+                "INSERT OR REPLACE INTO ring_camera_to_video_item (camera_id, ding_id) VALUES (?, ?)",
+            )
+            .bind(&camera.id)
+            .bind(&video_item.ding_id)
+            .execute(&*pool)
+            .await?;
+        }
+    }
+    Ok(())
 }
