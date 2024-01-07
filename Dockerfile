@@ -26,7 +26,7 @@ RUN cargo leptos build --release -vv
 FROM debian:bookworm-slim
 
 # Install openssl and update CA certificates
-RUN apt update && apt install -y openssl ca-certificates libasound2 && \
+RUN apt update && apt install -y openssl ca-certificates libasound2-dev libudev-dev && \
     apt clean && \
     rm -rf /var/lib/apt/lists/*
 
