@@ -30,7 +30,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
     impl Device {
         pub fn format_for_openapi(&self) -> String {
-            format!("{} - {} - {} - {}\n", self.name, self.device_type, self.ip, self.state)
+            format!("{} - {} - {} - {}\n", self.name, self.device_type, self.ip, self.power_state)
         }
     }
 
@@ -66,7 +66,7 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
             name: row.get("name"),
             device_type: row.get("device_type"),
             ip: ip.to_string(),
-            state,
+            power_state: state,
             battery_percentage: 0,
         });
 
