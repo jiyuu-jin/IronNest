@@ -73,8 +73,8 @@ pub fn RingCameras(
                                                 selected_video_url_2
                                             };
                                             view! {
-                                                <div>
-                                                    <h2>
+                                                <div class="rounded-xl shadow-md border border-gray-200">
+                                                    <h2 class="p-2">
                                                         {format!(
                                                             "{} - Battery: {}",
                                                             camera.description,
