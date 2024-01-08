@@ -54,6 +54,22 @@ pub async fn roku_get_device_info(ip: &str) -> RokuDeviceInfo {
     from_str(&app_text).unwrap()
 }
 
+pub async fn roku_get_channel_icon(ip: &str, app_id: &str) -> String {
+    let roku_url = format!("http://{ip}:8060/query/icon/{app_id}");
+    let client = reqwest::Client::new();
+
+    let res_bytes = client
+        .get(roku_url)
+        .send()
+        .await
+        .unwrap()
+        .bytes()
+        .await
+        .unwrap();
+
+    base64::encode(res_bytes)
+}
+
 pub async fn roku_send_keypress(ip: &str, key: &str) -> serde_json::Value {
     post(ip, format!("keypress/{key}").as_str()).await
 }

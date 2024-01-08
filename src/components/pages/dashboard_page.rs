@@ -7,7 +7,7 @@ use {
         integrations::{
             iron_nest::types::Device,
             ring::types::{RingCamera, RingCameraSnapshot, VideoSearchRes},
-            roku::types::{Apps, AppsApp},
+            roku::types::AppsAppWithIcon,
         },
     },
     leptos::*,
@@ -21,13 +21,16 @@ pub struct DashboardValues {
     pub location_name: String,
     pub cameras: Vec<RingCamera>,
     pub devices: Vec<Device>,
-    pub roku_apps: Vec<AppsApp>,
+    pub roku_apps: Vec<AppsAppWithIcon>,
 }
 
 #[server(GetDashboardValues)]
 pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
     use {
-        crate::integrations::{iron_nest::types::Device, roku::roku_get_apps},
+        crate::integrations::{
+            iron_nest::types::Device,
+            roku::{roku_get_apps, roku_get_channel_icon},
+        },
         sqlx::{Pool, Row, Sqlite},
     };
 
@@ -49,7 +52,17 @@ pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
     .await?;
 
     let apps = roku_get_apps("10.0.0.217").await;
-    println!("{:?}", apps);
+    let mut apps_with_icon = Vec::new();
+
+    for app in apps.apps.into_iter() {
+        apps_with_icon.push(AppsAppWithIcon {
+            icon: roku_get_channel_icon("10.0.0.217", &app.id).await,
+            name: app.name,
+            id: app.id,
+            app_type: app.app_type,
+            version: app.version,
+        });
+    }
 
     let mut cameras = Vec::new();
     for ring_camera_row in ring_camera_rows {
@@ -72,7 +85,7 @@ pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
         cameras,
         ws_url: "".to_string(),
         devices,
-        roku_apps: apps.apps,
+        roku_apps: apps_with_icon,
     })
 }
 
@@ -85,7 +98,7 @@ pub fn DashboardPage() -> impl IntoView {
             <div class="xl:pl-96">
                 <div class="px-4 py-10 sm:px-6 lg:px-8 lg:py-6">
                     <RingCameras ring_values=dashboard_values.clone()/>
-                    // <RokuTvRemote dashboard_values=dashboard_values/>
+                    <RokuTvRemote dashboard_values=dashboard_values/>
                     <CommandBox/>
                 </div>
             </div>

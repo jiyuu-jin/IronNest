@@ -50,3 +50,18 @@ pub struct AppsApp {
     #[serde(rename = "version")]
     pub version: String,
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct AppsWithIcon {
+    #[serde(rename = "app", default)]
+    pub apps: Vec<AppsAppWithIcon>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct AppsAppWithIcon {
+    pub name: String,
+    pub id: String,
+    pub app_type: String,
+    pub version: String,
+    pub icon: String,
+}
