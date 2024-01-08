@@ -196,6 +196,7 @@ pub fn SmartLightItem(device: Device) -> impl IntoView {
                                 set_signal.set(!signal.get());
                             });
                         }
+
                         checked=signal
                         class="sr-only peer"
                     />

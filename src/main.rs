@@ -15,8 +15,7 @@ use {
     },
     log::{error, info},
     sqlx::{Pool, Sqlite},
-    std::{thread, time::Duration},
-    tokio::runtime,
+    std::time::Duration,
 };
 
 cfg_if::cfg_if! {
@@ -143,7 +142,7 @@ cfg_if::cfg_if! {
                     interval.tick().await;
 
                     info!("Refreshing Ring Device Data");
-                    let ring_devices = discovery_ring_client.get_devices().await;
+                    let ring_devices = discovery_ring_client.get_devices().await.unwrap();
 
                     let doorbots = ring_devices
                     .doorbots
@@ -174,16 +173,13 @@ cfg_if::cfg_if! {
             });
 
             let http_server = {
-                log::info!("starting iron nest...");
                 log::info!("listening on http://{}", &addr);
                 axum::Server::bind(&addr).serve(app.into_make_service())
             };
 
-            let shared_pool_clone2 = shared_pool.clone();
-            thread::spawn(move || {
-                println!("Running discovery thread for tp-link devices");
-                let rt = runtime::Runtime::new().unwrap();
-                rt.block_on(async {
+            tokio::task::spawn({
+                let shared_pool = shared_pool.clone();
+                async move {
                     loop {
                         match discover_devices().await {
                             Ok(tp_link_devices) => {
@@ -217,7 +213,7 @@ cfg_if::cfg_if! {
                                         }
                                     }
                                 }
-                                insert_devices_into_db(shared_pool_clone2.clone(), &devices).await.unwrap();
+                                insert_devices_into_db(shared_pool.clone(), &devices).await.unwrap();
                             },
                             Err(e) => {
                                 eprintln!("Error discovering devices: {}", e);
@@ -225,47 +221,43 @@ cfg_if::cfg_if! {
                         }
                         tokio::time::sleep(Duration::from_secs(20)).await;
                     }
-                });
+                }
             });
 
-            let shared_pool_clone = shared_pool.clone();
-            thread::spawn(move || {
+            tokio::task::spawn(async move {
                 println!("Running discovery thread for roku devices");
-                let rt = tokio::runtime::Runtime::new().unwrap();
-                rt.block_on(async {
-                    loop {
-                        let roku_devices = roku_discover().await;
-                        let mut devices: Vec<Device> = Vec::new();
+                loop {
+                    let roku_devices = roku_discover().await;
+                    let mut devices: Vec<Device> = Vec::new();
 
-                        for device in roku_devices.iter() {
-                            let ip = extract_ip(&device.location).unwrap();
-                            let device_info = roku_get_device_info(&ip).await;
-                            let power_state = if device_info.power_mode == "PowerOn" { 1 } else {0};
-                            devices.push(Device {
-                                id: 0,
-                                name: device_info.user_device_name,
-                                device_type: DeviceType::RokuTv,
-                                ip,
-                                power_state,
-                                battery_percentage: 0,
-                            });
-                        }
-
-                        match insert_devices_into_db(shared_pool_clone.clone(), &devices).await {
-                            Ok(_) => {},
-                            Err(e) => {
-                                print!("{e}");
-                            }
-                        };
-                        tokio::time::sleep(Duration::from_secs(30)).await;
+                    for device in roku_devices.iter() {
+                        let ip = extract_ip(&device.location).unwrap();
+                        let device_info = roku_get_device_info(&ip).await;
+                        let power_state = if device_info.power_mode == "PowerOn" { 1 } else {0};
+                        devices.push(Device {
+                            id: 0,
+                            name: device_info.user_device_name,
+                            device_type: DeviceType::RokuTv,
+                            ip,
+                            power_state,
+                            battery_percentage: 0,
+                        });
                     }
-                });
+
+                    match insert_devices_into_db(shared_pool.clone(), &devices).await {
+                        Ok(_) => {},
+                        Err(e) => {
+                            print!("{e}");
+                        }
+                    };
+                    tokio::time::sleep(Duration::from_secs(30)).await;
+                }
             });
 
             tokio::select! {
                 e = http_server => error!("HTTP server exiting with error {e:?}"),
-                // e = ring_auth_refresh_job => error!("Ring auth refresh job exiting with error {e:?}"),
-                // e = ring_device_discovery_job => error!("Ring device discovery job exiting with error {e:?}")
+                e = ring_auth_refresh_job => error!("Ring auth refresh job exiting with error {e:?}"),
+                e = ring_device_discovery_job => error!("Ring device discovery job exiting with error {e:?}")
             }
         }
     }

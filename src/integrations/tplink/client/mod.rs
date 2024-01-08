@@ -16,7 +16,7 @@ use {
 
 const KEY: u8 = 0xAB;
 
-pub async fn discover_devices() -> Result<Vec<DeviceData>, Box<dyn Error>> {
+pub async fn discover_devices() -> Result<Vec<DeviceData>, Box<dyn Error + Send>> {
     let port = 9999;
     let socket = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, port))
         .await

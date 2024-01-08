@@ -1,3 +1,6 @@
+use http::StatusCode;
+use serde::de::DeserializeOwned;
+
 use {
     super::types::{
         AuthResponse, CameraEventsRes, DevicesRes, Doorbot, LocationsRes, RingCamera,
@@ -97,6 +100,24 @@ pub fn camera_recordings_list(recordings: VideoSearchRes) -> String {
         .collect::<String>()
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum RingRestClientInternalError {
+    #[error("Request error: {0}")]
+    Request(#[from] reqwest::Error),
+
+    #[error("Unexpected response code: {0} {1:?}")]
+    UnexpectedResponseCode(StatusCode, reqwest::Result<String>),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum RingRestClientError {
+    #[error("Unauthorized")]
+    Unauthorized,
+
+    #[error("Internal error: {0}")]
+    InternalError(RingRestClientInternalError),
+}
+
 impl RingRestClient {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
@@ -158,66 +179,74 @@ impl RingRestClient {
         info!("refresh_result: {refresh_result}");
     }
 
-    pub async fn request(&self, path: &str, method: Method) -> String {
+    pub async fn request<T>(&self, path: &str, method: Method) -> Result<T, RingRestClientError>
+    where
+        T: DeserializeOwned,
+    {
         let request_body = HashMap::from([("client_id", "ring_official_android")]);
 
         let (auth_token, hardware_id) = {
-            let state = self.state.read().unwrap();
+            let state = self.state.read().expect("State read error");
             (state.auth_token.clone(), state.hardware_id.clone())
         };
-        let auth_value = format!("{}{}", "Bearer ", &auth_token);
 
         let res = self
             .client
             .request(method, path)
             .json(&request_body)
-            .header("authorization", auth_value)
+            .bearer_auth(auth_token)
             .header("hardware_id", &hardware_id)
             .header("User-Agent", "android:com.ringapp")
             .send()
             .await
-            .unwrap();
+            .map_err(|e| {
+                RingRestClientError::InternalError(RingRestClientInternalError::Request(e))
+            })?;
 
-        println!("{}", res.status());
-        res.text().await.unwrap()
+        let status = res.status();
+        match status {
+            _ if status.is_success() => res.json::<T>().await.map_err(|e| {
+                RingRestClientError::InternalError(RingRestClientInternalError::Request(e))
+            }),
+            StatusCode::UNAUTHORIZED => Err(RingRestClientError::Unauthorized),
+            x => Err(RingRestClientError::InternalError(
+                RingRestClientInternalError::UnexpectedResponseCode(x, res.text().await),
+            )),
+        }
     }
 
-    pub async fn get_locations(&self) -> LocationsRes {
-        let res = self
-            .request(&format!("{DEVICE_API_BASE_URL}locations"), Method::GET)
-            .await;
-        serde_json::from_str::<LocationsRes>(&res)
-            .unwrap_or_else(|_| panic!("locations_res: {res}"))
+    pub async fn get_locations(&self) -> Result<LocationsRes, RingRestClientError> {
+        self.request::<LocationsRes>(&format!("{DEVICE_API_BASE_URL}locations"), Method::GET)
+            .await
     }
 
-    pub async fn get_devices(&self) -> DevicesRes {
-        let res = self
-            .request(&format!("{CLIENT_API_BASE_URL}ring_devices"), Method::GET)
-            .await;
-        serde_json::from_str::<DevicesRes>(&res).unwrap_or_else(|_| panic!("devices_res: {res}"))
+    pub async fn get_devices(&self) -> Result<DevicesRes, RingRestClientError> {
+        self.request::<DevicesRes>(&format!("{CLIENT_API_BASE_URL}ring_devices"), Method::GET)
+            .await
     }
 
-    pub async fn get_camera_events(&self, location_id: &str, device_id: &u64) -> CameraEventsRes {
+    pub async fn get_camera_events(
+        &self,
+        location_id: &str,
+        device_id: &u64,
+    ) -> Result<CameraEventsRes, RingRestClientError> {
         let camera_events_url =
             &format!("{CLIENT_API_BASE_URL}/locations/{location_id}/devices/{device_id}/events",);
 
-        let res = self.request(camera_events_url, Method::GET).await;
-        serde_json::from_str::<CameraEventsRes>(&res)
-            .unwrap_or_else(|_| panic!("camera_event_res: {res}"))
+        self.request::<CameraEventsRes>(camera_events_url, Method::GET)
+            .await
     }
 
-    pub async fn get_ws_url(&self) -> String {
-        let socket_ticket_res = self
-            .request(
+    pub async fn get_ws_url(&self) -> Result<String, RingRestClientError> {
+        let socket_ticket = self
+            .request::<SocketTicketRes>(
                 &format!("{APP_API_BASE_URL}clap/ticket/request/signalsocket"),
                 Method::POST,
             )
-            .await;
+            .await?;
 
-        let socket_ticket = serde_json::from_str::<SocketTicketRes>(&socket_ticket_res)
-            .unwrap_or_else(|_| panic!("locations_res: {socket_ticket_res}"));
-
-        format!("wss://api.prod.signalling.ring.devices.a2z.com:443/ws?api_version=4.0&auth_type=ring_solutions&client_id=ring_site-3333&token={}", &socket_ticket.ticket)
+        let url = format!("wss://api.prod.signalling.ring.devices.a2z.com:443/ws?api_version=4.0&auth_type=ring_solutions&client_id=ring_site-3333&token={}", &socket_ticket.ticket);
+        Ok(url)
     }
 
     pub async fn get_camera_snapshot(&self, id: &str) -> (String, bytes::Bytes) {
@@ -256,7 +285,7 @@ impl RingRestClient {
         (formatted_time, res.bytes().await.unwrap())
     }
 
-    pub async fn get_recordings(&self, id: &i64) -> VideoSearchRes {
+    pub async fn get_recordings(&self, id: &i64) -> Result<VideoSearchRes, RingRestClientError> {
         let date_from = get_start_of_today();
         let date_to = get_end_of_today();
 
@@ -265,15 +294,17 @@ impl RingRestClient {
             CLIENT_API_BASE_URL, id, date_from, date_to
         );
 
-        let res = self.request(&recordings_url, Method::GET).await;
-        serde_json::from_str::<VideoSearchRes>(&res)
-            .unwrap_or_else(|_| panic!("camera_event_res: {res}"))
+        self.request::<VideoSearchRes>(&recordings_url, Method::GET)
+            .await
     }
 
     pub async fn subscribe_to_motion_events(&self, device_id: &u64) {
         let recordings_url = &format!("{CLIENT_API_BASE_URL}devices/{device_id}/motions_subscribe");
         println!("{recordings_url}");
-        let res = self.request(recordings_url, Method::POST).await;
+        let res = self
+            .request::<serde_json::Value>(recordings_url, Method::POST)
+            .await
+            .unwrap();
         println!("subscribe motion events: {res}");
     }
 }
@@ -286,7 +317,7 @@ pub async fn get_ring_camera(
         .get_camera_snapshot(&device.id.to_string())
         .await;
     let image_base64 = base64.encode(snapshot_res.1);
-    let videos = ring_rest_client.get_recordings(&device.id).await;
+    let videos = ring_rest_client.get_recordings(&device.id).await.unwrap();
 
     RingCamera {
         id: device.id,

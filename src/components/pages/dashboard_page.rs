@@ -1,9 +1,13 @@
 use {
     crate::{
-        components::{command_box::CommandBox, device_list::DeviceList, ring_cameras::RingCameras},
+        components::{
+            command_box::CommandBox, device_list::DeviceList, ring_cameras::RingCameras,
+            roku_tv_remote::RokuTvRemote,
+        },
         integrations::{
             iron_nest::types::Device,
             ring::types::{RingCamera, RingCameraSnapshot, VideoSearchRes},
+            roku::types::{Apps, AppsApp},
         },
     },
     leptos::*,
@@ -17,12 +21,13 @@ pub struct DashboardValues {
     pub location_name: String,
     pub cameras: Vec<RingCamera>,
     pub devices: Vec<Device>,
+    pub roku_apps: Vec<AppsApp>,
 }
 
 #[server(GetDashboardValues)]
 pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
     use {
-        crate::integrations::iron_nest::types::Device,
+        crate::integrations::{iron_nest::types::Device, roku::roku_get_apps},
         sqlx::{Pool, Row, Sqlite},
     };
 
@@ -42,6 +47,9 @@ pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
     )
     .fetch_all(&*pool)
     .await?;
+
+    let apps = roku_get_apps("10.0.0.217").await;
+    println!("{:?}", apps);
 
     let mut cameras = Vec::new();
     for ring_camera_row in ring_camera_rows {
@@ -64,6 +72,7 @@ pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
         cameras,
         ws_url: "".to_string(),
         devices,
+        roku_apps: apps.apps,
     })
 }
 
@@ -75,13 +84,14 @@ pub fn DashboardPage() -> impl IntoView {
         <main class="lg:pl-20">
             <div class="xl:pl-96">
                 <div class="px-4 py-10 sm:px-6 lg:px-8 lg:py-6">
-                    <RingCameras ring_values=dashboard_values/>
+                    <RingCameras ring_values=dashboard_values.clone()/>
+                    // <RokuTvRemote dashboard_values=dashboard_values/>
                     <CommandBox/>
                 </div>
             </div>
         </main>
 
-        <aside class="bg-gray-100 fixed inset-y-0 left-20 hidden w-96 overflow-y-auto border-r border-gray-200 px-4 py-6 sm:px-6 lg:px-4 xl:block space-y-0.5">
+        <aside class="bg-gray-100 fixed inset-y-0 left-20 hidden w-96 overflow-y-auto border-r border-gray-200 px-4 py-6 sm:px-6 lg:px- xl:block space-y-0.5">
             <DeviceList ring_values=dashboard_values/>
         </aside>
     }
