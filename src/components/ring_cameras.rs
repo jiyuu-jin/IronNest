@@ -22,7 +22,7 @@ pub fn RingCameras(
         <Suspense fallback=|| {
             view! {
                 <div
-                    class="mb-2"
+                    class="mb-4"
                     style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;"
                 >
                     <button
@@ -51,7 +51,10 @@ pub fn RingCameras(
                     match data {
                         Ok(data) => {
                             view! {
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
+                                <div
+                                    class="mb-4"
+                                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;"
+                                >
                                     {data
                                         .cameras
                                         .iter()

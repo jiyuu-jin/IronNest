@@ -1,6 +1,3 @@
-use http::StatusCode;
-use serde::de::DeserializeOwned;
-
 use {
     super::types::{
         AuthResponse, CameraEventsRes, DevicesRes, Doorbot, LocationsRes, RingCamera,
@@ -9,9 +6,10 @@ use {
     base64::{engine::general_purpose::STANDARD as base64, Engine},
     chrono::{DateTime, Duration, Local, TimeZone, Utc},
     chrono_tz::US::Eastern,
+    http::StatusCode,
     log::{info, warn},
     reqwest::{self, Client, Method},
-    serde::{Deserialize, Serialize},
+    serde::{de::DeserializeOwned, Deserialize, Serialize},
     std::{
         collections::HashMap,
         fs::File,

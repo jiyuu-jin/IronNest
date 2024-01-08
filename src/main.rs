@@ -1,5 +1,3 @@
-use iron_nest::integrations::ring::types::DevicesRes;
-
 use {
     iron_nest::{
         components::layout::App,
@@ -10,7 +8,7 @@ use {
                 create_db_tables, extract_ip, insert_cameras_into_db,
                 types::{Device, DeviceType},
             },
-            ring::{get_ring_camera, RingRestClient},
+            ring::{get_ring_camera, types::DevicesRes, RingRestClient},
             roku::{roku_discover, roku_get_device_info},
             tplink::{discover_devices, types::DeviceData},
         },
