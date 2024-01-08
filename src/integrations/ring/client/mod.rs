@@ -190,11 +190,13 @@ impl RingRestClient {
             (state.auth_token.clone(), state.hardware_id.clone())
         };
 
+        let auth_value = format!("{}{}", "Bearer ", &auth_token);
+
         let res = self
             .client
             .request(method, path)
             .json(&request_body)
-            .bearer_auth(auth_token)
+            .header("authorization", auth_value)
             .header("hardware_id", &hardware_id)
             .header("User-Agent", "android:com.ringapp")
             .send()
