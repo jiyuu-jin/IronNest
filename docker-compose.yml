@@ -16,12 +16,12 @@ services:
     volumes:
       - "./data/letsencrypt:/letsencrypt"
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
-  iron_nest:
-    build: .
-    # network_mode: "host"
-    ports:
-      - "3000:3000"
-    volumes:
-      - "./data/app/:/app/data/"
-      - "./traefik.yaml:/etc/traefik/traefik.yml"
-      - "./traefik-config.yml:/etc/traefik/traefik-config.yml"
+  # iron_nest:
+  #   build: .
+  #   # network_mode: "host"
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - "./data/app/:/app/data/"
+  #     - "./traefik.yaml:/etc/traefik/traefik.yml"
+  #     - "./traefik-config.yml:/etc/traefik/traefik-config.yml"
