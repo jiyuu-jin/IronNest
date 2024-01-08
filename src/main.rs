@@ -1,3 +1,5 @@
+use iron_nest::integrations::ring::types::DevicesRes;
+
 use {
     iron_nest::{
         components::layout::App,
@@ -142,7 +144,13 @@ cfg_if::cfg_if! {
                     interval.tick().await;
 
                     info!("Refreshing Ring Device Data");
-                    let ring_devices = discovery_ring_client.get_devices().await.unwrap();
+                    let ring_devices = match discovery_ring_client.get_devices().await {
+                        Ok(data) => data,
+                        Err(_) => DevicesRes{
+                            doorbots: Vec::new(),
+                            authorized_doorbots: Vec::new(),
+                        },
+                    };
 
                     let doorbots = ring_devices
                     .doorbots
