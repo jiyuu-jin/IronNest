@@ -21,7 +21,7 @@ pub fn RokuTvRemote(
                         match data {
                             Ok(data) => {
                                 view! {
-                                    <div class="col-span-6 rounded-lg">
+                                    <div class="col-span-6 rounded-lg bg-slate-900">
                                         <div class="rounded-lg shadow-md col-span-6 h-full">
                                             <div class="border-slate-100 h-full rounded-lg transition-all duration-500 dark:bg-slate-800 transition-all duration-500 dark:border-slate-500 sm:pb-8 lg:p-6 xl:p-10 xl:pb-8">
                                                 <div class="grid grid-cols-4 gap-2 rounded-lg">
@@ -40,7 +40,10 @@ pub fn RokuTvRemote(
                                                                     }
                                                                 >
 
-                                                                    <img class="rounded-lg" src={format!("data:image/png;base64, {}", app.icon)} />
+                                                                    <img
+                                                                        class="rounded-lg"
+                                                                        src=format!("data:image/png;base64, {}", app.icon)
+                                                                    />
                                                                 </div>
                                                             }
                                                         })
