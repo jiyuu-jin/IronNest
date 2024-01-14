@@ -189,7 +189,7 @@ fn create_video_timeline(
                 .map(|video| {
                     let position = calculate_position(
                         video.created_at,
-                        start_of_day_timestamp,
+                        start_of_day_timestamp.try_into().unwrap(),
                         timeline_width,
                     );
                     let width = calculate_width(video.duration, timeline_width);
@@ -221,7 +221,7 @@ fn get_start_of_day_timestamp() -> u64 {
     now.date().and_hms(0, 0, 0).timestamp_millis() as u64
 }
 
-fn calculate_position(timestamp: u64, start_of_day_timestamp: u64, timeline_width: i32) -> i32 {
+fn calculate_position(timestamp: i64, start_of_day_timestamp: i64, timeline_width: i32) -> i32 {
     let position = timestamp - start_of_day_timestamp;
     let position_percentage = (position as f64 / 86_400_000f64) * 100.0;
     (position_percentage * timeline_width as f64 / 100.0) as i32

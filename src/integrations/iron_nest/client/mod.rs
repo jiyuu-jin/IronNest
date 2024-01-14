@@ -169,21 +169,9 @@ pub async fn create_db_tables(pool: Arc<Pool<Sqlite>>) {
     sqlx::query(
         "CREATE TABLE ring_video_item (
             ding_id TEXT PRIMARY KEY,
+            camera_id INT8,
             created_at INT8 NOT NULL,
             hq_url TEXT NOT NULL
-        )",
-    )
-    .execute(&*pool.clone())
-    .await
-    .unwrap();
-
-    sqlx::query(
-        "CREATE TABLE ring_camera_to_video_item (
-            camera_id INT8 NOT NULL,
-            ding_id TEXT NOT NULL,
-            PRIMARY KEY (camera_id, ding_id),
-            FOREIGN KEY (camera_id) REFERENCES ring_cameras(id),
-            FOREIGN KEY (ding_id) REFERENCES ring_video_item(ding_id)
         )",
     )
     .execute(&*pool.clone())
@@ -210,19 +198,12 @@ pub async fn insert_cameras_into_db(
 
         for video_item in camera.videos.video_search.iter() {
             sqlx::query(
-                "INSERT OR REPLACE INTO ring_video_item (ding_id, created_at, hq_url) VALUES (?, ?, ?)",
+                "INSERT OR REPLACE INTO ring_video_item (ding_id, camera_id, created_at, hq_url) VALUES (?, ?, ?, ?)",
             )
             .bind(&video_item.ding_id)
+            .bind(&camera.id)
             .bind(&video_item.created_at.to_string())
             .bind(&video_item.hq_url)
-            .execute(&*pool)
-            .await?;
-
-            sqlx::query(
-                "INSERT OR REPLACE INTO ring_camera_to_video_item (camera_id, ding_id) VALUES (?, ?)",
-            )
-            .bind(&camera.id)
-            .bind(&video_item.ding_id)
             .execute(&*pool)
             .await?;
         }

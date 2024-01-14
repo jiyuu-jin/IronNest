@@ -105,7 +105,7 @@ pub struct VideoSearchRes {
 #[derive(Deserialize, Clone, Serialize, Debug)]
 pub struct VideoItem {
     pub ding_id: String,
-    pub created_at: u64,
+    pub created_at: i64,
     pub updated_at: u64,
     pub hq_url: String,
     pub lq_url: String,
@@ -145,4 +145,11 @@ pub struct RingValues {
     pub location_name: String,
     pub cameras: Vec<RingCamera>,
     pub devices: Vec<Device>,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+pub struct RingVideoRow {
+    pub created_at: i64,
+    pub location_name: String,
 }
