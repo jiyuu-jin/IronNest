@@ -22,30 +22,17 @@ pub struct DashboardValues {
     pub ws_url: String,
     pub location_name: String,
     pub cameras: Vec<RingCamera>,
-    pub devices: Vec<Device>,
     pub roku_apps: Vec<AppsAppWithIcon>,
 }
 
 #[server(GetDashboardValues)]
 pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
     use {
-        crate::integrations::{
-            iron_nest::types::Device,
-            roku::{roku_get_apps, roku_get_channel_icon},
-        },
+        crate::integrations::roku::{roku_get_apps, roku_get_channel_icon},
         sqlx::{Pool, Row, Sqlite},
     };
 
     let pool = use_context::<Arc<Pool<Sqlite>>>().unwrap();
-
-    let query = "
-        SELECT id, name, device_type, ip, power_state, battery_percentage
-        FROM devices
-        ORDER BY name
-    ";
-    let devices = sqlx::query_as::<Sqlite, Device>(query)
-        .fetch_all(&*pool)
-        .await?;
 
     let ring_camera_rows = sqlx::query(
         "SELECT id, description, snapshot_image, snapshot_timestamp, health FROM ring_cameras",
@@ -119,7 +106,6 @@ pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
         location_name: "".to_string(),
         cameras,
         ws_url: "".to_string(),
-        devices,
         roku_apps: apps_with_icon,
     })
 }
@@ -127,20 +113,41 @@ pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
 #[component]
 pub fn DashboardPage() -> impl IntoView {
     let dashboard_values = create_resource(|| (), |_| get_dashboard_values());
+    let devices = create_resource(|| (), |_| get_devices());
 
     view! {
         <main class="lg:pl-20">
             <div class="xl:pl-96">
                 <div class="px-4 py-10 sm:px-6 lg:px-8 lg:py-6">
-                    <RingCameras ring_values=dashboard_values.clone()/>
-                    <RokuTvRemote dashboard_values=dashboard_values/>
+                    <RingCameras ring_values=dashboard_values.clone() />
+                    <RokuTvRemote dashboard_values=dashboard_values />
                     <CommandBox/>
                 </div>
             </div>
         </main>
 
         <aside class="bg-gray-100 fixed inset-y-0 left-20 hidden w-96 overflow-y-auto border-r border-gray-200 px-4 py-6 sm:px-6 lg:px- xl:block space-y-0.5">
-            <DeviceList ring_values=dashboard_values/>
+            <DeviceList devices=devices/>
         </aside>
     }
+}
+
+#[server(GetDevices)]
+pub async fn get_devices() -> Result<Vec<Device>, ServerFnError> {
+    use {
+        crate::integrations::iron_nest::types::Device,
+        sqlx::{Pool, Sqlite},
+        std::sync::Arc,
+    };
+
+    let pool = use_context::<Arc<Pool<Sqlite>>>().unwrap();
+
+    let query = "
+        SELECT id, name, device_type, ip, power_state, 0 AS battery_percentage 
+        FROM devices
+    ";
+    sqlx::query_as::<Sqlite, Device>(query)
+        .fetch_all(&*pool)
+        .await
+        .map_err(Into::into)
 }

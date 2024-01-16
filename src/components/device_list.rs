@@ -1,13 +1,10 @@
 use {
-    super::pages::dashboard_page::DashboardValues,
     crate::integrations::iron_nest::types::{Device, DeviceType},
     leptos::*,
 };
 
 #[component]
-pub fn DeviceList(
-    ring_values: Resource<(), Result<DashboardValues, ServerFnError>>,
-) -> impl IntoView {
+pub fn DeviceList(devices: Resource<(), Result<Vec<Device>, ServerFnError>>) -> impl IntoView {
     view! {
         <div>
             <h2 class="text-lg">"Devices"</h2>
@@ -16,14 +13,13 @@ pub fn DeviceList(
                 view! { <p>"Loading devices..."</p> }
             }>
                 {move || {
-                    ring_values
+                    devices
                         .get()
                         .map(|data| {
                             data.map(|data| {
                                 view! {
                                     <ul class="device-list space-y-2">
                                         {data
-                                            .devices
                                             .into_iter()
                                             .map(|device| {
                                                 view! { <DeviceListItem device=device/> }
