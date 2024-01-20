@@ -3,6 +3,7 @@ use {
         components::layout::App,
         handlers::roku_keypress_handler,
         integrations::{
+            efuy::{eufy_login, get_devices},
             iron_nest::{
                 client::insert_devices_into_db,
                 create_db_tables, extract_ip, insert_cameras_into_db,
@@ -259,6 +260,13 @@ cfg_if::cfg_if! {
                     tokio::time::sleep(Duration::from_secs(30)).await;
                 }
             });
+
+            // tokio::task::spawn(async move {
+            //     println!("Running discovery thread for eufy devices");
+            //     let auth_token = eufy_login().await;
+            //     get_devices(auth_token).await;
+            //     tokio::time::sleep(Duration::from_secs(300)).await;
+            // });
 
             tokio::select! {
                 e = http_server => error!("HTTP server exiting with error {e:?}"),
