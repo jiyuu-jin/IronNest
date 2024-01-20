@@ -114,7 +114,7 @@ pub fn DevicesPage() -> impl IntoView {
                 </div>
             </div>
             <div class="md:hidden">
-                <DeviceList devices=devices />
+                <DeviceList devices=devices/>
             </div>
         </main>
     }

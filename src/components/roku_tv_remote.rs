@@ -54,8 +54,8 @@ pub fn RokuTvRemote(
                                     </div>
                                 }
                             }
-                            Err(_) => {
-                                view! { <div></div> }
+                            Err(e) => {
+                                view! { <div>{format!("{e:?}")}</div> }
                             }
                         }
                     }

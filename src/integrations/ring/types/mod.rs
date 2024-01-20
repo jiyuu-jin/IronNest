@@ -150,6 +150,8 @@ pub struct RingValues {
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 pub struct RingVideoRow {
+    pub ding_id: String,
     pub created_at: i64,
-    pub location_name: String,
+    pub camera_id: i64,
+    pub hq_url: String,
 }

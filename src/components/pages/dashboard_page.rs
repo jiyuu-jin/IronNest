@@ -13,6 +13,7 @@ use {
         },
     },
     leptos::*,
+    log::error,
     serde::{Deserialize, Serialize},
     std::sync::Arc,
 };
@@ -57,36 +58,38 @@ pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
     for ring_camera_row in ring_camera_rows {
         let video_events_query = "
             SELECT ding_id, camera_id, created_at, hq_url
-            FROM ring_cameras
+            FROM ring_video_item
         ";
 
         let mut video_items = Vec::new();
-        // let ring_videos = sqlx::query_as::<Sqlite, RingVideoRow>(video_events_query)
-        //     .fetch_all(&*pool)
-        //     .await?
-        //     .iter()
-        //     .map(|video| {
-        //         video_items.push(VideoItem {
-        //             ding_id: "".to_string(),
-        //             created_at: video.created_at,
-        //             updated_at: 0,
-        //             hq_url: "".to_string(),
-        //             lq_url: "".to_string(),
-        //             is_e2ee: false,
-        //             manifest_id: None,
-        //             preroll_duration: 0.0,
-        //             thumbnail_url: None,
-        //             untranscoded_url: "".to_string(),
-        //             kind: "".to_string(),
-        //             state: "".to_string(),
-        //             had_subscription: false,
-        //             radar_data_url: None,
-        //             favorite: false,
-        //             duration: 0,
-        //             device_placement: None,
-        //             owner_id: "".to_string(),
-        //         })
-        //     });
+        error!("BEFORE =======================");
+        let _ring_videos = sqlx::query_as::<Sqlite, RingVideoRow>(video_events_query)
+            .fetch_all(&*pool)
+            .await?
+            .iter()
+            .map(|video| {
+                video_items.push(VideoItem {
+                    ding_id: "".to_string(),
+                    created_at: video.created_at,
+                    updated_at: 0,
+                    hq_url: "".to_string(),
+                    lq_url: "".to_string(),
+                    is_e2ee: false,
+                    manifest_id: None,
+                    preroll_duration: 0.0,
+                    thumbnail_url: None,
+                    untranscoded_url: "".to_string(),
+                    kind: "".to_string(),
+                    state: "".to_string(),
+                    had_subscription: false,
+                    radar_data_url: None,
+                    favorite: false,
+                    duration: 0,
+                    device_placement: None,
+                    owner_id: "".to_string(),
+                })
+            });
+        error!("AFTER ================================= {:?}", video_items);
 
         cameras.push(RingCamera {
             id: ring_camera_row.get("id"),
@@ -119,8 +122,8 @@ pub fn DashboardPage() -> impl IntoView {
         <main class="lg:pl-20">
             <div class="xl:pl-96">
                 <div class="px-4 py-10 sm:px-6 lg:px-8 lg:py-6">
-                    <RingCameras ring_values=dashboard_values.clone() />
-                    <RokuTvRemote dashboard_values=dashboard_values />
+                    <RingCameras ring_values=dashboard_values.clone()/>
+                    <RokuTvRemote dashboard_values=dashboard_values/>
                     <CommandBox/>
                 </div>
             </div>
