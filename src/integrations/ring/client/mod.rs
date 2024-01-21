@@ -6,13 +6,14 @@ use {
     base64::{engine::general_purpose::STANDARD as base64, Engine},
     chrono::{DateTime, Duration, Local, TimeZone, Utc},
     chrono_tz::US::Eastern,
-    http::StatusCode,
+    http::{header::ToStrError, StatusCode},
     log::{info, warn},
-    reqwest::{self, Client, Method},
+    reqwest::{self, Client, Method, Response},
     serde::{de::DeserializeOwned, Deserialize, Serialize},
     std::{
         collections::HashMap,
         fs::File,
+        num::ParseFloatError,
         str,
         sync::{Arc, RwLock},
     },
@@ -105,6 +106,15 @@ pub enum RingRestClientInternalError {
 
     #[error("Unexpected response code: {0} {1:?}")]
     UnexpectedResponseCode(StatusCode, reqwest::Result<String>),
+
+    #[error("Ring snapshot API response headers missing x-time-millis header")]
+    HeadersMissingXTimeMillis,
+
+    #[error("Ring snapshot API response x-time-millis header cannot be converted to string: {0}")]
+    XTimeMillisHeaderNotString(ToStrError),
+
+    #[error("Ring snapshot API response x-time-millis header cannot be parsed: {0}")]
+    XTimeMillisHeaderParseError(ParseFloatError),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -113,7 +123,7 @@ pub enum RingRestClientError {
     Unauthorized,
 
     #[error("Internal error: {0}")]
-    InternalError(RingRestClientInternalError),
+    InternalError(#[from] RingRestClientInternalError),
 }
 
 impl RingRestClient {
@@ -177,10 +187,11 @@ impl RingRestClient {
         info!("refresh_result: {refresh_result}");
     }
 
-    pub async fn request<T>(&self, path: &str, method: Method) -> Result<T, RingRestClientError>
-    where
-        T: DeserializeOwned,
-    {
+    pub async fn request(
+        &self,
+        path: &str,
+        method: Method,
+    ) -> Result<Response, RingRestClientError> {
         let request_body = HashMap::from([("client_id", "ring_official_android")]);
 
         let (auth_token, hardware_id) = {
@@ -205,9 +216,7 @@ impl RingRestClient {
 
         let status = res.status();
         match status {
-            _ if status.is_success() => res.json::<T>().await.map_err(|e| {
-                RingRestClientError::InternalError(RingRestClientInternalError::Request(e))
-            }),
+            _ if status.is_success() => Ok(res),
             StatusCode::UNAUTHORIZED => Err(RingRestClientError::Unauthorized),
             x => Err(RingRestClientError::InternalError(
                 RingRestClientInternalError::UnexpectedResponseCode(x, res.text().await),
@@ -215,13 +224,30 @@ impl RingRestClient {
         }
     }
 
+    pub async fn request_json<T>(
+        &self,
+        path: &str,
+        method: Method,
+    ) -> Result<T, RingRestClientError>
+    where
+        T: DeserializeOwned,
+    {
+        self.request(path, method)
+            .await?
+            .json::<T>()
+            .await
+            .map_err(|e| {
+                RingRestClientError::InternalError(RingRestClientInternalError::Request(e))
+            })
+    }
+
     pub async fn get_locations(&self) -> Result<LocationsRes, RingRestClientError> {
-        self.request::<LocationsRes>(&format!("{DEVICE_API_BASE_URL}locations"), Method::GET)
+        self.request_json::<LocationsRes>(&format!("{DEVICE_API_BASE_URL}locations"), Method::GET)
             .await
     }
 
     pub async fn get_devices(&self) -> Result<DevicesRes, RingRestClientError> {
-        self.request::<DevicesRes>(&format!("{CLIENT_API_BASE_URL}ring_devices"), Method::GET)
+        self.request_json::<DevicesRes>(&format!("{CLIENT_API_BASE_URL}ring_devices"), Method::GET)
             .await
     }
 
@@ -233,13 +259,13 @@ impl RingRestClient {
         let camera_events_url =
             &format!("{CLIENT_API_BASE_URL}/locations/{location_id}/devices/{device_id}/events",);
 
-        self.request::<CameraEventsRes>(camera_events_url, Method::GET)
+        self.request_json::<CameraEventsRes>(camera_events_url, Method::GET)
             .await
     }
 
     pub async fn get_ws_url(&self) -> Result<String, RingRestClientError> {
         let socket_ticket = self
-            .request::<SocketTicketRes>(
+            .request_json::<SocketTicketRes>(
                 &format!("{APP_API_BASE_URL}clap/ticket/request/signalsocket"),
                 Method::POST,
             )
@@ -249,40 +275,33 @@ impl RingRestClient {
         Ok(url)
     }
 
-    pub async fn get_camera_snapshot(&self, id: &str) -> (String, bytes::Bytes) {
-        let request_body = HashMap::from([("client_id", "ring_official_android")]);
-
-        let (auth_token, hardware_id) = {
-            let state = self.state.read().unwrap();
-            (state.auth_token.clone(), state.hardware_id.clone())
-        };
-        let res = self
-            .client
-            .get(&format!("{SNAPSHOTS_API_BASE_URL}next/{id}"))
-            .json(&request_body)
-            .bearer_auth(&auth_token)
-            .header("hardware_id", &hardware_id)
-            .header("User-Agent", "android:com.ringapp")
-            .send()
-            .await
-            .unwrap();
+    pub async fn get_camera_snapshot(
+        &self,
+        id: &str,
+    ) -> Result<(String, bytes::Bytes), RingRestClientError> {
+        let snapshot_url = &format!("{SNAPSHOTS_API_BASE_URL}next/{id}");
+        let res = self.request(snapshot_url, Method::GET).await?;
 
         let time_ms = res
             .headers()
             .get("x-time-millis")
-            .unwrap()
+            .ok_or(RingRestClientInternalError::HeadersMissingXTimeMillis)?
             .to_str()
-            .unwrap()
+            .map_err(RingRestClientInternalError::XTimeMillisHeaderNotString)?
             .parse::<f64>()
-            .unwrap();
+            .map_err(RingRestClientInternalError::XTimeMillisHeaderParseError)?;
+
+        let snapshot_bytes = res
+            .bytes()
+            .await
+            .map_err(RingRestClientInternalError::Request)?;
 
         let utc_time = DateTime::<Utc>::from_timestamp((time_ms / 1000.) as i64, 0).unwrap();
         let est_time = utc_time.with_timezone(&Eastern);
 
         let formatted_time = est_time.format("%Y-%m-%d %I:%M:%S %p").to_string();
 
-        println!("{}", res.status());
-        (formatted_time, res.bytes().await.unwrap())
+        Ok((formatted_time, snapshot_bytes))
     }
 
     pub async fn get_recordings(&self, id: &i64) -> Result<VideoSearchRes, RingRestClientError> {
@@ -294,7 +313,7 @@ impl RingRestClient {
             CLIENT_API_BASE_URL, id, date_from, date_to
         );
 
-        self.request::<VideoSearchRes>(&recordings_url, Method::GET)
+        self.request_json::<VideoSearchRes>(&recordings_url, Method::GET)
             .await
     }
 
@@ -302,7 +321,7 @@ impl RingRestClient {
         let recordings_url = &format!("{CLIENT_API_BASE_URL}devices/{device_id}/motions_subscribe");
         println!("{recordings_url}");
         let res = self
-            .request::<serde_json::Value>(recordings_url, Method::POST)
+            .request_json::<serde_json::Value>(recordings_url, Method::POST)
             .await
             .unwrap();
         println!("subscribe motion events: {res}");
@@ -316,7 +335,10 @@ pub async fn get_ring_camera(
     let snapshot_res = ring_rest_client
         .get_camera_snapshot(&device.id.to_string())
         .await;
-    let image_base64 = base64.encode(snapshot_res.1);
+
+    let snapshot_values = snapshot_res.unwrap_or(("".to_owned(), bytes::Bytes::new()));
+
+    let image_base64 = base64.encode(snapshot_values.1);
     let videos = ring_rest_client.get_recordings(&device.id).await.unwrap();
 
     RingCamera {
@@ -324,7 +346,7 @@ pub async fn get_ring_camera(
         description: device.description.to_string(),
         snapshot: RingCameraSnapshot {
             image: image_base64,
-            timestamp: snapshot_res.0,
+            timestamp: snapshot_values.0,
         },
         health: device.health.battery_percentage,
         videos,
