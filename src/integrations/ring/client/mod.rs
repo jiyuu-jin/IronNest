@@ -296,7 +296,8 @@ impl RingRestClient {
             .await
             .map_err(RingRestClientInternalError::Request)?;
 
-        let utc_time = DateTime::<Utc>::from_timestamp((time_ms / 1000.) as i64, 0).unwrap();
+        let utc_time = DateTime::<Utc>::from_timestamp((time_ms / 1000.) as i64, 0)
+            .ok_or(RingRestClientInternalError::HeadersMissingXTimeMillis)?;
         let est_time = utc_time.with_timezone(&Eastern);
 
         let formatted_time = est_time.format("%Y-%m-%d %I:%M:%S %p").to_string();
