@@ -340,7 +340,12 @@ pub async fn get_ring_camera(
     let snapshot_values = snapshot_res.unwrap_or(("".to_owned(), bytes::Bytes::new()));
 
     let image_base64 = base64.encode(snapshot_values.1);
-    let videos = ring_rest_client.get_recordings(&device.id).await.unwrap();
+    let videos = ring_rest_client
+        .get_recordings(&device.id)
+        .await
+        .unwrap_or(VideoSearchRes {
+            video_search: Vec::new(),
+        });
 
     RingCamera {
         id: device.id,
