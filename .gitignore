@@ -2,3 +2,4 @@ target
 .env
 .DS_store
 state.json
+default.creds

@@ -6,14 +6,11 @@ use {
         },
         integrations::{
             iron_nest::types::Device,
-            ring::types::{
-                RingCamera, RingCameraSnapshot, RingVideoRow, VideoItem, VideoSearchRes,
-            },
+            ring::types::{RingCamera, RingCameraSnapshot, VideoSearchRes},
             roku::types::AppsAppWithIcon,
         },
     },
     leptos::*,
-    log::error,
     serde::{Deserialize, Serialize},
     std::sync::Arc,
 };
@@ -29,7 +26,10 @@ pub struct DashboardValues {
 #[server(GetDashboardValues)]
 pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
     use {
-        crate::integrations::roku::{roku_get_apps, roku_get_channel_icon},
+        crate::integrations::{
+            roku::{roku_get_apps, roku_get_channel_icon},
+            stoplight::toggle_stoplight,
+        },
         sqlx::{Pool, Row, Sqlite},
     };
 
@@ -62,34 +62,33 @@ pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
         ";
 
         let mut video_items = Vec::new();
-        error!("BEFORE =======================");
-        let _ring_videos = sqlx::query_as::<Sqlite, RingVideoRow>(video_events_query)
-            .fetch_all(&*pool)
-            .await?
-            .iter()
-            .map(|video| {
-                video_items.push(VideoItem {
-                    ding_id: "".to_string(),
-                    created_at: video.created_at,
-                    updated_at: 0,
-                    hq_url: "".to_string(),
-                    lq_url: "".to_string(),
-                    is_e2ee: false,
-                    manifest_id: None,
-                    preroll_duration: 0.0,
-                    thumbnail_url: None,
-                    untranscoded_url: "".to_string(),
-                    kind: "".to_string(),
-                    state: "".to_string(),
-                    had_subscription: false,
-                    radar_data_url: None,
-                    favorite: false,
-                    duration: 0,
-                    device_placement: None,
-                    owner_id: "".to_string(),
-                })
-            });
-        error!("AFTER ================================= {:?}", video_items);
+
+        // let _ring_videos = sqlx::query_as::<Sqlite, RingVideoRow>(video_events_query)
+        //     .fetch_all(&*pool)
+        //     .await?
+        //     .iter()
+        //     .map(|video| {
+        //         video_items.push(VideoItem {
+        //             ding_id: "".to_string(),
+        //             created_at: video.created_at,
+        //             updated_at: 0,
+        //             hq_url: "".to_string(),
+        //             lq_url: "".to_string(),
+        //             is_e2ee: false,
+        //             manifest_id: None,
+        //             preroll_duration: 0.0,
+        //             thumbnail_url: None,
+        //             untranscoded_url: "".to_string(),
+        //             kind: "".to_string(),
+        //             state: "".to_string(),
+        //             had_subscription: false,
+        //             radar_data_url: None,
+        //             favorite: false,
+        //             duration: 0,
+        //             device_placement: None,
+        //             owner_id: "".to_string(),
+        //         })
+        //     });
 
         cameras.push(RingCamera {
             id: ring_camera_row.get("id"),
