@@ -128,7 +128,7 @@ pub async fn execute_function(function_name: String, function_args: serde_json::
 
 pub async fn create_db_tables(pool: Arc<Pool<Sqlite>>) {
     sqlx::query(
-        "CREATE TABLE devices (
+        "CREATE TABLE IF NOT EXISTS devices (
             id INTEGER PRIMARY KEY,
             name TEXT NOT NULL,
             device_type TEXT NOT NULL,
@@ -142,7 +142,7 @@ pub async fn create_db_tables(pool: Arc<Pool<Sqlite>>) {
     .unwrap();
 
     sqlx::query(
-        "CREATE TABLE events (
+        "CREATE TABLE IF NOT EXISTS events (
             id INTEGER PRIMARY KEY,
             schedule TEXT NOT NULL,
             function TEXT NOT NULL,
@@ -154,7 +154,7 @@ pub async fn create_db_tables(pool: Arc<Pool<Sqlite>>) {
     .unwrap();
 
     sqlx::query(
-        "CREATE TABLE ring_cameras (
+        "CREATE TABLE IF NOT EXISTS ring_cameras (
             id INT8 PRIMARY KEY,
             description TEXT NOT NULL,
             snapshot_image TEXT NOT NULL,
@@ -167,7 +167,7 @@ pub async fn create_db_tables(pool: Arc<Pool<Sqlite>>) {
     .unwrap();
 
     sqlx::query(
-        "CREATE TABLE ring_video_item (
+        "CREATE TABLE IF NOT EXISTS ring_video_item (
             ding_id TEXT PRIMARY KEY,
             camera_id INT8,
             created_at INT8 NOT NULL,

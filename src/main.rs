@@ -15,7 +15,10 @@ use {
         },
     },
     log::{error, info},
-    sqlx::{Pool, Sqlite},
+    sqlx::{
+        sqlite::{SqliteConnectOptions, SqlitePool},
+        Pool, Sqlite,
+    },
     std::time::Duration,
 };
 
@@ -38,7 +41,6 @@ cfg_if::cfg_if! {
             leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes},
             reqwest::header::HeaderMap,
             std::{ sync::Arc},
-            sqlx::sqlite::SqlitePool,
         };
 
         #[derive(FromRef, Debug, Clone)]
@@ -88,7 +90,9 @@ cfg_if::cfg_if! {
         #[tokio::main]
         async fn main() {
             dotenv().ok();
-            let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+            let db_filename = "database.db";
+            let options = SqliteConnectOptions::new().filename(&db_filename);
+            let pool = SqlitePool::connect_with(options).await.unwrap();
             let shared_pool = Arc::new(pool);
 
             create_db_tables(shared_pool.clone()).await;
