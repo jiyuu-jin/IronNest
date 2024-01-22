@@ -173,9 +173,14 @@ cfg_if::cfg_if! {
                             battery_percentage: camera.health,
                         });
                     }
-
-                    insert_cameras_into_db(shared_pool_clone1.clone(), &cameras).await.unwrap();
-                    insert_devices_into_db(shared_pool_clone1.clone(), &devices).await.unwrap();
+                    match insert_cameras_into_db(shared_pool_clone1.clone(), &cameras).await {
+                        Ok(_) => print!("success"),
+                        Err(err) => error!("{err}"),
+                    }
+                    match insert_devices_into_db(shared_pool_clone1.clone(), &devices).await {
+                        Ok(_) => print!("success"),
+                        Err(err) => error!("{err}"),
+                    }
                 }
             });
 
