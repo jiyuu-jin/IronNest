@@ -1,5 +1,6 @@
 use {
     crate::integrations::iron_nest::{execute_function, types::Device},
+    futures::future::join_all,
     leptos::ServerFnError,
     log::info,
     serde_json::json,
@@ -25,7 +26,6 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     },
         sqlx::{Pool, Sqlite, Row},
     };
-    use std::io::Cursor;
 
     impl Device {
         pub fn format_for_openapi(&self) -> String {
@@ -262,16 +262,15 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
         .message
         .clone();
 
-    let mut function_responses: Vec<(ChatCompletionMessageToolCall, String)> = Vec::new();
-
     let value = if let Some(tool_calls) = response_message.tool_calls {
-        for tool_call in tool_calls.iter() {
+        let tool_call_futs = tool_calls.iter().map(|tool_call| async {
             let function_name = tool_call.function.name.to_string();
             let function_args: serde_json::Value = tool_call.function.arguments.parse().unwrap();
             let function_response = execute_function(function_name, function_args).await;
 
-            function_responses.push((tool_call.clone(), function_response.to_string()));
-        }
+            (tool_call.clone(), function_response.to_string())
+        });
+        let function_responses = join_all(tool_call_futs).await;
 
         let mut messages: Vec<ChatCompletionRequestMessage> =
             vec![ChatCompletionRequestUserMessageArgs::default()
