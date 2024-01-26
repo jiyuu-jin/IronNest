@@ -154,6 +154,16 @@ pub async fn create_db_tables(pool: Arc<Pool<Sqlite>>) {
     .unwrap();
 
     sqlx::query(
+        "CREATE TABLE IF NOT EXISTS auth (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+        )",
+    )
+    .execute(&*pool.clone())
+    .await
+    .unwrap();
+
+    sqlx::query(
         "CREATE TABLE IF NOT EXISTS ring_cameras (
             id INT8 PRIMARY KEY,
             description TEXT NOT NULL,
