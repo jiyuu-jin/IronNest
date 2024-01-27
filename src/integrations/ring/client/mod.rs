@@ -7,16 +7,11 @@ use {
     chrono::{DateTime, Duration, Local, TimeZone, Utc},
     chrono_tz::US::Eastern,
     http::{header::ToStrError, StatusCode},
-    log::{info, warn},
+    log::{error, info},
     reqwest::{self, Client, Method, Response},
     serde::{de::DeserializeOwned, Deserialize, Serialize},
-    std::{
-        collections::HashMap,
-        fs::File,
-        num::ParseFloatError,
-        str,
-        sync::{Arc, RwLock},
-    },
+    sqlx::{Pool, Sqlite},
+    std::{collections::HashMap, num::ParseFloatError, str, sync::Arc},
     uuid::Uuid,
 };
 
@@ -27,7 +22,8 @@ static SNAPSHOTS_API_BASE_URL: &str = "https://app-snaps.ring.com/snapshots/";
 static APP_API_BASE_URL: &str = "https://app.ring.com/api/v1/";
 static OAUTH_API_BASE_URL: &str = "https://oauth.ring.com/oauth/token";
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 pub struct State {
     pub refresh_token: String,
     pub hardware_id: String,
@@ -36,46 +32,9 @@ pub struct State {
 
 #[derive(Debug)]
 pub struct RingRestClient {
-    state: RwLock<State>,
+    state: State,
     pub client: Client,
-}
-
-const STATE_FILE_NAME: &str = "state.json";
-
-fn read_state_from_file() -> std::io::Result<State> {
-    let state_file = File::open(STATE_FILE_NAME);
-    let result = match state_file {
-        Ok(file) => {
-            let state = serde_json::from_reader(file);
-            match state {
-                Ok(state) => Some(state),
-                Err(e) => {
-                    warn!("Error reading from state file, resetting to empty state: {e}");
-                    None
-                }
-            }
-        }
-        Err(e) => {
-            if e.kind() == std::io::ErrorKind::NotFound {
-                info!("State file not found, defaulting to empty state");
-                None
-            } else {
-                return Err(e);
-            }
-        }
-    };
-
-    Ok(result.unwrap_or_else(|| State {
-        refresh_token: "".to_owned(),
-        hardware_id: Uuid::new_v4().to_string(),
-        auth_token: "".to_owned(),
-    }))
-}
-
-fn write_state_to_file(state: &State) -> std::io::Result<()> {
-    let state_file = File::create(STATE_FILE_NAME)?;
-    serde_json::to_writer(state_file, state)?;
-    Ok(())
+    pool: Arc<Pool<Sqlite>>,
 }
 
 pub fn camera_recordings_list(recordings: VideoSearchRes) -> String {
@@ -126,11 +85,51 @@ pub enum RingRestClientError {
     InternalError(#[from] RingRestClientInternalError),
 }
 
+pub async fn get_ring_auth(pool: Arc<Pool<Sqlite>>) -> State {
+    let query = "
+        SELECT hardware_id, auth_token, refresh_token 
+        FROM auth
+    ";
+
+    let auth_query = sqlx::query_as::<Sqlite, State>(query)
+        .fetch_one(&*pool)
+        .await;
+
+    match auth_query {
+        Ok(state) => state,
+        Err(err) => {
+            error!("{err}");
+            State {
+                hardware_id: "".to_string(),
+                auth_token: "".to_string(),
+                refresh_token: "".to_string(),
+            }
+        }
+    }
+}
+
+pub async fn insert_ring_auth(pool: Arc<Pool<Sqlite>>, state: State) {
+    let query = "
+        INSERT OR REPLACE INTO auth (name, auth_token, refresh_token, hardware_id) VALUES (?, ?, ?, ?);
+    ";
+
+    sqlx::query(query)
+        .bind("ring")
+        .bind(state.auth_token)
+        .bind(state.refresh_token)
+        .bind(state.hardware_id)
+        .execute(&*pool)
+        .await
+        .unwrap();
+}
+
 impl RingRestClient {
     #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
+    pub async fn new(pool: Arc<Pool<Sqlite>>) -> Self {
+        let auth_db_pool = pool.clone();
         Self {
-            state: RwLock::new(read_state_from_file().unwrap()),
+            pool,
+            state: get_ring_auth(auth_db_pool).await,
             client: reqwest::Client::new(),
         }
     }
@@ -140,17 +139,12 @@ impl RingRestClient {
             HashMap::from([("client_id", "ring_official_android"), ("scope", "client")]);
 
         let res = {
-            let (refresh_token, hardware_id) = {
-                let state = self.state.read().unwrap();
-                (state.refresh_token.clone(), state.hardware_id.clone())
-            };
-
             if !username.is_empty() && !password.is_empty() {
                 request_body.insert("grant_type", "password");
                 request_body.insert("username", username);
                 request_body.insert("password", password);
             } else {
-                request_body.insert("refresh_token", &refresh_token);
+                request_body.insert("refresh_token", &self.state.refresh_token);
                 request_body.insert("grant_type", "refresh_token");
             };
 
@@ -160,7 +154,7 @@ impl RingRestClient {
                 .header("2fa-support", "true")
                 .header("2fa-code", two_fa)
                 .header("User-Agent", "android:com.ringapp")
-                .header("hardware_id", &hardware_id)
+                .header("hardware_id", &self.state.hardware_id)
                 .send()
                 .await
                 .unwrap()
@@ -172,10 +166,15 @@ impl RingRestClient {
             let auth_res = serde_json::from_str::<AuthResponse>(&text)
                 .unwrap_or_else(|_| panic!("error requesting: {text}"));
 
-            let mut state = self.state.write().unwrap();
-            state.auth_token = auth_res.access_token;
-            state.refresh_token = auth_res.refresh_token;
-            write_state_to_file(&state).unwrap();
+            insert_ring_auth(
+                self.pool.clone(),
+                State {
+                    auth_token: auth_res.access_token,
+                    refresh_token: auth_res.refresh_token,
+                    hardware_id: Uuid::new_v4().to_string(),
+                },
+            )
+            .await;
             "Login successful".to_string()
         } else {
             res.text().await.unwrap()
@@ -193,20 +192,14 @@ impl RingRestClient {
         method: Method,
     ) -> Result<Response, RingRestClientError> {
         let request_body = HashMap::from([("client_id", "ring_official_android")]);
-
-        let (auth_token, hardware_id) = {
-            let state = self.state.read().expect("State read error");
-            (state.auth_token.clone(), state.hardware_id.clone())
-        };
-
-        let auth_value = format!("{}{}", "Bearer ", &auth_token);
+        let auth_value = format!("{}{}", "Bearer ", &self.state.auth_token);
 
         let res = self
             .client
             .request(method, path)
             .json(&request_body)
             .header("authorization", auth_value)
-            .header("hardware_id", &hardware_id)
+            .header("hardware_id", &self.state.hardware_id)
             .header("User-Agent", "android:com.ringapp")
             .send()
             .await

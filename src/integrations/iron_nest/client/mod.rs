@@ -157,6 +157,9 @@ pub async fn create_db_tables(pool: Arc<Pool<Sqlite>>) {
         "CREATE TABLE IF NOT EXISTS auth (
             id INTEGER PRIMARY KEY,
             name TEXT NOT NULL,
+            hardware_id TEXT,
+            auth_token TEXT,
+            refresh_token TEXT
         )",
     )
     .execute(&*pool.clone())

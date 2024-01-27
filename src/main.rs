@@ -90,7 +90,7 @@ cfg_if::cfg_if! {
         #[tokio::main]
         async fn main() {
             dotenv().ok();
-            let db_filename = "database.db";
+            let db_filename = "database.sqlite";
             let options = SqliteConnectOptions::new().filename(&db_filename);
             let pool = SqlitePool::connect_with(options).await.unwrap();
             let shared_pool = Arc::new(pool);
@@ -103,7 +103,7 @@ cfg_if::cfg_if! {
             let addr = leptos_options.site_addr;
             let routes = generate_route_list(App);
 
-            let ring_rest_client = Arc::new(iron_nest::integrations::ring::RingRestClient::new());
+            let ring_rest_client = Arc::new(iron_nest::integrations::ring::RingRestClient::new(shared_pool.clone()).await);
 
             let app_state = AppState {
                 leptos_options,

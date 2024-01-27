@@ -3,4 +3,4 @@ target
 .DS_store
 state.json
 default.creds
-database.db
+database.sqlite
