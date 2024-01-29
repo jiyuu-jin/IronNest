@@ -12,6 +12,7 @@ use {
             ring::{get_ring_camera, types::DevicesRes, RingRestClient},
             roku::{roku_discover, roku_get_device_info},
             tplink::{discover_devices, types::DeviceData},
+            tuya,
         },
     },
     log::{error, info},
@@ -270,12 +271,12 @@ cfg_if::cfg_if! {
                 }
             });
 
-            // tokio::task::spawn(async move {
-            //     println!("Running discovery thread for eufy devices");
-            //     let auth_token = eufy_login().await;
-            //     get_devices(auth_token).await;
-            //     tokio::time::sleep(Duration::from_secs(300)).await;
-            // });
+            tokio::task::spawn(async move {
+                println!("Running discovery thread for tuya devices");
+                let res = tuya::request().await;
+                println!("{res}");
+                tokio::time::sleep(Duration::from_secs(300)).await;
+            });
 
             tokio::select! {
                 e = http_server => error!("HTTP server exiting with error {e:?}"),

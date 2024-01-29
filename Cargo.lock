@@ -1701,6 +1701,7 @@ dependencies = [
  "elliptic-curve",
  "futures",
  "hex",
+ "hmac",
  "http 0.2.10",
  "js-sys",
  "leptos",

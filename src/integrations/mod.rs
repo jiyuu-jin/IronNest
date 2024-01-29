@@ -6,3 +6,4 @@ pub mod ring;
 pub mod roku;
 pub mod stoplight;
 pub mod tplink;
+pub mod tuya;
