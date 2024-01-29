@@ -90,11 +90,10 @@ pub async fn discover_devices() -> Result<Vec<DeviceData>, Box<dyn Error + Send>
 }
 
 pub async fn send(ip: &str, json: serde_json::Value) -> io::Result<()> {
-    let trimmed_ip = ip.trim_matches('"');
-    let _ip: IpAddr = match trimmed_ip.parse() {
+    let _ip: IpAddr = match ip.parse() {
         Ok(addr) => addr,
         Err(e) => {
-            eprintln!("Failed to parse IP address '{}': {}", trimmed_ip, e);
+            eprintln!("Failed to parse IP address '{}': {}", ip, e);
             return Err(io::Error::new(io::ErrorKind::InvalidInput, e));
         }
     };
