@@ -2,7 +2,7 @@ use {
     async_nats::jetstream,
     log::info,
     serde::{Deserialize, Serialize},
-    std::io::Error,
+    std::error::Error,
 };
 
 const STOPLIGHT_BUCKET: &str = "stoplight";
@@ -15,44 +15,35 @@ pub struct Stoplight {
     pub green: bool,
 }
 
-pub async fn toggle_stoplight() -> Result<&'static str, Error> {
+pub async fn toggle_stoplight(color: &str) -> Result<&'static str, Box<dyn Error>> {
     info!("sending command to stoplight");
+
     let nats = async_nats::ConnectOptions::with_credentials_file("default.creds")
-        .await
-        .unwrap()
+        .await?
         .require_tls(true)
         .connect("connect.ngs.global")
-        .await
-        .unwrap();
+        .await?;
 
     let js = jetstream::new(nats);
-    let kv = js.get_key_value(STOPLIGHT_BUCKET).await.unwrap();
+    let kv = js.get_key_value(STOPLIGHT_BUCKET).await?;
 
-    let value = serde_json::from_slice::<Stoplight>(
-        &kv.get(STOPLIGHT_SUBJECT)
-            .await
-            .unwrap()
-            .ok_or(Stoplight {
-                red: false,
-                yellow: false,
-                green: false,
-            })
-            .unwrap(),
-    )
-    .unwrap();
+    let stoplight_value = kv.get(STOPLIGHT_SUBJECT).await.unwrap().unwrap();
+    let mut value: Stoplight = serde_json::from_slice(&stoplight_value)?;
 
-    kv.put(
-        STOPLIGHT_SUBJECT,
-        serde_json::to_string(&Stoplight {
-            red: true,
-            yellow: !value.yellow,
-            green: !value.green,
-        })
-        .unwrap()
-        .into(),
-    )
-    .await
-    .unwrap();
+    println!("before color {color}");
+    println!("before value {:?}", value);
+    match color {
+        "red" => value.red = !value.red,
+        "yellow" => value.yellow = !value.yellow,
+        "green" => value.green = !value.green,
+        _ => info!("not found"),
+    }
+
+    println!("color {color}");
+    println!("value {:?}", value);
+
+    kv.put(STOPLIGHT_SUBJECT, serde_json::to_string(&value)?.into())
+        .await?;
 
     Ok("success")
 }

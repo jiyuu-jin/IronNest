@@ -245,7 +245,27 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
                     }))
                     .build().unwrap()
             )
-            .build().unwrap()
+            .build().unwrap(),
+            ChatCompletionToolArgs::default()
+                .r#type(ChatCompletionToolType::Function)
+                .function(
+                    ChatCompletionFunctionsArgs::default()
+                        .name("stoplight_toggle")
+                        .description("Toggle current state of red, green, or yellow by name")
+                        .parameters(json!({
+                            "type": "object",
+                            "properties": {
+                                "color": {
+                                    "type": "string",
+                                    "description": "The color light to toggle",
+                                    "enum": ["red", "green", "yellow"],
+                                },
+                            },
+                            "required": [],
+                        }))
+                        .build().unwrap()
+                )
+                .build().unwrap(),
     ])
     .build().unwrap();
 
@@ -325,7 +345,7 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
                 Err(err) => println!("{err}"),
             }
         }
-        whisper_tts(client, &response_content).await.unwrap();
+        // whisper_tts(client, &response_content).await.unwrap();
         response_content
     } else {
         "".to_string()

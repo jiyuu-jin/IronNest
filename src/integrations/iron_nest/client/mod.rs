@@ -3,6 +3,7 @@ use {
     crate::integrations::{
         ring::types::RingCamera,
         roku::{roku_launch_app, roku_search, roku_send_keypress},
+        stoplight::toggle_stoplight,
         tplink::{
             tplink_set_light_brightness, tplink_turn_light_on_off, tplink_turn_plug_off,
             tplink_turn_plug_on,
@@ -72,55 +73,58 @@ pub async fn schedule_task(
 pub async fn execute_function(function_name: String, function_args: serde_json::Value) -> Value {
     match function_name.as_str() {
         "roku_send_keypress" => {
-            let key = function_args["key"]
-                .to_string()
-                .trim_matches('"')
-                .to_string();
-            let ip = function_args["ip"]
-                .to_string()
-                .trim_matches('"')
-                .to_string();
-            roku_send_keypress(&ip, &key).await
+            let key = function_args["key"].as_str().unwrap();
+            let ip = function_args["ip"].as_str().unwrap();
+            roku_send_keypress(ip, key).await
         }
         "tplink_turn_plug_on" => {
-            let ip = function_args["ip"].to_string();
+            let ip = function_args["ip"].as_str().unwrap();
             tplink_turn_plug_on(&ip).await;
             json!({
                 "message": "success"
             })
         }
         "tplink_turn_plug_off" => {
-            let ip = function_args["ip"].to_string();
+            let ip = function_args["ip"].as_str().unwrap();
             tplink_turn_plug_off(&ip).await;
             json!({
                 "message": "success"
             })
         }
         "tplink_turn_light_on_off" => {
-            let ip = function_args["ip"].to_string();
-            let state: u8 = function_args["state"].to_string().parse().unwrap();
+            let ip = function_args["ip"].as_str().unwrap();
+            let state: u8 = function_args["state"].as_str().unwrap().parse().unwrap();
             tplink_turn_light_on_off(&ip, state).await;
             json!({
                 "message": "success"
             })
         }
         "tplink_set_light_brightness" => {
-            let ip = function_args["ip"].to_string();
-            let brightness: u8 = function_args["brightness"].to_string().parse().unwrap();
+            let ip = function_args["ip"].as_str().unwrap();
+            let brightness: u8 = function_args["brightness"]
+                .as_str()
+                .unwrap()
+                .parse()
+                .unwrap();
             tplink_set_light_brightness(&ip, brightness).await;
             json!({
                 "message": "success"
             })
         }
         "roku_search" => {
-            let query = function_args["query"].to_string();
-            let ip = function_args["ip"].to_string();
+            let query = function_args["query"].as_str().unwrap();
+            let ip = function_args["ip"].as_str().unwrap();
             roku_search(&ip, &query).await
         }
         "roku_launch_app" => {
-            let app_id = function_args["app_id"].to_string();
-            let ip = function_args["ip"].to_string();
+            let app_id = function_args["app_id"].as_str().unwrap();
+            let ip = function_args["ip"].as_str().unwrap();
             roku_launch_app(&ip, &app_id).await
+        }
+        "stoplight_toggle" => {
+            let color = function_args["color"].as_str().unwrap();
+            let result = toggle_stoplight(color).await.is_ok();
+            json!({"success": result})
         }
         &_ => todo!(),
     }
@@ -156,10 +160,11 @@ pub async fn create_db_tables(pool: Arc<Pool<Sqlite>>) {
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS auth (
             id INTEGER PRIMARY KEY,
-            name TEXT NOT NULL,
+            name TEXT NOT NULL UNIQUE,
             hardware_id TEXT,
             auth_token TEXT,
-            refresh_token TEXT
+            refresh_token TEXT,
+            captcha TEXT
         )",
     )
     .execute(&*pool.clone())
