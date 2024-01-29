@@ -110,14 +110,19 @@ pub async fn get_ring_auth(pool: Arc<Pool<Sqlite>>) -> State {
 
 pub async fn insert_ring_auth(pool: Arc<Pool<Sqlite>>, state: State) {
     let query = "
-        INSERT OR REPLACE INTO auth (name, auth_token, refresh_token, hardware_id) VALUES (?, ?, ?, ?);
+        INSERT INTO auth (name, auth_token, refresh_token, hardware_id) 
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(name) DO UPDATE SET
+            auth_token = excluded.auth_token,
+            refresh_token = excluded.refresh_token,
+            hardware_id = excluded.hardware_id;
     ";
 
     sqlx::query(query)
         .bind("ring")
-        .bind(state.auth_token)
-        .bind(state.refresh_token)
-        .bind(state.hardware_id)
+        .bind(&state.auth_token)
+        .bind(&state.refresh_token)
+        .bind(&state.hardware_id)
         .execute(&*pool)
         .await
         .unwrap();
