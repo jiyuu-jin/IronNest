@@ -26,10 +26,7 @@ pub struct DashboardValues {
 #[server(GetDashboardValues)]
 pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
     use {
-        crate::integrations::{
-            roku::{roku_get_apps, roku_get_channel_icon},
-            stoplight::toggle_stoplight,
-        },
+        crate::integrations::roku::{roku_get_apps, roku_get_channel_icon},
         sqlx::{Pool, Row, Sqlite},
     };
 

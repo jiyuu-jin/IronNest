@@ -6,8 +6,9 @@ use {
             efuy::{eufy_login, get_devices},
             iron_nest::{
                 client::insert_devices_into_db,
-                create_db_tables, extract_ip, insert_cameras_into_db,
-                types::{Device, DeviceType},
+                create_db_tables, extract_ip, get_auth_from_db, insert_auth,
+                insert_cameras_into_db,
+                types::{AuthState, Device, DeviceType},
             },
             ring::{get_ring_camera, types::DevicesRes, RingRestClient},
             roku::{roku_discover, roku_get_device_info},
@@ -241,6 +242,43 @@ cfg_if::cfg_if! {
                 }
             });
 
+            let shared_pool_3 = shared_pool.clone();
+            tokio::task::spawn(async move {
+                println!("Running thread for tuya auth");
+                let tuya_auth = get_auth_from_db(shared_pool_3.clone(), "tuya").await;
+
+                if !tuya_auth.refresh_token.is_empty() {
+                    println!("Found a refresh_token, refreshing auth_token");
+                } else {
+                    println!("No refresh_token found, getting a new one");
+                    let res = tuya::get_refresh_token().await.unwrap();
+                    insert_auth(shared_pool_3, "tuya", AuthState {
+                        refresh_token: res.result.refresh_token,
+                        hardware_id: res.result.uid,
+                        auth_token: res.result.access_token,
+                    }).await;
+                }
+                tokio::time::sleep(chrono::Duration::hours(1).to_std().unwrap()).await;
+            });
+
+            let shared_pool_4 = shared_pool.clone();
+            tokio::task::spawn(async move {
+                println!("Running thread for eufy auth");
+                let eufy_auth = get_auth_from_db(shared_pool_4.clone(), "eufy").await;
+                if !eufy_auth.refresh_token.is_empty() {
+                    println!("Found a refresh_token, refreshing auth_token");
+                } else {
+                    println!("No refresh_token found, getting a new one");
+                    let res = eufy_login().await;
+                    insert_auth(shared_pool_4, "eufy", AuthState {
+                        refresh_token: res.data.auth_token.to_owned(),
+                        hardware_id: res.data.user_id,
+                        auth_token: res.data.auth_token,
+                    }).await;
+                }
+                tokio::time::sleep(chrono::Duration::hours(1).to_std().unwrap()).await;
+            });
+
             tokio::task::spawn(async move {
                 println!("Running discovery thread for roku devices");
                 loop {
@@ -271,12 +309,6 @@ cfg_if::cfg_if! {
                 }
             });
 
-            tokio::task::spawn(async move {
-                println!("Running discovery thread for tuya devices");
-                let res = tuya::request().await;
-                println!("{res}");
-                tokio::time::sleep(Duration::from_secs(300)).await;
-            });
 
             tokio::select! {
                 e = http_server => error!("HTTP server exiting with error {e:?}"),

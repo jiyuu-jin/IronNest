@@ -1,5 +1,5 @@
 use {
-    super::types::Device,
+    super::types::{AuthState, Device},
     crate::integrations::{
         ring::types::RingCamera,
         roku::{roku_launch_app, roku_search, roku_send_keypress},
@@ -9,7 +9,7 @@ use {
             tplink_turn_plug_on,
         },
     },
-    log::info,
+    log::{error, info},
     serde_json::{json, Value},
     sqlx::{Pool, Sqlite},
     std::sync::Arc,
@@ -227,4 +227,48 @@ pub async fn insert_cameras_into_db(
         }
     }
     Ok(())
+}
+
+pub async fn insert_auth(pool: Arc<Pool<Sqlite>>, name: &str, state: AuthState) {
+    let query = "
+        INSERT INTO auth (name, auth_token, refresh_token, hardware_id) 
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(name) DO UPDATE SET
+            auth_token = excluded.auth_token,
+            refresh_token = excluded.refresh_token,
+            hardware_id = excluded.hardware_id;
+    ";
+
+    sqlx::query(query)
+        .bind(name)
+        .bind(&state.auth_token)
+        .bind(&state.refresh_token)
+        .bind(&state.hardware_id)
+        .execute(&*pool)
+        .await
+        .unwrap();
+}
+
+pub async fn get_auth_from_db(pool: Arc<Pool<Sqlite>>, name: &str) -> AuthState {
+    let query = format!(
+        "SELECT hardware_id, auth_token, refresh_token 
+        FROM auth
+        WHERE name={name};",
+    );
+
+    let auth_query = sqlx::query_as::<Sqlite, AuthState>(&query)
+        .fetch_one(&*pool)
+        .await;
+
+    match auth_query {
+        Ok(state) => state,
+        Err(err) => {
+            error!("{err}");
+            AuthState {
+                hardware_id: "".to_string(),
+                auth_token: "".to_string(),
+                refresh_token: "".to_string(),
+            }
+        }
+    }
 }
