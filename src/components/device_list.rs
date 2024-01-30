@@ -42,6 +42,7 @@ pub fn DeviceListItem(device: Device) -> impl IntoView {
         DeviceType::SmartPlug => view! { <SmartPlugItem device=device/> },
         DeviceType::SmartLight => view! { <SmartLightItem device=device/> },
         DeviceType::RingDoorbell => view! { <RingDoorbellItem device=device/> },
+        DeviceType::Stoplight => view! { <StoplightItem device=device/> },
         DeviceType::RokuTv => view! { <RokuTvItem device=device/> },
     }
 }
@@ -63,7 +64,7 @@ pub fn SmartPlugItem(device: Device) -> impl IntoView {
     let (signal, set_signal) = create_signal(device.power_state == 1);
 
     view! {
-        <li class="col-span-1 divide-y divide-gray-200 rounded-lg bg-white shadow">
+        <li style="min-height: 100px" class="col-span-1 divide-y divide-gray-200 rounded-lg bg-white shadow">
             <div class="flex w-full items-center justify-between space-x-6 p-6">
                 <div class="flex-1 truncate">
                     <div class="flex items-center space-x-3">
@@ -138,6 +139,38 @@ pub fn RingDoorbellItem(device: Device) -> impl IntoView {
                     <p class="mt-1 truncate text-sm text-gray-500">
                         {format!("Battery: {}", &device.battery_percentage)}
                     </p>
+                </div>
+            </div>
+        </li>
+    }
+}
+
+#[component]
+pub fn StoplightItem(device: Device) -> impl IntoView {
+    view! {
+        <li style="min-height: 100px" class="col-span-1 divide-y divide-gray-200 rounded-lg bg-white shadow">
+            <div class="flex w-full items-center justify-between space-x-6 p-6">
+                <div class="flex-1 truncate">
+                    <div class="flex items-center space-x-3">
+                        <h3 class="truncate text-sm font-medium text-gray-900">{&device.name}</h3>
+                        <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                            <svg
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path d="M15 9H9V15H15V9Z" fill="currentColor" />
+                                <path
+                                fill-rule="evenodd"
+                                clip-rule="evenodd"
+                                d="M23 12C23 18.0751 18.0751 23 12 23C5.92487 23 1 18.0751 1 12C1 5.92487 5.92487 1 12 1C18.0751 1 23 5.92487 23 12ZM21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
+                                fill="currentColor"
+                                />
+                            </svg>
+                        </span>
+                    </div>
                 </div>
             </div>
         </li>

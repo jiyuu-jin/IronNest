@@ -1,5 +1,5 @@
 use {
-    super::types::{AuthState, Device},
+    super::types::{AuthState, Device, DeviceType},
     crate::integrations::{
         ring::types::RingCamera,
         roku::{roku_launch_app, roku_search, roku_send_keypress},
@@ -34,6 +34,24 @@ pub async fn insert_devices_into_db(
         .execute(&*pool)
         .await?;
     }
+
+    Ok(())
+}
+
+pub async fn insert_initial_devices_into_db(pool: Arc<Pool<Sqlite>>) -> Result<(), sqlx::Error> {
+    insert_devices_into_db(
+        pool,
+        &vec![Device {
+            name: "Living Room Stoplight".to_owned(),
+            device_type: DeviceType::Stoplight,
+            id: 0,
+            ip: "0.0.0.0".to_owned(),
+            battery_percentage: 0,
+            power_state: 0,
+        }],
+    )
+    .await
+    .unwrap();
 
     Ok(())
 }
