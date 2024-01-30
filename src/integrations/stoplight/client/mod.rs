@@ -15,6 +15,21 @@ pub struct Stoplight {
     pub green: bool,
 }
 
+pub async fn stoplight_get_state() -> Result<Stoplight, Box<dyn Error>> {
+    let nats = async_nats::ConnectOptions::with_credentials_file("default.creds")
+        .await?
+        .require_tls(true)
+        .connect("connect.ngs.global")
+        .await?;
+
+    let js = jetstream::new(nats);
+    let kv = js.get_key_value(STOPLIGHT_BUCKET).await?;
+
+    let stoplight_value = kv.get(STOPLIGHT_SUBJECT).await.unwrap().unwrap();
+    let value: Stoplight = serde_json::from_slice(&stoplight_value).unwrap();
+    Ok(value)
+}
+
 pub async fn toggle_stoplight(color: &str) -> Result<&'static str, Box<dyn Error>> {
     info!("sending command to stoplight");
 
@@ -26,21 +41,14 @@ pub async fn toggle_stoplight(color: &str) -> Result<&'static str, Box<dyn Error
 
     let js = jetstream::new(nats);
     let kv = js.get_key_value(STOPLIGHT_BUCKET).await?;
+    let mut value = stoplight_get_state().await?;
 
-    let stoplight_value = kv.get(STOPLIGHT_SUBJECT).await.unwrap().unwrap();
-    let mut value: Stoplight = serde_json::from_slice(&stoplight_value)?;
-
-    println!("before color {color}");
-    println!("before value {:?}", value);
     match color {
         "red" => value.red = !value.red,
         "yellow" => value.yellow = !value.yellow,
         "green" => value.green = !value.green,
         _ => info!("not found"),
     }
-
-    println!("color {color}");
-    println!("value {:?}", value);
 
     kv.put(STOPLIGHT_SUBJECT, serde_json::to_string(&value)?.into())
         .await?;
