@@ -3,11 +3,11 @@ use {
         components::layout::App,
         handlers::roku_keypress_handler,
         integrations::{
-            efuy::{eufy_login, get_devices},
+            efuy::eufy_login,
             iron_nest::{
                 client::insert_devices_into_db,
                 create_db_tables, extract_ip, get_auth_from_db, insert_auth,
-                insert_cameras_into_db,
+                insert_cameras_into_db, insert_initial_devices_into_db,
                 types::{AuthState, Device, DeviceType},
             },
             ring::{get_ring_camera, types::DevicesRes, RingRestClient},
@@ -138,6 +138,9 @@ cfg_if::cfg_if! {
                     auth_ring_rest_client.refresh_auth_token().await;
                 }
             });
+
+            // insert initial devices
+            insert_initial_devices_into_db(shared_pool.clone()).await.unwrap();
 
             let shared_pool_clone1 = shared_pool.clone();
             let discovery_ring_client = ring_rest_client.clone();
