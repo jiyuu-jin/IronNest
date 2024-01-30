@@ -56,7 +56,7 @@ pub fn get_headers() -> HeaderMap {
     headers
 }
 
-pub async fn eufy_login() -> String {
+pub async fn eufy_login() -> ApiResponse {
     let username = env::var("EUFY_USERNAME").expect("EUFY_USERNAME not found in environment");
     let password = env::var("EUFY_PASSWORD").expect("EUFY_PASSWORD not found in environment");
 
@@ -127,7 +127,7 @@ pub async fn eufy_login() -> String {
 
     let auth = serde_json::from_str::<ApiResponse>(&auth_res).unwrap();
     println!("Got Eufy auth_token: {:?}", auth.data.auth_token);
-    auth.data.auth_token
+    auth
 }
 
 pub async fn get_devices(auth_token: String) {

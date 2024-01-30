@@ -34,3 +34,11 @@ pub struct Device {
     pub power_state: u8,
     pub battery_percentage: i64,
 }
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+pub struct AuthState {
+    pub refresh_token: String,
+    pub hardware_id: String,
+    pub auth_token: String,
+}

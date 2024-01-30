@@ -3,13 +3,14 @@ use {
         AuthResponse, CameraEventsRes, DevicesRes, Doorbot, LocationsRes, RingCamera,
         RingCameraSnapshot, SocketTicketRes, VideoSearchRes,
     },
+    crate::integrations::iron_nest::{get_auth_from_db, insert_auth, types::AuthState},
     base64::{engine::general_purpose::STANDARD as base64, Engine},
     chrono::{DateTime, Duration, Local, TimeZone, Utc},
     chrono_tz::US::Eastern,
     http::{header::ToStrError, StatusCode},
     log::{error, info},
     reqwest::{self, Client, Method, Response},
-    serde::{de::DeserializeOwned, Deserialize, Serialize},
+    serde::de::DeserializeOwned,
     sqlx::{Pool, Sqlite},
     std::{collections::HashMap, num::ParseFloatError, str, sync::Arc},
     uuid::Uuid,
@@ -22,17 +23,9 @@ static SNAPSHOTS_API_BASE_URL: &str = "https://app-snaps.ring.com/snapshots/";
 static APP_API_BASE_URL: &str = "https://app.ring.com/api/v1/";
 static OAUTH_API_BASE_URL: &str = "https://oauth.ring.com/oauth/token";
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
-pub struct State {
-    pub refresh_token: String,
-    pub hardware_id: String,
-    pub auth_token: String,
-}
-
 #[derive(Debug)]
 pub struct RingRestClient {
-    state: State,
+    state: AuthState,
     pub client: Client,
     pool: Arc<Pool<Sqlite>>,
 }
@@ -85,56 +78,13 @@ pub enum RingRestClientError {
     InternalError(#[from] RingRestClientInternalError),
 }
 
-pub async fn get_ring_auth(pool: Arc<Pool<Sqlite>>) -> State {
-    let query = "
-        SELECT hardware_id, auth_token, refresh_token 
-        FROM auth
-    ";
-
-    let auth_query = sqlx::query_as::<Sqlite, State>(query)
-        .fetch_one(&*pool)
-        .await;
-
-    match auth_query {
-        Ok(state) => state,
-        Err(err) => {
-            error!("{err}");
-            State {
-                hardware_id: "".to_string(),
-                auth_token: "".to_string(),
-                refresh_token: "".to_string(),
-            }
-        }
-    }
-}
-
-pub async fn insert_ring_auth(pool: Arc<Pool<Sqlite>>, state: State) {
-    let query = "
-        INSERT INTO auth (name, auth_token, refresh_token, hardware_id) 
-        VALUES (?, ?, ?, ?)
-        ON CONFLICT(name) DO UPDATE SET
-            auth_token = excluded.auth_token,
-            refresh_token = excluded.refresh_token,
-            hardware_id = excluded.hardware_id;
-    ";
-
-    sqlx::query(query)
-        .bind("ring")
-        .bind(&state.auth_token)
-        .bind(&state.refresh_token)
-        .bind(&state.hardware_id)
-        .execute(&*pool)
-        .await
-        .unwrap();
-}
-
 impl RingRestClient {
     #[allow(clippy::new_without_default)]
     pub async fn new(pool: Arc<Pool<Sqlite>>) -> Self {
         let auth_db_pool = pool.clone();
         Self {
             pool,
-            state: get_ring_auth(auth_db_pool).await,
+            state: get_auth_from_db(auth_db_pool, "ring").await,
             client: reqwest::Client::new(),
         }
     }
@@ -171,9 +121,10 @@ impl RingRestClient {
             let auth_res = serde_json::from_str::<AuthResponse>(&text)
                 .unwrap_or_else(|_| panic!("error requesting: {text}"));
 
-            insert_ring_auth(
+            insert_auth(
                 self.pool.clone(),
-                State {
+                "ring",
+                AuthState {
                     auth_token: auth_res.access_token,
                     refresh_token: auth_res.refresh_token,
                     hardware_id: Uuid::new_v4().to_string(),

@@ -3,25 +3,51 @@ use {
     hmac::{Hmac, Mac},
     http::{HeaderMap, HeaderName, HeaderValue, Method},
     reqwest::Client,
+    serde::{Deserialize, Serialize},
     sha2::{Digest, Sha256},
-    std::env,
+    std::{env, error::Error},
     url::Url,
 };
 
 static TUYA_API_URL: &str = "https://openapi.tuyaus.com";
 
-pub async fn request() -> String {
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct State {
+    pub refresh_token: String,
+    pub hardware_id: String,
+    pub auth_token: String,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct TuyaAuthRes {
+    pub result: TuyaAuthValues,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct TuyaAuthValues {
+    pub access_token: String,
+    pub refresh_token: String,
+    pub uid: String,
+}
+
+#[derive(Debug)]
+pub struct TuyaRestClient {
+    pub state: State,
+}
+
+pub async fn get_refresh_token() -> Result<TuyaAuthRes, Box<dyn Error>> {
+    let res = request("/v1.0/token?grant_type=1").await;
+    let tuya_auth: TuyaAuthRes = serde_json::from_str(&res)?;
+    Ok(tuya_auth)
+}
+
+pub async fn request(path: &str) -> String {
     let tuya_client_id =
         env::var("TUYA_CLIENT_ID").expect("TUYA_CLIENT_ID not found in environment");
     let tuya_api_key = env::var("TUYA_API_KEY").expect("TUYA_API_KEY not found in environment");
     let token: Option<String> = None;
 
-    let token_api_path = "/v1.0/token?grant_type=1";
-    let api_url = TUYA_API_URL
-        .parse::<Url>()
-        .unwrap()
-        .join(token_api_path)
-        .unwrap();
+    let api_url = TUYA_API_URL.parse::<Url>().unwrap().join(path).unwrap();
 
     let method = Method::GET;
     let body: Option<String> = None;
@@ -44,7 +70,7 @@ pub async fn request() -> String {
     )
     .unwrap();
 
-    let mut payload = tuya_api_key.clone();
+    let mut payload = tuya_client_id.clone();
     let secret_or_access_token_header = if let Some(token) = token {
         payload.push_str(&token);
         [("access_token", HeaderValue::from_str(&token).unwrap())]
@@ -61,7 +87,8 @@ pub async fn request() -> String {
     for (name, value) in signed_headers.iter() {
         payload.push_str(&format!("{name}:{}\n", value.to_str().unwrap()));
     }
-    payload.push_str(token_api_path);
+    payload.push_str("\n");
+    payload.push_str(path);
     let mut hmac = Hmac::<Sha256>::new_from_slice(tuya_api_key.as_bytes()).unwrap();
     hmac.update(payload.as_bytes());
     let signature = hex::encode_upper(hmac.finalize().into_bytes());
