@@ -268,13 +268,14 @@ pub async fn insert_auth(pool: Arc<Pool<Sqlite>>, name: &str, state: AuthState) 
 }
 
 pub async fn get_auth_from_db(pool: Arc<Pool<Sqlite>>, name: &str) -> AuthState {
-    let query = format!(
-        "SELECT hardware_id, auth_token, refresh_token 
+    let query = "
+        SELECT hardware_id, auth_token, refresh_token 
         FROM auth
-        WHERE name={name};",
-    );
+        WHERE name=$1
+    ";
 
     let auth_query = sqlx::query_as::<Sqlite, AuthState>(&query)
+        .bind(name)
         .fetch_one(&*pool)
         .await;
 
