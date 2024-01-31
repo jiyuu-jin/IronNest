@@ -1,4 +1,5 @@
 use {
+    super::types::TuyaDeviceRes,
     chrono::Utc,
     hmac::{Hmac, Mac},
     http::{HeaderMap, HeaderName, HeaderValue, Method},
@@ -36,16 +37,26 @@ pub struct TuyaRestClient {
 }
 
 pub async fn get_refresh_token() -> Result<TuyaAuthRes, Box<dyn Error>> {
-    let res = request("/v1.0/token?grant_type=1").await;
+    let res = request("/v1.0/token?grant_type=1", "").await;
     let tuya_auth: TuyaAuthRes = serde_json::from_str(&res)?;
+    println!("{:?}", tuya_auth);
     Ok(tuya_auth)
 }
 
-pub async fn request(path: &str) -> String {
+pub async fn get_devices(user_id: &str, token: &str) -> Result<TuyaDeviceRes, Box<dyn Error>> {
+    let res = request(&format!("/v1.0/users/{user_id}/devices"), token).await;
+    let tuya_devices: TuyaDeviceRes = serde_json::from_str(&res)?;
+    Ok(tuya_devices)
+}
+
+pub async fn get_user_id(device_id: &str, token: &str) -> String {
+    request(&format!("/v1.0/devices/{device_id}"), token).await
+}
+
+pub async fn request(path: &str, token: &str) -> String {
     let tuya_client_id =
         env::var("TUYA_CLIENT_ID").expect("TUYA_CLIENT_ID not found in environment");
     let tuya_api_key = env::var("TUYA_API_KEY").expect("TUYA_API_KEY not found in environment");
-    let token: Option<String> = None;
 
     let api_url = TUYA_API_URL.parse::<Url>().unwrap().join(path).unwrap();
 
@@ -71,7 +82,7 @@ pub async fn request(path: &str) -> String {
     .unwrap();
 
     let mut payload = tuya_client_id.clone();
-    let secret_or_access_token_header = if let Some(token) = token {
+    let secret_or_access_token_header = if !token.is_empty() {
         payload.push_str(&token);
         [("access_token", HeaderValue::from_str(&token).unwrap())]
     } else {
