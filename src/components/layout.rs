@@ -4,8 +4,8 @@ use {
             navbar::Navbar,
             pages::{
                 accounts_page::AccountsPage, dashboard_page::DashboardPage,
-                devices_page::DevicesPage, ring_login_page::RingLoginPage,
-                settings_page::SettingsPage, websocket_page::WebSocketPage,
+                devices_page::DevicesPage, login_page::LoginPage, settings_page::SettingsPage,
+                websocket_page::WebSocketPage,
             },
         },
         error_template::{AppError, ErrorTemplate},
@@ -183,7 +183,7 @@ pub fn App() -> impl IntoView {
                     <Routes>
                         <Route path="/" view=DashboardPage/>
                         <Route path="/accounts" view=AccountsPage/>
-                        <Route path="/accounts/:integration" view=RingLoginPage/>
+                        <Route path="/accounts/:integration" view=LoginPage/>
                         <Route path="/settings" view=SettingsPage/>
                         <Route path="/devices" view=DevicesPage/>
                         <Route path="/websocket" view=WebSocketPage/>

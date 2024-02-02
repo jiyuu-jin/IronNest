@@ -1,5 +1,27 @@
 use {leptos::*, leptos_router::*, std::sync::Arc};
 
+#[component]
+pub fn LoginPage() -> impl IntoView {
+    let params = use_params_map();
+    let integration =
+        move || params.with(|params| params.get("integration").cloned().unwrap_or_default());
+
+    let login = move || match integration().as_str() {
+        "ring" => view! { <RingLoginPage/> },
+        _ => view! { <LoginPageNotFound/> },
+    };
+    login()
+}
+
+#[component]
+pub fn LoginPageNotFound() -> impl IntoView {
+    view! {
+        <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
+            "Login Not Found"
+        </div>
+    }
+}
+
 #[server(HandleLogin)]
 pub async fn handle_login(
     username: String,
