@@ -10,5 +10,5 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 pub async fn handle_assistant_command(text: String) -> Result<String, ServerFnError> {
     use sqlx::{Pool, Sqlite};
     let pool = use_context::<Arc<Pool<Sqlite>>>().unwrap();
-    open_api_command(text, &*pool).await
+    open_api_command(text, &pool).await
 }

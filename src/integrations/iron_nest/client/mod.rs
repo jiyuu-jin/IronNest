@@ -98,14 +98,14 @@ pub async fn execute_function(function_name: String, function_args: serde_json::
         }
         "tplink_turn_plug_on" => {
             let ip = function_args["ip"].as_str().unwrap();
-            tplink_turn_plug_on(&ip).await;
+            tplink_turn_plug_on(ip).await;
             json!({
                 "message": "success"
             })
         }
         "tplink_turn_plug_off" => {
             let ip = function_args["ip"].as_str().unwrap();
-            tplink_turn_plug_off(&ip).await;
+            tplink_turn_plug_off(ip).await;
             json!({
                 "message": "success"
             })
@@ -219,18 +219,18 @@ pub async fn create_db_tables(pool: Arc<Pool<Sqlite>>) {
 
 pub async fn insert_cameras_into_db(
     pool: Arc<Pool<Sqlite>>,
-    cameras: &Vec<RingCamera>,
+    cameras: &[RingCamera],
 ) -> Result<(), sqlx::Error> {
     info!("Inserting camera into db");
     for camera in cameras.iter() {
         sqlx::query(
             "INSERT OR REPLACE INTO ring_cameras (id, description, snapshot_image, snapshot_timestamp, health) VALUES (?, ?, ?, ?, ?)",
         )
-        .bind(&camera.id)
+        .bind(camera.id)
         .bind(&camera.description)
         .bind(&camera.snapshot.image)
         .bind(&camera.snapshot.timestamp)
-        .bind(&camera.health)
+        .bind(camera.health)
         .execute(&*pool)
         .await?;
 
@@ -239,7 +239,7 @@ pub async fn insert_cameras_into_db(
                 "INSERT OR REPLACE INTO ring_video_item (ding_id, camera_id, created_at, hq_url) VALUES (?, ?, ?, ?)",
             )
             .bind(&video_item.ding_id)
-            .bind(&camera.id)
+            .bind(camera.id)
             .bind(&video_item.created_at.to_string())
             .bind(&video_item.hq_url)
             .execute(&*pool)
@@ -280,7 +280,7 @@ pub async fn get_auth_from_db(pool: Arc<Pool<Sqlite>>, name: &str) -> AuthState 
         WHERE name=$1
     ";
 
-    let auth_query = sqlx::query_as::<Sqlite, AuthState>(&query)
+    let auth_query = sqlx::query_as::<Sqlite, AuthState>(query)
         .bind(name)
         .fetch_one(&*pool)
         .await;
