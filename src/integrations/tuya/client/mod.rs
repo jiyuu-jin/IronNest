@@ -83,8 +83,8 @@ pub async fn request(path: &str, token: &str) -> String {
 
     let mut payload = tuya_client_id.clone();
     let secret_or_access_token_header = if !token.is_empty() {
-        payload.push_str(&token);
-        [("access_token", HeaderValue::from_str(&token).unwrap())]
+        payload.push_str(token);
+        [("access_token", HeaderValue::from_str(token).unwrap())]
     } else {
         [("secret", HeaderValue::from_str(&tuya_api_key).unwrap())]
     };
@@ -98,7 +98,7 @@ pub async fn request(path: &str, token: &str) -> String {
     for (name, value) in signed_headers.iter() {
         payload.push_str(&format!("{name}:{}\n", value.to_str().unwrap()));
     }
-    payload.push_str("\n");
+    payload.push('\n');
     payload.push_str(path);
     let mut hmac = Hmac::<Sha256>::new_from_slice(tuya_api_key.as_bytes()).unwrap();
     hmac.update(payload.as_bytes());
