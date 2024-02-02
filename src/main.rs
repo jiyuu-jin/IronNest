@@ -3,7 +3,6 @@ use {
         components::layout::App,
         handlers::roku_keypress_handler,
         integrations::{
-            efuy::eufy_login,
             iron_nest::{
                 client::insert_devices_into_db,
                 create_db_tables, extract_ip, get_auth_from_db, insert_auth,
@@ -13,7 +12,7 @@ use {
             ring::{get_ring_camera, types::DevicesRes, RingRestClient},
             roku::{roku_discover, roku_get_device_info},
             tplink::{discover_devices, types::DeviceData},
-            tuya::{get_devices, get_refresh_token, get_user_id},
+            tuya::{get_devices, get_refresh_token},
         },
     },
     log::{error, info},
@@ -299,12 +298,23 @@ cfg_if::cfg_if! {
                     println!("Found a refresh_token, refreshing auth_token");
                 } else {
                     println!("No refresh_token found, getting a new one");
-                    let res = eufy_login().await;
+                    let res = iron_nest::integrations::efuy::eufy_login().await;
                     insert_auth(shared_pool_5, "eufy", AuthState {
                         refresh_token: res.data.auth_token.to_owned(),
                         hardware_id: res.data.user_id,
                         auth_token: res.data.auth_token,
                     }).await;
+                }
+
+                tokio::time::sleep(chrono::Duration::hours(1).to_std().unwrap()).await;
+            });
+
+            let shared_pool_6 = shared_pool.clone();
+            tokio::task::spawn(async move {
+                println!("Running thread for eufy discovery");
+                let eufy_auth = get_auth_from_db(shared_pool_6.clone(), "eufy").await;
+                if !eufy_auth.auth_token.is_empty() {
+                    iron_nest::integrations::efuy::get_devices(eufy_auth.auth_token).await;
                 }
                 tokio::time::sleep(chrono::Duration::hours(1).to_std().unwrap()).await;
             });

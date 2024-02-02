@@ -135,9 +135,10 @@ pub async fn get_devices(auth_token: String) {
     let country_url = get_country_url(&client).await;
 
     let mut headers = get_headers();
+    println!("auth_token: {auth_token}");
     headers.insert("X-Auth-Token", HeaderValue::from_str(&auth_token).unwrap());
 
-    let device_res = client
+    let res = client
         .post(format!("{country_url}/v2/house/device_list"))
         .json(&json!({
             "device_sn": "",
@@ -151,11 +152,10 @@ pub async fn get_devices(auth_token: String) {
         .headers(headers)
         .send()
         .await
-        .unwrap()
-        .text()
-        .await
         .unwrap();
-    println!("{:?}", device_res);
+    println!("res: {res:?}");
+    let device_res = res.text().await.unwrap();
+    println!("device_res: {:?}", device_res);
 }
 
 fn encrypt_api_data(data: &str, key: &[u8]) -> Result<String, Box<dyn std::error::Error>> {
