@@ -20,7 +20,7 @@ use {
         sqlite::{SqliteConnectOptions, SqlitePool},
         Pool, Sqlite,
     },
-    std::time::Duration,
+    std::{fs::File, time::Duration},
 };
 
 cfg_if::cfg_if! {
@@ -91,10 +91,16 @@ cfg_if::cfg_if! {
         #[tokio::main]
         async fn main() {
             dotenv().ok();
-            let db_filename = "database.sqlite";
-            let options = SqliteConnectOptions::new().filename(&db_filename);
-            let pool = SqlitePool::connect_with(options).await.unwrap();
-            let shared_pool = Arc::new(pool);
+
+            let shared_pool = {
+                let db_filename = std::path::Path::new("database.sqlite");
+                if !db_filename.exists() {
+                    File::create(db_filename).unwrap();
+                }
+                let options = SqliteConnectOptions::new().filename(db_filename);
+                let pool = SqlitePool::connect_with(options).await.unwrap();
+                Arc::new(pool)
+            };
 
             create_db_tables(shared_pool.clone()).await;
             simple_logger::init_with_level(log::Level::Debug).expect("couldn't initialize logging");
