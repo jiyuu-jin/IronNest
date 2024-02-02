@@ -154,9 +154,9 @@ fn encrypt_with_header(input: &[u8], first_key: u8) -> Vec<u8> {
 fn decrypt(input: &[u8], first_key: u8) -> Vec<u8> {
     let mut buf = input.to_vec();
     let mut key = first_key;
-    for i in 0..buf.len() {
-        let next_key = buf[i];
-        buf[i] ^= key;
+    for item in &mut buf {
+        let next_key = *item;
+        *item ^= key;
         key = next_key;
     }
     buf
