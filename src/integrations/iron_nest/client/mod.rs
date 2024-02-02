@@ -9,6 +9,7 @@ use {
             tplink_turn_plug_on,
         },
     },
+    chrono::Utc,
     log::{error, info},
     serde_json::{json, Value},
     sqlx::{Pool, Sqlite},
@@ -112,7 +113,7 @@ pub async fn execute_function(function_name: String, function_args: serde_json::
         "tplink_turn_light_on_off" => {
             let ip = function_args["ip"].as_str().unwrap();
             let state: u8 = function_args["state"].as_str().unwrap().parse().unwrap();
-            tplink_turn_light_on_off(&ip, state).await;
+            tplink_turn_light_on_off(ip, state).await;
             json!({
                 "message": "success"
             })
@@ -124,7 +125,7 @@ pub async fn execute_function(function_name: String, function_args: serde_json::
                 .unwrap()
                 .parse()
                 .unwrap();
-            tplink_set_light_brightness(&ip, brightness).await;
+            tplink_set_light_brightness(ip, brightness).await;
             json!({
                 "message": "success"
             })
@@ -132,12 +133,12 @@ pub async fn execute_function(function_name: String, function_args: serde_json::
         "roku_search" => {
             let query = function_args["query"].as_str().unwrap();
             let ip = function_args["ip"].as_str().unwrap();
-            roku_search(&ip, &query).await
+            roku_search(ip, query).await
         }
         "roku_launch_app" => {
             let app_id = function_args["app_id"].as_str().unwrap();
             let ip = function_args["ip"].as_str().unwrap();
-            roku_launch_app(&ip, &app_id).await
+            roku_launch_app(ip, app_id).await
         }
         "stoplight_toggle" => {
             let color = function_args["color"].as_str().unwrap();
@@ -182,6 +183,7 @@ pub async fn create_db_tables(pool: Arc<Pool<Sqlite>>) {
             hardware_id TEXT,
             auth_token TEXT,
             refresh_token TEXT,
+            last_login DATETIME,
             captcha TEXT
         )",
     )
@@ -248,13 +250,16 @@ pub async fn insert_cameras_into_db(
 }
 
 pub async fn insert_auth(pool: Arc<Pool<Sqlite>>, name: &str, state: AuthState) {
+    let dt = Utc::now();
+    let timestamp: i64 = dt.timestamp();
     let query = "
-        INSERT INTO auth (name, auth_token, refresh_token, hardware_id) 
-        VALUES (?, ?, ?, ?)
+        INSERT INTO auth (name, auth_token, refresh_token, hardware_id, last_login) 
+        VALUES (?, ?, ?, ?, ?)
         ON CONFLICT(name) DO UPDATE SET
             auth_token = excluded.auth_token,
             refresh_token = excluded.refresh_token,
-            hardware_id = excluded.hardware_id;
+            hardware_id = excluded.hardware_id,
+            last_login = excluded.last_login;
     ";
 
     sqlx::query(query)
@@ -262,6 +267,7 @@ pub async fn insert_auth(pool: Arc<Pool<Sqlite>>, name: &str, state: AuthState) 
         .bind(&state.auth_token)
         .bind(&state.refresh_token)
         .bind(&state.hardware_id)
+        .bind(timestamp)
         .execute(&*pool)
         .await
         .unwrap();
