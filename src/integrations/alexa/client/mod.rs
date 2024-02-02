@@ -12,7 +12,7 @@ const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 const AMAZON_LOGIN_URL: &str = "https://www.amazon.com/ap/signin";
 const ALEXA_URL: &str = "https://alexa.amazon.com";
 
-pub async fn login(email: &str, password: &str) -> Result<(), reqwest::Error> {
+pub async fn login(_email: &str, _password: &str) -> Result<(), reqwest::Error> {
     let jar = Arc::new(Jar::default());
     let client = Client::builder()
         .cookie_provider(Arc::clone(&jar))
