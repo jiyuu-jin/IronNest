@@ -50,7 +50,7 @@ pub async fn discover_devices() -> Result<Vec<DeviceData>, Box<dyn Error + Send>
                         GetSysInfo::TPLinkDiscoveryData(mut get_sysinfo) => {
                             info!("Smart Plug from {}: {}", src_addr, get_sysinfo.alias);
                             get_sysinfo.ip = Some(src_addr.ip());
-                            devices.push(DeviceData::SmartPlug(Box::new(get_sysinfo)));
+                            devices.push(DeviceData::SmartPlug(get_sysinfo));
                         }
                         GetSysInfo::TPLinkSmartLightData(mut get_sysinfo) => {
                             info!("Smart Light from {}: {}", src_addr, get_sysinfo.alias);

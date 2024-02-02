@@ -16,7 +16,7 @@ pub struct TPLinkDiscoverySysInfo {
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum GetSysInfo {
-    TPLinkDiscoveryData(TPLinkDiscoveryData),
+    TPLinkDiscoveryData(Box<TPLinkDiscoveryData>),
     TPLinkSmartLightData(TPLinkSmartLightData),
     Empty(()),
     CatchAll(serde_json::Value), // Catch-all variant
