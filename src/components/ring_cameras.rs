@@ -65,9 +65,9 @@ pub fn RingCameras(
                                                 camera.videos.video_search.clone(),
                                                 start_of_day_timestamp,
                                                 if is_index_zero {
-                                                    set_selected_video_url_1.clone()
+                                                    set_selected_video_url_1
                                                 } else {
-                                                    set_selected_video_url_2.clone()
+                                                    set_selected_video_url_2
                                                 },
                                             );
                                             let selected_video_url = if is_index_zero {
@@ -205,7 +205,6 @@ fn create_video_timeline(
                             class="video-duration-pill"
                             on:click=move |_| {
                                 set_selected_video_url.set(video.hq_url.clone());
-                                ()
                             }
                         >
                         </a>
