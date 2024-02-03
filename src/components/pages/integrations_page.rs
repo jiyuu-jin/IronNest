@@ -7,7 +7,7 @@ pub struct Integration {
 
 #[component]
 pub fn AccountsPage() -> impl IntoView {
-    let integrations = vec![Integration {
+    let integrations = [Integration {
         name: "ring".to_string(),
         image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTIr91eAi3NC85wLntkOtCVTHPrrmK3gbvHcLASAbbJiOlqX4dTxttliz8uDi8mDfcRTzI&usqp=CAU"
             .to_string(),
@@ -26,14 +26,23 @@ pub fn AccountsPage() -> impl IntoView {
     }, Integration{
         name: "govee".to_string(),
         image: "data:image/png;base64,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".to_owned(),
-    }];
+    }, Integration {
+        name: "instacart".to_string(),
+        image: "https://imgs.search.brave.com/jT5Tgh8vw5Z9G_v6gw6Y5yyOxyBu0QEasi9tjeLx7A8/rs:fit:500:0:0/g:ce/aHR0cHM6Ly9yZWVv/by5qaW5nb2ZmZXIu/Y29tL0luc3RhY2Fy/dC1pY29uLnBuZyFp/Y29uNTEy".to_string(),
+    }, Integration {
+        name: "stoplight".to_string(),
+        image: "https://imgs.search.brave.com/r7A61_F6ELOOGWb6_0nsadT-2V3w4XxCLN4bBaq9UzQ/rs:fit:860:0:0/g:ce/aHR0cHM6Ly93d3cu/aWNvbnNob2NrLmNv/bS9pbWFnZS9CZXRh/L0dlbmVyYWwvdHJh/ZmZpY19saWdodA".to_string(),
+    }, Integration {
+        name: "roku".to_string(),
+        image: "data:image/png;base64,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".to_string(),
+    },];
 
     let integration_views: Vec<_> = integrations
         .iter()
         .map(|data| {
             view! {
                 <li class="overflow-hidden rounded-xl border border-gray-200">
-                    <a href=format!("/accounts/{}", data.name.clone())>
+                    <a href=format!("/integration/{}", data.name.clone())>
                         <div class="flex items-center gap-x-4 border-b border-gray-900/5 bg-gray-50 p-6">
                             <img
                                 src=data.image.clone()
