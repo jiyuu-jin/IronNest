@@ -93,7 +93,10 @@ pub async fn request(path: &str, token: &str) -> String {
     payload.push_str(&format!("{method}\n"));
     payload.push_str(&format!(
         "{:x}\n",
-        Sha256::digest(body.unwrap_or_else(|| "".to_owned()))
+        Sha256::digest(
+            #[allow(clippy::unnecessary_literal_unwrap)]
+            body.unwrap_or_else(|| "".to_owned())
+        )
     ));
     for (name, value) in signed_headers.iter() {
         payload.push_str(&format!("{name}:{}\n", value.to_str().unwrap()));
