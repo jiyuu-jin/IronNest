@@ -65,8 +65,8 @@ pub fn Navbar() -> impl IntoView {
             },
         },
         NavbarItem {
-            path: "/accounts".to_string(),
-            text: "Accounts".to_string(),
+            path: "/integrations".to_string(),
+            text: "Integrations".to_string(),
             image: view! {
                 <svg
                     class="h-6 w-6 shrink-0"
