@@ -1,5 +1,6 @@
 pub mod alexa;
 pub mod efuy;
+pub mod instacart;
 pub mod iron_nest;
 pub mod openai;
 pub mod ring;

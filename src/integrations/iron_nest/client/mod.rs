@@ -46,7 +46,7 @@ pub async fn insert_initial_devices_into_db(pool: Arc<Pool<Sqlite>>) -> Result<(
             name: "Living Room Stoplight".to_owned(),
             device_type: DeviceType::Stoplight,
             id: 0,
-            ip: "0.0.0.0".to_owned(),
+            ip: "0.0.0.1".to_owned(),
             battery_percentage: 0,
             power_state: 0,
         }],
