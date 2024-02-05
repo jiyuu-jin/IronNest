@@ -169,7 +169,7 @@ pub fn RingCameras(
 
 fn create_video_timeline(
     videos: Vec<VideoItem>, // Now taking ownership of the data
-    start_of_day_timestamp: u64,
+    start_of_day_timestamp: i64,
     set_selected_video_url: WriteSignal<std::string::String>,
 ) -> impl IntoView {
     let timeline_width = 1400; // Fixed timeline width in pixels
@@ -189,7 +189,7 @@ fn create_video_timeline(
                 .map(|video| {
                     let position = calculate_position(
                         video.created_at,
-                        start_of_day_timestamp.try_into().unwrap(),
+                        start_of_day_timestamp,
                         timeline_width,
                     );
                     let width = calculate_width(video.duration, timeline_width);
@@ -215,9 +215,13 @@ fn create_video_timeline(
     }
 }
 
-fn get_start_of_day_timestamp() -> u64 {
-    let now = chrono::Local::now();
-    now.date().and_hms(0, 0, 0).timestamp_millis() as u64
+/// Gets the timestamp of the start of today in the local timezone
+fn get_start_of_day_timestamp() -> i64 {
+    chrono::Local::now()
+        .date_naive()
+        .and_hms_opt(0, 0, 0)
+        .expect("Date should be valid with non-invalid params")
+        .timestamp_millis()
 }
 
 fn calculate_position(timestamp: i64, start_of_day_timestamp: i64, timeline_width: i32) -> i32 {

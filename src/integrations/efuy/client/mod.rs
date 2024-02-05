@@ -4,6 +4,7 @@ use {
         cipher::{generic_array::typenum::U16, BlockEncrypt, KeyInit},
         Aes256,
     },
+    base64::Engine,
     chrono::Utc,
     elliptic_curve::{generic_array::GenericArray, sec1::ToEncodedPoint},
     hex::decode,
@@ -190,5 +191,5 @@ fn encrypt_api_data(data: &str, key: &[u8]) -> Result<String, Box<dyn std::error
         encrypted_data.extend_from_slice(&block);
     }
 
-    Ok(base64::encode(&encrypted_data))
+    Ok(base64::engine::general_purpose::STANDARD.encode(&encrypted_data))
 }

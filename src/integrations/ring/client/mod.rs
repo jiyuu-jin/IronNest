@@ -34,9 +34,7 @@ pub fn camera_recordings_list(recordings: VideoSearchRes) -> String {
     "<ul>"
         .chars()
         .chain(recordings.video_search.iter().flat_map(|recording| {
-            let created_at_utc = Utc
-                .timestamp_millis_opt(recording.created_at as i64)
-                .unwrap();
+            let created_at_utc = Utc.timestamp_millis_opt(recording.created_at).unwrap();
             let created_at_eastern = created_at_utc.with_timezone(&Eastern);
             let formatted_time = created_at_eastern.format("%B %e, %Y, %I:%M %p").to_string();
 
@@ -308,10 +306,14 @@ pub async fn get_ring_camera(
     }
 }
 
+/// Gets the UTC timestamp for the start of the local timezone's current day
 fn get_start_of_today() -> i64 {
-    let local_midnight = Local::today().and_hms(0, 0, 0);
-    let utc_midnight = local_midnight.with_timezone(&Utc);
-    utc_midnight.timestamp_millis()
+    Local::now()
+        .date_naive()
+        .and_hms_opt(0, 0, 0)
+        .expect("Date should be valid with non-invalid params")
+        .and_utc()
+        .timestamp_millis()
 }
 
 fn get_end_of_today() -> i64 {

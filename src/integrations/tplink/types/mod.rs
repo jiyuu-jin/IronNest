@@ -16,7 +16,7 @@ pub struct TPLinkDiscoverySysInfo {
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum GetSysInfo {
-    TPLinkDiscoveryData(TPLinkDiscoveryData),
+    TPLinkDiscoveryData(Box<TPLinkDiscoveryData>),
     TPLinkSmartLightData(TPLinkSmartLightData),
     Empty(()),
     CatchAll(serde_json::Value), // Catch-all variant
@@ -27,10 +27,12 @@ pub struct TPLinkDiscoveryData {
     pub active_mode: String,
     pub alias: String,
     pub dev_name: String,
-    pub deviceId: String,
+    #[serde(rename = "deviceId")]
+    pub device_id: String,
     pub err_code: u64,
     pub feature: String,
-    pub hwId: String,
+    #[serde(rename = "hwId")]
+    pub hw_id: String,
     pub hw_ver: String,
     pub icon_hash: String,
     pub latitude_i: i64,
@@ -40,7 +42,8 @@ pub struct TPLinkDiscoveryData {
     pub mic_type: String,
     pub model: String,
     pub obd_src: String,
-    pub oemId: String,
+    #[serde(rename = "oemId")]
+    pub oem_id: String,
     pub on_time: i64,
     pub relay_state: u8,
     pub rssi: i64,
@@ -52,7 +55,7 @@ pub struct TPLinkDiscoveryData {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum DeviceData {
-    SmartPlug(TPLinkDiscoveryData),
+    SmartPlug(Box<TPLinkDiscoveryData>),
     SmartLight(TPLinkSmartLightData),
 }
 

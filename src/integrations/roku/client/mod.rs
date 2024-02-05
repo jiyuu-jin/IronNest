@@ -1,5 +1,6 @@
 use {
     super::types::{ActionApp, Apps, RokuDeviceInfo, RokuDiscoverRes},
+    base64::Engine,
     futures::prelude::*,
     serde_json::json,
     serde_xml_rs::from_str,
@@ -67,7 +68,7 @@ pub async fn roku_get_channel_icon(ip: &str, app_id: &str) -> String {
         .await
         .unwrap();
 
-    base64::encode(res_bytes)
+    base64::engine::general_purpose::STANDARD.encode(res_bytes)
 }
 
 pub async fn roku_send_keypress(ip: &str, key: &str) -> serde_json::Value {
