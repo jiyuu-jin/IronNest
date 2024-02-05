@@ -6,11 +6,10 @@ pub fn LoginPage() -> impl IntoView {
     let integration =
         move || params.with(|params| params.get("integration").cloned().unwrap_or_default());
 
-    let login = move || match integration().as_str() {
+    match integration().as_str() {
         "ring" => view! { <RingLoginPage/> },
         _ => view! { <LoginPageNotFound/> },
-    };
-    login()
+    }
 }
 
 #[component]

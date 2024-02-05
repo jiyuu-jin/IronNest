@@ -184,7 +184,7 @@ pub fn App() -> impl IntoView {
                         <Route path="/" view=DashboardPage/>
                         <Route path="/integrations" view=AccountsPage/>
                         <Route path="/integrations/:integration" view=LoginPage/>
-                        <Route path="/scripts" view=ScriptsPage />
+                        <Route path="/scripts" view=ScriptsPage/>
                         <Route path="/settings" view=SettingsPage/>
                         <Route path="/devices" view=DevicesPage/>
                         <Route path="/websocket" view=WebSocketPage/>
