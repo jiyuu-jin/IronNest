@@ -5,6 +5,7 @@ pub mod iron_nest;
 pub mod openai;
 pub mod ring;
 pub mod roku;
+pub mod simpli_safe;
 pub mod stoplight;
 pub mod tplink;
 pub mod tuya;
