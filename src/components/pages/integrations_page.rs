@@ -36,9 +36,12 @@ pub fn AccountsPage() -> impl IntoView {
         name: "roku".to_owned(),
         image: "data:image/png;base64,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".to_owned(),
     },Integration {
-        name: "simplisafe".to_owned(),
+        name: "simpli safe".to_owned(),
         image: "https://play-lh.googleusercontent.com/QSJQlcF2wMi1QDa_6skQd6grZglVwGuKel4fTjJ054LAJzY5Z2HqHOjpjluhm1VkDGli".to_owned(),
-    },];
+    },Integration {
+        name: "tp-link kasa".to_owned(),
+        image: "https://play-lh.googleusercontent.com/HH2EMJy6xdJX9WM72G5LJ8SRzACsxCSjPKCNYiHdNuSiij1M4v5W-3XLzXVXVuhWnKA=w480-h960-rw".to_owned(),
+    }];
 
     let integration_views: Vec<_> = integrations
         .iter()
