@@ -19,17 +19,16 @@ pub fn WebSocketPage() -> impl IntoView {
         <Suspense fallback=move || {
             view! { <p>"Loading..."</p> }
         }>
-            {move || {
-                ring_values
-                    .get()
-                    .map(|ring_values| {
-                        ring_values
-                            .map(|ring_values| {
-                                view! { <WebSocketComponent ring_values=ring_values/> }
-                            })
-                    })
-            }}
-
+            {move || ring_values.get().map(|ring_values| {
+                match ring_values {
+                    Ok(ring_values) => {
+                        view! { <WebSocketComponent ring_values=ring_values/> }.into_view()
+                    }
+                    Err(e) => {
+                        view! { <p>{format!("WebSocketPage error: {e}")}</p> }.into_view()
+                    }
+                }
+            })}
         </Suspense>
     }
 }

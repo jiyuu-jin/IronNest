@@ -11,12 +11,12 @@ pub fn RingCameras(
     let start_of_day_timestamp = get_start_of_day_timestamp();
 
     view! {
-        <Suspense fallback=|| {
-            view! {
-                <div
-                    class="mb-4"
-                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;"
-                >
+        <div
+            class="mb-2"
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;"
+        >
+            <Suspense fallback=|| {
+                view! {
                     <button
                         style="min-height:360px;"
                         type="button"
@@ -35,17 +35,12 @@ pub fn RingCameras(
                             "Camera Loading..."
                         </span>
                     </button>
-                </div>
-            }
-        }>
-            {move || ring_values.get().map(|data| {
-                match data {
-                    Ok(data) => {
-                        view! {
-                            <div
-                                class="mb-4"
-                                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;"
-                            >
+                }
+            }>
+                {move || ring_values.get().map(|data| {
+                    match data {
+                        Ok(data) => {
+                            view! {
                                 {data
                                     .cameras
                                     .iter()
@@ -53,30 +48,17 @@ pub fn RingCameras(
                                         camera_component(start_of_day_timestamp, camera.clone())
                                     })
                                     .collect::<Vec<_>>()}
-                            </div>
+                            }.into_view()
+                        }
+                        Err(e) => {
+                            view! {
+                                <p>{format!("RingCameras error: {e}")}</p>
+                            }.into_view()
                         }
                     }
-                    Err(_) => {
-                        view! {
-                            <div
-                                class="mb-2"
-                                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;"
-                            >
-                                <button
-                                    style="max-height:360px;"
-                                    type="button"
-                                    class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-12 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                                >
-                                    <span class="mt-2 block text-xl font-semibold text-gray-900">
-                                        "Loading data or none available."
-                                    </span>
-                                </button>
-                            </div>
-                        }
-                    }
-                }
-            })}
-        </Suspense>
+                })}
+            </Suspense>
+        </div>
     }
 }
 

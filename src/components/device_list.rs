@@ -12,25 +12,23 @@ pub fn DeviceList(devices: Resource<(), Result<Vec<Device>, ServerFnError>>) -> 
             <Suspense fallback=|| {
                 view! { <p>"Loading devices..."</p> }
             }>
-                {move || {
-                    devices
-                        .get()
-                        .map(|data| {
-                            data.map(|data| {
-                                view! {
-                                    <ul class="device-list space-y-2">
-                                        {data
-                                            .into_iter()
-                                            .map(|device| {
-                                                view! { <DeviceListItem device=device/> }
-                                            })
-                                            .collect::<Vec<_>>()}
-                                    </ul>
-                                }
-                            })
-                        })
-                }}
-
+                {move || devices.get().map(|data| {
+                    match data {
+                        Ok(data) => {
+                            view! {
+                                <ul class="device-list space-y-2">
+                                    {data
+                                        .into_iter()
+                                        .map(|device| {
+                                            view! { <DeviceListItem device=device/> }
+                                        })
+                                        .collect::<Vec<_>>()}
+                                </ul>
+                            }.into_view()
+                        }
+                        Err(e) => view! { <p>{format!("DeviceList error: {e}")}</p> }.into_view()
+                    }
+                })}
             </Suspense>
         </div>
     }
