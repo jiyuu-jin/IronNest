@@ -20,7 +20,7 @@ IronNest is a home automation system designed to integrate with various smart de
 
 The project has the following main files:
 - `main.rs`: The main entry point, sets up the server, routes, and middleware.
-- `intergations.rs`: Contains the utility functions & types for an intergartion such as the `RingRestClient` for making requests to the Ring API.
+- `intergations`: Contains the utility functions & types for an intergartion such as the `RingRestClient` for making requests to the Ring API.
   - `client`: Contains an integrations client & authentication logic.
   - `types`: Contains an intergartions data structures and types.
 
