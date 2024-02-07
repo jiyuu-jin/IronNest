@@ -48,7 +48,7 @@ pub fn AccountsPage() -> impl IntoView {
         .map(|data| {
             view! {
                 <li class="overflow-hidden rounded-xl border border-gray-200">
-                    <a href=format!("/integration/{}", data.name.clone())>
+                    <a href=format!("/integrations/{}", data.name.clone())>
                         <div class="flex items-center gap-x-4 border-b border-gray-900/5 bg-gray-50 p-6">
                             <img
                                 src=data.image.clone()
