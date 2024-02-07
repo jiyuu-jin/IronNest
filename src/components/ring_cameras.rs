@@ -1,5 +1,6 @@
 use {
-    super::pages::dashboard_page::DashboardValues, crate::integrations::ring::types::VideoItem,
+    super::pages::dashboard_page::DashboardValues,
+    crate::integrations::ring::types::{RingCamera, VideoItem},
     leptos::*,
 };
 
@@ -8,15 +9,6 @@ pub fn RingCameras(
     ring_values: Resource<(), Result<DashboardValues, ServerFnError>>,
 ) -> impl IntoView {
     let start_of_day_timestamp = get_start_of_day_timestamp();
-
-    // @TODO learn leptos and fix hardcoded state logic
-    let mut signals = Vec::new();
-    for _ in 0..2 {
-        let (signal, set_signal) = create_signal(None);
-        signals.push((signal, set_signal));
-    }
-    let (selected_video_url_1, set_selected_video_url_1) = signals[0];
-    let (selected_video_url_2, set_selected_video_url_2) = signals[1];
 
     view! {
         <Suspense fallback=|| {
@@ -58,69 +50,8 @@ pub fn RingCameras(
                                     {data
                                         .cameras
                                         .iter()
-                                        .enumerate()
-                                        .map(|(index, camera)| {
-                                            let is_index_zero = index.to_string() == '0'.to_string();
-                                            let video_timeline = create_video_timeline(
-                                                camera.videos.video_search.clone(),
-                                                start_of_day_timestamp,
-                                                if is_index_zero {
-                                                    set_selected_video_url_1
-                                                } else {
-                                                    set_selected_video_url_2
-                                                },
-                                            );
-                                            let selected_video_url = if is_index_zero {
-                                                selected_video_url_1
-                                            } else {
-                                                selected_video_url_2
-                                            };
-                                            view! {
-                                                <div class="rounded-xl shadow-md border border-gray-200">
-                                                    <h2 class="p-2">
-                                                        {format!(
-                                                            "{} - Battery: {}",
-                                                            camera.description,
-                                                            camera.health,
-                                                        )}
-
-                                                    </h2>
-
-                                                    {match selected_video_url.get() {
-                                                        Some(selected_video_url) => {
-                                                            view! {
-                                                                <div>
-                                                                    <video
-                                                                        style="width: 100%"
-                                                                        src=selected_video_url
-                                                                        autoplay=true
-                                                                        controls=true
-                                                                    ></video>
-                                                                </div>
-                                                            }
-                                                        }
-                                                        None => {
-                                                            view! {
-                                                                <div>
-                                                                    <img
-                                                                        style="width: 100%"
-                                                                        src=format!(
-                                                                            "data:image/png;base64,{}",
-                                                                            camera.snapshot.image,
-                                                                        )
-                                                                    />
-
-                                                                </div>
-                                                            }
-                                                        }
-                                                    }}
-
-                                                    <p>{"Time: "} {&camera.snapshot.timestamp}</p>
-                                                    <div style="max-width: 100%; overflow-x: auto;">
-                                                        {video_timeline}
-                                                    </div>
-                                                </div>
-                                            }
+                                        .map(|camera| {
+                                            camera_component(start_of_day_timestamp, camera.clone())
                                         })
                                         .collect::<Vec<_>>()}
                                 </div>
@@ -167,6 +98,62 @@ pub fn RingCameras(
             }}
 
         </Suspense>
+    }
+}
+
+fn camera_component(start_of_day_timestamp: i64, camera: RingCamera) -> impl IntoView {
+    let (selected_video_url, set_selected_video_url) = create_signal(None);
+
+    let video_timeline = create_video_timeline(
+        camera.videos.video_search.clone(),
+        start_of_day_timestamp,
+        set_selected_video_url,
+    );
+    view! {
+        <div class="rounded-xl shadow-md border border-gray-200">
+            <h2 class="p-2">
+                {format!(
+                    "{} - Battery: {}",
+                    camera.description,
+                    camera.health,
+                )}
+
+            </h2>
+
+            {move || match selected_video_url.get() {
+                Some(selected_video_url) => {
+                    view! {
+                        <div>
+                            <video
+                                style="width: 100%"
+                                src=selected_video_url
+                                autoplay=true
+                                controls=true
+                            ></video>
+                        </div>
+                    }
+                }
+                None => {
+                    view! {
+                        <div>
+                            <img
+                                style="width: 100%"
+                                src=format!(
+                                    "data:image/png;base64,{}",
+                                    camera.snapshot.image,
+                                )
+                            />
+
+                        </div>
+                    }
+                }
+            }}
+
+            <p>{"Time: "} {&camera.snapshot.timestamp}</p>
+            <div style="max-width: 100%; overflow-x: auto;">
+                {video_timeline}
+            </div>
+        </div>
     }
 }
 
