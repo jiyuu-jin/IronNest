@@ -1,8 +1,18 @@
 cfg_if::cfg_if! {
     if #[cfg(feature = "ssr")] {
         use {
+            axum::{
+                body::Body as AxumBody,
+                extract::{FromRef, Path, RawQuery, State},
+                response::{IntoResponse, Response},
+                routing::get,
+                Router,
+            },
+            dotenv::dotenv,
+            http::Request,
             iron_nest::{
                 components::layout::App,
+                fileserv::file_and_error_handler,
                 handlers::roku_keypress_handler,
                 integrations::{
                     iron_nest::{
@@ -17,31 +27,16 @@ cfg_if::cfg_if! {
                     tuya::{get_devices, get_refresh_token},
                 },
             },
-            log::{error, info},
+            leptos::{get_configuration, logging::log, provide_context, LeptosOptions},
+            leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes},
+            log::{error, info, LevelFilter},
+            reqwest::header::HeaderMap,
+            simple_logger::SimpleLogger,
             sqlx::{
                 sqlite::{SqliteConnectOptions, SqlitePool},
                 Pool, Sqlite,
             },
-            std::{fs::File, time::Duration},
-        };
-
-        use {
-            axum::{
-                body::Body as AxumBody,
-                extract::{FromRef, Path, RawQuery, State},
-                response::{IntoResponse, Response},
-                routing::{get,},
-                Router,
-            },
-            dotenv::dotenv,
-            http::Request,
-            iron_nest::{
-                fileserv::file_and_error_handler,
-            },
-            leptos::{get_configuration, logging::log, provide_context, LeptosOptions},
-            leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes},
-            reqwest::header::HeaderMap,
-            std::{ sync::Arc},
+            std::{fs::File, sync::Arc, time::Duration},
         };
 
         #[derive(FromRef, Debug, Clone)]
@@ -103,7 +98,11 @@ cfg_if::cfg_if! {
             };
 
             create_db_tables(shared_pool.clone()).await;
-            simple_logger::init_with_level(log::Level::Debug).expect("couldn't initialize logging");
+            SimpleLogger::new()
+                .with_level(LevelFilter::Warn)
+                .with_module_level("iron_nest", LevelFilter::Debug)
+                .init()
+                .expect("couldn't initialize logging");
 
             let conf = get_configuration(None).await.unwrap();
             let leptos_options = conf.leptos_options;
