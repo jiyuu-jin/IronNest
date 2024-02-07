@@ -45,10 +45,8 @@ pub fn DeviceList(devices: Resource<(), Result<Vec<Device>, ServerFnError>>) -> 
                             })
                         })
                 }}
-                >>>>>>> Stashed changes
             </Suspense>
             {move || modal.get().then(|| view! { <Modal modal=modal toggle_modal=toggle_modal/> })}
-
         </div>
     }
 }
