@@ -121,9 +121,9 @@ pub async fn execute_function(function_name: String, function_args: serde_json::
         "tplink_set_light_brightness" => {
             let ip = function_args["ip"].as_str().unwrap();
             let brightness: u8 = function_args["brightness"]
-                .as_str()
+                .as_u64()
                 .unwrap()
-                .parse()
+                .try_into()
                 .unwrap();
             tplink_set_light_brightness(ip, brightness).await;
             json!({
