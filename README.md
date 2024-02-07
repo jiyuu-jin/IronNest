@@ -13,6 +13,9 @@ IronNest is a home automation system designed to integrate with various smart de
 
 <img width="1728" alt="image" src="https://github.com/jiyuu-jin/IronNest/assets/19313806/51236523-af7b-463f-9b84-48251751abed">
 
+<img width="1727" alt="image" src="https://github.com/jiyuu-jin/IronNest/assets/19313806/cd0e9216-d3bc-418b-b888-5fe294a0a5a4">
+
+
 ## Project Structure
 
 The project has the following main files:
