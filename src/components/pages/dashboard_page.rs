@@ -71,7 +71,7 @@ pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
                 ding_id: "".to_string(),
                 created_at: video.created_at,
                 updated_at: 0,
-                hq_url: "".to_string(),
+                hq_url: video.hq_url.clone(),
                 lq_url: "".to_string(),
                 is_e2ee: false,
                 manifest_id: None,
