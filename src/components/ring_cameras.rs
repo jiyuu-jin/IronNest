@@ -12,7 +12,7 @@ pub fn RingCameras(
     // @TODO learn leptos and fix hardcoded state logic
     let mut signals = Vec::new();
     for _ in 0..2 {
-        let (signal, set_signal) = create_signal(String::new());
+        let (signal, set_signal) = create_signal(None);
         signals.push((signal, set_signal));
     }
     let (selected_video_url_1, set_selected_video_url_1) = signals[0];
@@ -86,29 +86,32 @@ pub fn RingCameras(
 
                                                     </h2>
 
-                                                    {if !selected_video_url.get().is_empty() {
-                                                        view! {
-                                                            <div>
-                                                                <video
-                                                                    style="width: 100%"
-                                                                    src=selected_video_url.get().clone()
-                                                                    autoplay=true
-                                                                    controls=true
-                                                                ></video>
-                                                            </div>
+                                                    {match selected_video_url.get() {
+                                                        Some(selected_video_url) => {
+                                                            view! {
+                                                                <div>
+                                                                    <video
+                                                                        style="width: 100%"
+                                                                        src=selected_video_url
+                                                                        autoplay=true
+                                                                        controls=true
+                                                                    ></video>
+                                                                </div>
+                                                            }
                                                         }
-                                                    } else {
-                                                        view! {
-                                                            <div>
-                                                                <img
-                                                                    style="width: 100%"
-                                                                    src=format!(
-                                                                        "data:image/png;base64,{}",
-                                                                        camera.snapshot.image,
-                                                                    )
-                                                                />
+                                                        None => {
+                                                            view! {
+                                                                <div>
+                                                                    <img
+                                                                        style="width: 100%"
+                                                                        src=format!(
+                                                                            "data:image/png;base64,{}",
+                                                                            camera.snapshot.image,
+                                                                        )
+                                                                    />
 
-                                                            </div>
+                                                                </div>
+                                                            }
                                                         }
                                                     }}
 
@@ -170,7 +173,7 @@ pub fn RingCameras(
 fn create_video_timeline(
     videos: Vec<VideoItem>, // Now taking ownership of the data
     start_of_day_timestamp: i64,
-    set_selected_video_url: WriteSignal<std::string::String>,
+    set_selected_video_url: WriteSignal<Option<String>>,
 ) -> impl IntoView {
     let timeline_width = 1400; // Fixed timeline width in pixels
 
@@ -204,7 +207,7 @@ fn create_video_timeline(
                             style=video_style
                             class="video-duration-pill"
                             on:click=move |_| {
-                                set_selected_video_url.set(video.hq_url.clone());
+                                set_selected_video_url.set(Some(video.hq_url.clone()));
                             }
                         >
                         </a>
