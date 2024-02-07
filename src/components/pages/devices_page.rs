@@ -70,49 +70,55 @@ pub fn DevicesPage() -> impl IntoView {
                                     </tr>
                                 }
                             }>
-                                {move || devices.get().map(|data| {
-                                    match data {
-                                        Ok(data) => {
-                                            data.iter()
-                                                .map(|device| {
+                                {move || {
+                                    devices
+                                        .get()
+                                        .map(|data| {
+                                            match data {
+                                                Ok(data) => {
+                                                    data.iter()
+                                                        .map(|device| {
+                                                            view! {
+                                                                <tr>
+                                                                    <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">
+                                                                        {&device.name}
+                                                                    </td>
+                                                                    <th
+                                                                        scope="col"
+                                                                        class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
+                                                                    >
+                                                                        {device.device_type.to_string()}
+                                                                    </th>
+                                                                    <th
+                                                                        scope="col"
+                                                                        class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
+                                                                    >
+                                                                        {&device.ip}
+                                                                    </th>
+                                                                    <th
+                                                                        scope="col"
+                                                                        class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
+                                                                    >
+                                                                        {device.power_state}
+                                                                    </th>
+                                                                </tr>
+                                                            }
+                                                        })
+                                                        .collect::<Vec<_>>()
+                                                        .into_view()
+                                                }
+                                                Err(e) => {
                                                     view! {
                                                         <tr>
-                                                            <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">
-                                                                {&device.name}
-                                                            </td>
-                                                            <th
-                                                                scope="col"
-                                                                class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
-                                                            >
-                                                                {device.device_type.to_string()}
-                                                            </th>
-                                                            <th
-                                                                scope="col"
-                                                                class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
-                                                            >
-                                                                {&device.ip}
-                                                            </th>
-                                                            <th
-                                                                scope="col"
-                                                                class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
-                                                            >
-                                                                {device.power_state}
-                                                            </th>
+                                                            <td>{format!("Devices error: {e}")}</td>
                                                         </tr>
                                                     }
-                                                })
-                                                .collect::<Vec<_>>()
-                                                .into_view()
-                                        }
-                                        Err(e) => {
-                                            view! {
-                                                <tr>
-                                                    <td>{format!("Devices error: {e}")}</td>
-                                                </tr>
-                                            }.into_view()
-                                        }
-                                    }
-                                })}
+                                                        .into_view()
+                                                }
+                                            }
+                                        })
+                                }}
+
                             </Suspense>
                         </tbody>
                     </table>

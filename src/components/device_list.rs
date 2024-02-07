@@ -11,51 +11,46 @@ pub fn DeviceList(devices: Resource<(), Result<Vec<Device>, ServerFnError>>) -> 
     let (modal, toggle_modal) = create_signal(false);
 
     view! {
-            <div>
-                <h2 class="text-lg">"Devices"</h2>
-                <hr class="mb-2"/>
-                <Suspense fallback=|| {
-                    view! { <p>"Loading devices..."</p> }
-                }>
-                    {move || {
-                        devices
-                            .get()
-                            .map(|data| {
-                                data.map(|data| {
-                                    view! {
-                                        <ul class="device-list space-y-2">
-                                            {data
-                                                .into_iter()
-                                                .map(|device| {
-                                                    view! {
-                                                        <DeviceListItem
-                                                            device=device
-                                                            on:click=move |_| {
-                                                                println!("clicked!");
-                                                                spawn_local(async move {
-                                                                    toggle_modal.set(!modal.get());
-                                                                });
-                                                            }
-                                                        />
-                                                    }
-                                                })
-                                                .collect::<Vec<_>>()}
-                                        </ul>
-                                    }
-                                })
+        <div>
+            <h2 class="text-lg">"Devices"</h2>
+            <hr class="mb-2"/>
+            <Suspense fallback=|| {
+                view! { <p>"Loading devices..."</p> }
+            }>
+                {move || {
+                    devices
+                        .get()
+                        .map(|data| {
+                            data.map(|data| {
+                                view! {
+                                    <ul class="device-list space-y-2">
+                                        {data
+                                            .into_iter()
+                                            .map(|device| {
+                                                view! {
+                                                    <DeviceListItem
+                                                        device=device
+                                                        on:click=move |_| {
+                                                            println!("clicked!");
+                                                            spawn_local(async move {
+                                                                toggle_modal.set(!modal.get());
+                                                            });
+                                                        }
+                                                    />
+                                                }
+                                            })
+                                            .collect::<Vec<_>>()}
+                                    </ul>
+                                }
                             })
-                    }}
+                        })
+                }}
+                >>>>>>> Stashed changes
+            </Suspense>
+            {move || modal.get().then(|| view! { <Modal modal=modal toggle_modal=toggle_modal/> })}
 
-    >>>>>>> Stashed changes
-                </Suspense>
-                {move || modal.get().then(|| view! {
-                    <Modal
-                        modal=modal
-                        toggle_modal=toggle_modal
-                    />
-                })}
-            </div>
-        }
+        </div>
+    }
 }
 
 #[component]

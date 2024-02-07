@@ -37,26 +37,30 @@ pub fn RingCameras(
                     </button>
                 }
             }>
-                {move || ring_values.get().map(|data| {
-                    match data {
-                        Ok(data) => {
-                            view! {
-                                {data
-                                    .cameras
-                                    .iter()
-                                    .map(|camera| {
-                                        camera_component(start_of_day_timestamp, camera.clone())
-                                    })
-                                    .collect::<Vec<_>>()}
-                            }.into_view()
-                        }
-                        Err(e) => {
-                            view! {
-                                <p>{format!("RingCameras error: {e}")}</p>
-                            }.into_view()
-                        }
-                    }
-                })}
+                {move || {
+                    ring_values
+                        .get()
+                        .map(|data| {
+                            match data {
+                                Ok(data) => {
+                                    view! {
+                                        {data
+                                            .cameras
+                                            .iter()
+                                            .map(|camera| {
+                                                camera_component(start_of_day_timestamp, camera.clone())
+                                            })
+                                            .collect::<Vec<_>>()}
+                                    }
+                                        .into_view()
+                                }
+                                Err(e) => {
+                                    view! { <p>{format!("RingCameras error: {e}")}</p> }.into_view()
+                                }
+                            }
+                        })
+                }}
+
             </Suspense>
         </div>
     }
@@ -72,12 +76,7 @@ fn camera_component(start_of_day_timestamp: i64, camera: RingCamera) -> impl Int
     );
     view! {
         <div class="rounded-xl shadow-md border border-gray-200">
-            <h2 class="p-2">
-                {format!(
-                    "{} - Battery: {}",
-                    camera.description,
-                    camera.health,
-                )}
+            <h2 class="p-2">{format!("{} - Battery: {}", camera.description, camera.health)}
             </h2>
 
             {move || match selected_video_url.get() {
@@ -98,10 +97,7 @@ fn camera_component(start_of_day_timestamp: i64, camera: RingCamera) -> impl Int
                         <div>
                             <img
                                 style="width: 100%"
-                                src=format!(
-                                    "data:image/png;base64,{}",
-                                    camera.snapshot.image,
-                                )
+                                src=format!("data:image/png;base64,{}", camera.snapshot.image)
                             />
 
                         </div>
@@ -110,9 +106,7 @@ fn camera_component(start_of_day_timestamp: i64, camera: RingCamera) -> impl Int
             }}
 
             <p>{"Time: "} {camera.snapshot.timestamp}</p>
-            <div style="max-width: 100%; overflow-x: auto;">
-                {video_timeline}
-            </div>
+            <div style="max-width: 100%; overflow-x: auto;">{video_timeline}</div>
         </div>
     }
 }
@@ -132,6 +126,7 @@ fn create_video_timeline(
                 timeline_width,
             )
         >
+
             // Use into_iter() for owned data
             {videos
                 .into_iter()
