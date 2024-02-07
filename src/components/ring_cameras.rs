@@ -96,7 +96,6 @@ pub fn RingCameras(
                     }
                 }
             }}
-
         </Suspense>
     }
 }
@@ -105,7 +104,7 @@ fn camera_component(start_of_day_timestamp: i64, camera: RingCamera) -> impl Int
     let (selected_video_url, set_selected_video_url) = create_signal(None);
 
     let video_timeline = create_video_timeline(
-        camera.videos.video_search.clone(),
+        camera.videos.video_search,
         start_of_day_timestamp,
         set_selected_video_url,
     );
@@ -117,7 +116,6 @@ fn camera_component(start_of_day_timestamp: i64, camera: RingCamera) -> impl Int
                     camera.description,
                     camera.health,
                 )}
-
             </h2>
 
             {move || match selected_video_url.get() {
@@ -149,7 +147,7 @@ fn camera_component(start_of_day_timestamp: i64, camera: RingCamera) -> impl Int
                 }
             }}
 
-            <p>{"Time: "} {&camera.snapshot.timestamp}</p>
+            <p>{"Time: "} {camera.snapshot.timestamp}</p>
             <div style="max-width: 100%; overflow-x: auto;">
                 {video_timeline}
             </div>
@@ -172,7 +170,6 @@ fn create_video_timeline(
                 timeline_width,
             )
         >
-
             // Use into_iter() for owned data
             {videos
                 .into_iter()
