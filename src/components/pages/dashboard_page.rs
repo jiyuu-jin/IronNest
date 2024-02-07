@@ -5,17 +5,23 @@ use {
             roku_tv_remote::RokuTvRemote,
         },
         integrations::{
-            iron_nest::types::Device,
-            ring::types::{
-                RingCamera, RingCameraSnapshot, RingVideoRow, VideoItem, VideoSearchRes,
-            },
-            roku::types::AppsAppWithIcon,
+            iron_nest::types::Device, ring::types::RingCamera, roku::types::AppsAppWithIcon,
         },
     },
     leptos::*,
     serde::{Deserialize, Serialize},
-    std::sync::Arc,
 };
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "ssr")] {
+        use {
+            std::sync::Arc,
+            crate::integrations::ring::types::{
+                RingCameraSnapshot, RingVideoRow, VideoItem, VideoSearchRes,
+            }
+        };
+    }
+}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DashboardValues {

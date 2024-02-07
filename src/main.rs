@@ -1,30 +1,30 @@
-use {
-    iron_nest::{
-        components::layout::App,
-        handlers::roku_keypress_handler,
-        integrations::{
-            iron_nest::{
-                client::insert_devices_into_db,
-                create_db_tables, extract_ip, get_auth_from_db, insert_auth,
-                insert_cameras_into_db, insert_initial_devices_into_db,
-                types::{AuthState, Device, DeviceType},
-            },
-            ring::{get_ring_camera, types::DevicesRes, RingRestClient},
-            roku::{roku_discover, roku_get_device_info},
-            tplink::{discover_devices, types::DeviceData},
-            tuya::{get_devices, get_refresh_token},
-        },
-    },
-    log::{error, info},
-    sqlx::{
-        sqlite::{SqliteConnectOptions, SqlitePool},
-        Pool, Sqlite,
-    },
-    std::{fs::File, time::Duration},
-};
-
 cfg_if::cfg_if! {
     if #[cfg(feature = "ssr")] {
+        use {
+            iron_nest::{
+                components::layout::App,
+                handlers::roku_keypress_handler,
+                integrations::{
+                    iron_nest::{
+                        client::insert_devices_into_db,
+                        create_db_tables, extract_ip, get_auth_from_db, insert_auth,
+                        insert_cameras_into_db, insert_initial_devices_into_db,
+                        types::{AuthState, Device, DeviceType},
+                    },
+                    ring::{get_ring_camera, types::DevicesRes, RingRestClient},
+                    roku::{roku_discover, roku_get_device_info},
+                    tplink::{discover_devices, types::DeviceData},
+                    tuya::{get_devices, get_refresh_token},
+                },
+            },
+            log::{error, info},
+            sqlx::{
+                sqlite::{SqliteConnectOptions, SqlitePool},
+                Pool, Sqlite,
+            },
+            std::{fs::File, time::Duration},
+        };
+
         use {
             axum::{
                 body::Body as AxumBody,
@@ -361,6 +361,10 @@ cfg_if::cfg_if! {
                 e = ring_auth_refresh_job => error!("Ring auth refresh job exiting with error {e:?}"),
                 e = ring_device_discovery_job => error!("Ring device discovery job exiting with error {e:?}")
             }
+        }
+    } else {
+        fn main() {
+            unimplemented!("This functino is to make clippy happy")
         }
     }
 }

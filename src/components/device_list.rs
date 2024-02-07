@@ -21,30 +21,37 @@ pub fn DeviceList(devices: Resource<(), Result<Vec<Device>, ServerFnError>>) -> 
                     devices
                         .get()
                         .map(|data| {
-                            data.map(|data| {
-                                view! {
-                                    <ul class="device-list space-y-2">
-                                        {data
-                                            .into_iter()
-                                            .map(|device| {
-                                                view! {
-                                                    <DeviceListItem
-                                                        device=device
-                                                        on:click=move |_| {
-                                                            println!("clicked!");
-                                                            spawn_local(async move {
-                                                                toggle_modal.set(!modal.get());
-                                                            });
-                                                        }
-                                                    />
-                                                }
-                                            })
-                                            .collect::<Vec<_>>()}
-                                    </ul>
+                            match data {
+                                Ok(data) => {
+                                    view! {
+                                        <ul class="device-list space-y-2">
+                                            {data
+                                                .into_iter()
+                                                .map(|device| {
+                                                    view! {
+                                                        <DeviceListItem
+                                                            device=device
+                                                            on:click=move |_| {
+                                                                println!("clicked!");
+                                                                spawn_local(async move {
+                                                                    toggle_modal.set(!modal.get());
+                                                                });
+                                                            }
+                                                        />
+                                                    }
+                                                })
+                                                .collect::<Vec<_>>()}
+                                        </ul>
+                                    }
+                                        .into_view()
                                 }
-                            })
+                                Err(e) => {
+                                    view! { <p>{format!("DeviceList error: {e}")}</p> }.into_view()
+                                }
+                            }
                         })
                 }}
+
             </Suspense>
             {move || modal.get().then(|| view! { <Modal modal=modal toggle_modal=toggle_modal/> })}
         </div>

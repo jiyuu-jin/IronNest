@@ -5,7 +5,8 @@ leptos-fmt:
   leptosfmt .
 
 clippy:
-  cargo clippy --all-features
+  cargo clippy --features=ssr
+  cargo clippy --features=hydrate
 
 lint: fmt clippy
 

@@ -1,4 +1,10 @@
-use {leptos::*, leptos_router::*, std::sync::Arc};
+use {leptos::*, leptos_router::*};
+
+cfg_if::cfg_if! {
+    if #[cfg(feature = "ssr")] {
+        use std::sync::Arc;
+    }
+}
 
 #[component]
 pub fn LoginPage() -> impl IntoView {

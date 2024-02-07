@@ -76,8 +76,7 @@ fn camera_component(start_of_day_timestamp: i64, camera: RingCamera) -> impl Int
     );
     view! {
         <div class="rounded-xl shadow-md border border-gray-200">
-            <h2 class="p-2">{format!("{} - Battery: {}", camera.description, camera.health)}
-            </h2>
+            <h2 class="p-2">{format!("{} - Battery: {}", camera.description, camera.health)}</h2>
 
             {move || match selected_video_url.get() {
                 Some(selected_video_url) => {
