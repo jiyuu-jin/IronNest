@@ -72,7 +72,6 @@ pub fn RingLoginPage() -> impl IntoView {
                             />
                         </div>
                     </div>
-
                     <div>
                         <div class="flex items-center justify-between">
                             <label

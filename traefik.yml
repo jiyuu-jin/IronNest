@@ -1,3 +1,27 @@
-providers:
-  file:
-    filename: /etc/traefik/traefik-config.yml
+# traefik.yaml
+
+# Define HTTP entry point on port 80
+entryPoints:
+  web:
+    address: ":80"
+
+# HTTP routers, services, and middlewares
+http:
+  # Define the router
+  routers:
+    my-router:
+      entryPoints:
+        - "web"
+      rule: "Host(`myexternal.service.com`)"
+      service: "my-external-service"
+
+  # Define the service
+  services:
+    my-external-service:
+      loadBalancer:
+        servers:
+          - url: "http://external-service-url:port"
+
+# Enable Traefik dashboard
+api:
+  dashboard: true

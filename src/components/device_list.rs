@@ -1,37 +1,61 @@
 use {
-    crate::integrations::iron_nest::types::{Device, DeviceType},
+    crate::{
+        components::modal::Modal,
+        integrations::iron_nest::types::{Device, DeviceType},
+    },
     leptos::*,
 };
 
 #[component]
 pub fn DeviceList(devices: Resource<(), Result<Vec<Device>, ServerFnError>>) -> impl IntoView {
+    let (modal, toggle_modal) = create_signal(false);
+
     view! {
-        <div>
-            <h2 class="text-lg">"Devices"</h2>
-            <hr class="mb-2"/>
-            <Suspense fallback=|| {
-                view! { <p>"Loading devices..."</p> }
-            }>
-                {move || devices.get().map(|data| {
-                    match data {
-                        Ok(data) => {
-                            view! {
-                                <ul class="device-list space-y-2">
-                                    {data
-                                        .into_iter()
-                                        .map(|device| {
-                                            view! { <DeviceListItem device=device/> }
-                                        })
-                                        .collect::<Vec<_>>()}
-                                </ul>
-                            }.into_view()
-                        }
-                        Err(e) => view! { <p>{format!("DeviceList error: {e}")}</p> }.into_view()
-                    }
+            <div>
+                <h2 class="text-lg">"Devices"</h2>
+                <hr class="mb-2"/>
+                <Suspense fallback=|| {
+                    view! { <p>"Loading devices..."</p> }
+                }>
+                    {move || {
+                        devices
+                            .get()
+                            .map(|data| {
+                                data.map(|data| {
+                                    view! {
+                                        <ul class="device-list space-y-2">
+                                            {data
+                                                .into_iter()
+                                                .map(|device| {
+                                                    view! {
+                                                        <DeviceListItem
+                                                            device=device
+                                                            on:click=move |_| {
+                                                                println!("clicked!");
+                                                                spawn_local(async move {
+                                                                    toggle_modal.set(!modal.get());
+                                                                });
+                                                            }
+                                                        />
+                                                    }
+                                                })
+                                                .collect::<Vec<_>>()}
+                                        </ul>
+                                    }
+                                })
+                            })
+                    }}
+
+    >>>>>>> Stashed changes
+                </Suspense>
+                {move || modal.get().then(|| view! {
+                    <Modal
+                        modal=modal
+                        toggle_modal=toggle_modal
+                    />
                 })}
-            </Suspense>
-        </div>
-    }
+            </div>
+        }
 }
 
 #[component]

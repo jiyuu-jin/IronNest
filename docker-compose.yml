@@ -1,21 +1,39 @@
-version: '3.8'
+version: '3'
 
 services:
   traefik:
-    image: "traefik:v2.9"
-    restart: always
+    image: traefik:v2.5
     command:
-      - "--providers.docker=true"
-      - "--configFile=/etc/traefik/traefik.yml"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL}"
-      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - --providers.docker
+      - --providers.file.filename=/etc/traefik/traefik.yaml
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --api.dashboard=true
     ports:
-      - "443:443"
+      - "80:80"
+      - "8080:8080"
     volumes:
-      - "./data/letsencrypt:/letsencrypt"
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik.yaml:/etc/traefik/traefik.yaml
+
+# version: '3.8'
+
+# services:
+#   traefik:
+#     image: "traefik:v2.9"
+#     restart: always
+#     command:
+#       - "--providers.docker=true"
+#       - "--configFile=/etc/traefik/traefik.yml"
+#       - "--entrypoints.websecure.address=:443"
+#       - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+#       - "--certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL}"
+#       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+#     ports:
+#       - "443:443"
+#     volumes:
+#       - "./data/letsencrypt:/letsencrypt"
+#       - "/var/run/docker.sock:/var/run/docker.sock:ro"
   # iron_nest:
   #   build: .
   #   # network_mode: "host"
