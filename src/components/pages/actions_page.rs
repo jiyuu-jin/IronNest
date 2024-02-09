@@ -1,11 +1,11 @@
 use leptos::*;
 
 #[component]
-pub fn ScriptsPage() -> impl IntoView {
+pub fn ActionsPage() -> impl IntoView {
     view! {
         <main class="lg:p-40 lg:pt-20 cursor-pointer">
             <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
-                <h1>"No Scripts"</h1>
+                <h1>"No Actions"</h1>
                 <div
                     class="relative z-10"
                     aria-labelledby="slide-over-title"
@@ -26,7 +26,7 @@ pub fn ScriptsPage() -> impl IntoView {
                                                         class="text-base font-semibold leading-6 text-white"
                                                         id="slide-over-title"
                                                     >
-                                                        "Schedule an Event"
+                                                        "Schedule an Action"
                                                     </h2>
                                                     <div class="ml-3 flex h-7 items-center">
                                                         <button
@@ -99,16 +99,22 @@ pub fn ScriptsPage() -> impl IntoView {
                                                                             for="privacy-public"
                                                                             class="font-medium text-gray-900"
                                                                         >
-                                                                            "Repeat Daily" <div class="inline">
+                                                                            "Repeat Daily"
+                                                                            <div class="inline">
                                                                                 <div class="mt-2 inline">
-                                                                                    <select id="repeats" name="repeats" autocomplete="repeats" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6">
+                                                                                    <select
+                                                                                        id="repeats"
+                                                                                        name="repeats"
+                                                                                        autocomplete="repeats"
+                                                                                        class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6"
+                                                                                    >
                                                                                         <option>"Hourly"</option>
                                                                                         <option>"Daily"</option>
                                                                                         <option>"Weekly"</option>
                                                                                     </select>
-                                                                                    </div>
                                                                                 </div>
-                                                                            </label>
+                                                                            </div>
+                                                                        </label>
                                                                     </div>
                                                                 </div>
                                                                 <div>
@@ -147,7 +153,12 @@ pub fn ScriptsPage() -> impl IntoView {
                                                                     </label>
                                                                     <div class="inline">
                                                                         <div class="mt-2 inline">
-                                                                            <select id="function-name" name="function-name" autocomplete="function-name" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6">
+                                                                            <select
+                                                                                id="function-name"
+                                                                                name="function-name"
+                                                                                autocomplete="function-name"
+                                                                                class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:max-w-xs sm:text-sm sm:leading-6"
+                                                                            >
                                                                                 <option>"tplink_set_light_brightness"</option>
                                                                                 <option>"tplink_turn_light_on_off"</option>
                                                                                 <option>"tplink_turn_plug_on"</option>

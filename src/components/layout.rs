@@ -3,8 +3,8 @@ use {
         components::{
             navbar::Navbar,
             pages::{
-                dashboard_page::DashboardPage, devices_page::DevicesPage,
-                integrations_page::AccountsPage, login_page::LoginPage, scripts_page::ScriptsPage,
+                actions_page::ActionsPage, dashboard_page::DashboardPage,
+                devices_page::DevicesPage, integrations_page::AccountsPage, login_page::LoginPage,
                 settings_page::SettingsPage, websocket_page::WebSocketPage,
             },
         },
@@ -184,7 +184,7 @@ pub fn App() -> impl IntoView {
                         <Route path="/" view=DashboardPage/>
                         <Route path="/integrations" view=AccountsPage/>
                         <Route path="/integrations/:integration" view=LoginPage/>
-                        <Route path="/scripts" view=ScriptsPage/>
+                        <Route path="/actions" view=ActionsPage/>
                         <Route path="/settings" view=SettingsPage/>
                         <Route path="/devices" view=DevicesPage/>
                         <Route path="/websocket" view=WebSocketPage/>
