@@ -33,8 +33,8 @@ pub fn Navbar() -> impl IntoView {
             },
         },
         NavbarItem {
-            path: "/devices".to_string(),
-            text: "Devices".to_string(),
+            path: "/devices".to_owned(),
+            text: "Devices".to_owned(),
             image: view! {
                 <svg
                     class="h-6 w-6 shrink-0"
@@ -53,8 +53,8 @@ pub fn Navbar() -> impl IntoView {
             },
         },
         NavbarItem {
-            path: "/scripts".to_string(),
-            text: "Scripts".to_string(),
+            path: "/actions".to_owned(),
+            text: "Actions".to_owned(),
             image: view! {
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
