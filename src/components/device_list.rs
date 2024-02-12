@@ -4,6 +4,7 @@ use {
         integrations::iron_nest::types::{Device, DeviceType},
     },
     leptos::*,
+    log::debug,
 };
 
 #[component]
@@ -32,10 +33,9 @@ pub fn DeviceList(devices: Resource<(), Result<Vec<Device>, ServerFnError>>) -> 
                                                         <DeviceListItem
                                                             device=device
                                                             on:click=move |_| {
-                                                                println!("clicked!");
-                                                                spawn_local(async move {
-                                                                    toggle_modal.set(!modal.get());
-                                                                });
+                                                                let state = modal.get();
+                                                                debug!("clicked device list item! {state}");
+                                                                toggle_modal.set(true);
                                                             }
                                                         />
                                                     }
@@ -53,7 +53,7 @@ pub fn DeviceList(devices: Resource<(), Result<Vec<Device>, ServerFnError>>) -> 
                 }}
 
             </Suspense>
-            {move || modal.get().then(|| view! { <Modal modal=modal toggle_modal=toggle_modal/> })}
+            {move || modal.get().then(|| view! { <Modal toggle_modal=toggle_modal/> })}
         </div>
     }
 }
@@ -242,15 +242,23 @@ pub fn SmartLightItem(device: Device) -> impl IntoView {
                     </div>
                     <p class="mt-1 truncate text-sm text-gray-500">{&device.ip}</p>
                 </div>
-                <label class="relative inline-flex items-center cursor-pointer ml-2 mt-2">
+                <label
+                    class="relative inline-flex items-center cursor-pointer ml-2 mt-2"
+                    on:click:undelegated=|e| {
+                        debug!("clicked label! {} {}", e.event_phase(), e.bubbles());
+                        e.stop_propagation();
+                    }
+                >
                     <input
                         type="checkbox"
                         value=""
-                        on:click=move |_| {
+                        on:click:undelegated=move |_| {
                             let ip_clone = ip.clone();
+                            let signal = signal.get();
+                            debug!("clicked checkbox!");
                             spawn_local(async move {
-                                handle_smart_light_toggle(signal.get(), ip_clone).await.unwrap();
-                                set_signal.set(!signal.get());
+                                handle_smart_light_toggle(signal, ip_clone).await.unwrap();
+                                set_signal.set(!signal);
                             });
                         }
 
