@@ -1,4 +1,8 @@
-use {crate::components::login_form::LoginForm, leptos::*, leptos_router::*};
+use {
+    crate::components::{login_form::LoginForm, text_input::TextInput},
+    leptos::*,
+    leptos_router::*,
+};
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "ssr")] {
@@ -52,58 +56,24 @@ pub fn RingLoginPage() -> impl IntoView {
     view! {
         <LoginForm name=name logo=logo form_value=value>
             <ActionForm action=handle_login class="space-y-6">
-                <div>
-                    <label for="email" class="block text-sm font-medium leading-6 text-white">
-                        "Email address"
-                    </label>
-                    <div class="mt-2">
-                        <input
-                            id="email"
-                            name="username"
-                            type="text"
-                            placeholder="Username"
-                            autocomplete="email"
-                            required
-                            class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                        />
-                    </div>
-                </div>
-                <div>
-                    <div class="flex items-center justify-between">
-                        <label
-                            for="password"
-                            class="block text-sm font-medium leading-6 text-white"
-                        >
-                            Password
-                        </label>
-                    </div>
-                    <div class="mt-2">
-                        <input
-                            type="password"
-                            name="password"
-                            placeholder="Password"
-                            autocomplete="current-password"
-                            required
-                            class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                        />
-                    </div>
-                </div>
-                <div>
-                    <div class="flex items-center justify-between">
-                        <label for="tfa" class="block text-sm font-medium leading-6 text-white">
-                            Password
-                        </label>
-                    </div>
-                    <div class="mt-2">
-                        <input
-                            type="password"
-                            name="tfa"
-                            placeholder="2FA code"
-                            class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                        />
-                    </div>
-                </div>
-
+                <TextInput
+                    label="Username".to_owned()
+                    name="username".to_owned()
+                    placeholder="username".to_owned()
+                    input_type="text".to_owned()
+                />
+                <TextInput
+                    label="Password".to_owned()
+                    name="password".to_owned()
+                    placeholder="password".to_owned()
+                    input_type="password".to_owned()
+                />
+                <TextInput
+                    label="2FA code".to_owned()
+                    name="tfa".to_owned()
+                    placeholder="2FA code".to_owned()
+                    input_type="password".to_owned()
+                />
                 <div>
                     <input
                         type="submit"
