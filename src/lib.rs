@@ -3,6 +3,7 @@ pub mod components;
 pub mod error_template;
 pub mod fileserv;
 pub mod integrations;
+pub mod server;
 
 cfg_if! { if #[cfg(feature = "ssr")] {
     pub mod app;
