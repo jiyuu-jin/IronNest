@@ -1,7 +1,11 @@
 use {
     crate::{
-        components::{device_list_card::DeviceListCard, modal::Modal},
+        components::{checkbox::Checkbox, device_list_card::DeviceListCard, device_modal::Modal},
         integrations::iron_nest::types::{Device, DeviceType},
+        server::{
+            roku::handle_roku_tv_toggle,
+            tplink::{handle_smart_light_toggle, handle_smart_plug_toggle},
+        },
     },
     leptos::*,
     log::debug,
@@ -10,7 +14,7 @@ use {
 #[component]
 pub fn DeviceList(devices: Resource<(), Result<Vec<Device>, ServerFnError>>) -> impl IntoView {
     let (modal, toggle_modal) = create_signal(false);
-    // let (current_device, set_current_device) = create_signal(None);
+    let (current_device, set_current_device) = create_signal(None);
 
     view! {
         <div>
@@ -30,7 +34,6 @@ pub fn DeviceList(devices: Resource<(), Result<Vec<Device>, ServerFnError>>) -> 
                                             {data
                                                 .into_iter()
                                                 .map(|device| {
-                                                    let device_clone = device.clone();
                                                     view! {
                                                         <DeviceListItem
                                                             device=device.clone()
@@ -38,6 +41,7 @@ pub fn DeviceList(devices: Resource<(), Result<Vec<Device>, ServerFnError>>) -> 
                                                                 let state = modal.get();
                                                                 debug!("clicked device list item! {state}");
                                                                 toggle_modal.set(true);
+                                                                set_current_device.set(Some(device.clone()))
                                                             }
                                                         />
                                                     }
@@ -60,7 +64,12 @@ pub fn DeviceList(devices: Resource<(), Result<Vec<Device>, ServerFnError>>) -> 
                 }}
 
             </Suspense>
-            {move || modal.get().then(|| view! { <Modal toggle_modal=toggle_modal/> })}
+            {move || {
+                modal
+                    .get()
+                    .then(|| view! { <Modal toggle_modal=toggle_modal device=current_device/> })
+            }}
+
         </div>
     }
 }
@@ -76,17 +85,6 @@ pub fn DeviceListItem(device: Device) -> impl IntoView {
     }
 }
 
-#[server(HandleSmartPlugToggle)]
-pub async fn handle_smart_plug_toggle(state: bool, ip: String) -> Result<(), ServerFnError> {
-    use crate::integrations::tplink::{tplink_turn_plug_off, tplink_turn_plug_on};
-    if state {
-        tplink_turn_plug_off(&ip).await;
-    } else {
-        tplink_turn_plug_on(&ip).await;
-    }
-    Ok(())
-}
-
 #[component]
 pub fn SmartPlugItem(device: Device) -> impl IntoView {
     let ip = device.ip.to_string();
@@ -94,28 +92,13 @@ pub fn SmartPlugItem(device: Device) -> impl IntoView {
 
     view! {
         <DeviceListCard device=device>
-            <label
-                class="relative inline-flex items-center cursor-pointer ml-2 mt-2"
-                on:click:undelegated=|e| {
-                    e.stop_propagation();
-                }
-            >
-                <input
-                    type="checkbox"
-                    value=""
-                    on:click:undelegated=move |_| {
-                        let ip_clone = ip.clone();
-                        println!("clicked!");
-                        spawn_local(async move {
-                            handle_smart_plug_toggle(signal.get(), ip_clone).await.unwrap();
-                            set_signal.set(!signal.get());
-                        });
-                    }
-                    checked=signal
-                    class="sr-only peer"
-                />
-                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-            </label>
+            <Checkbox on_click=Box::new(move || {
+                let ip = ip.clone();
+                set_signal.set(!signal.get());
+                spawn_local(async move {
+                    handle_smart_plug_toggle(signal.get(), ip).await.unwrap();
+                })
+            })/>
         </DeviceListCard>
     }
 }
@@ -138,13 +121,6 @@ pub fn StoplightItem(device: Device) -> impl IntoView {
     }
 }
 
-#[server(HandleSmartLightToggle)]
-pub async fn handle_smart_light_toggle(state: bool, ip: String) -> Result<(), ServerFnError> {
-    use crate::integrations::tplink::tplink_turn_light_on_off;
-    tplink_turn_light_on_off(&ip, if state { 0 } else { 1 }).await;
-    Ok(())
-}
-
 #[component]
 pub fn SmartLightItem(device: Device) -> impl IntoView {
     let ip = device.ip.to_string();
@@ -152,43 +128,15 @@ pub fn SmartLightItem(device: Device) -> impl IntoView {
 
     view! {
         <DeviceListCard device=device>
-            <label
-                class="relative inline-flex items-center cursor-pointer ml-2 mt-2"
-                on:click:undelegated=|e| {
-                    e.stop_propagation();
-                }
-            >
-                <input
-                    type="checkbox"
-                    value=""
-                    on:click:undelegated=move |_| {
-                        let ip_clone = ip.clone();
-                        let signal = signal.get();
-                        debug!("clicked checkbox!");
-                        spawn_local(async move {
-                            handle_smart_light_toggle(signal, ip_clone).await.unwrap();
-                            set_signal.set(!signal);
-                        });
-                    }
-
-                    checked=signal
-                    class="sr-only peer"
-                />
-                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-            </label>
+            <Checkbox on_click=Box::new(move || {
+                let ip = ip.clone();
+                set_signal.set(!signal.get());
+                spawn_local(async move {
+                    handle_smart_light_toggle(signal.get(), ip).await.unwrap();
+                });
+            })/>
         </DeviceListCard>
     }
-}
-
-#[server(HandleRokuTvToggle)]
-pub async fn handle_roku_tv_toggle(state: bool, ip: String) -> Result<(), ServerFnError> {
-    use crate::integrations::roku::roku_send_keypress;
-    if state {
-        roku_send_keypress(&ip, "PowerOff").await;
-    } else {
-        roku_send_keypress(&ip, "PowerOn").await;
-    }
-    Ok(())
 }
 
 #[component]
@@ -198,28 +146,13 @@ pub fn RokuTvItem(device: Device) -> impl IntoView {
 
     view! {
         <DeviceListCard device=device>
-            <label
-                class="relative inline-flex items-center cursor-pointer ml-2 mt-2"
-                on:click:undelegated=|e| {
-                    e.stop_propagation();
-                }
-            >
-                <input
-                    type="checkbox"
-                    value=""
-                    on:click:undelegated=move |_| {
-                        let ip_clone = ip.clone();
-                        spawn_local(async move {
-                            handle_roku_tv_toggle(signal.get(), ip_clone).await.unwrap();
-                            set_signal.set(!signal.get());
-                        });
-                    }
-
-                    checked=signal
-                    class="sr-only peer"
-                />
-                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-            </label>
+            <Checkbox on_click=Box::new(move || {
+                let ip = ip.clone();
+                set_signal.set(!signal.get());
+                spawn_local(async move {
+                    handle_roku_tv_toggle(signal.get(), ip).await.unwrap();
+                });
+            })/>
         </DeviceListCard>
     }
 }
