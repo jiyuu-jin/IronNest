@@ -1,9 +1,10 @@
+pub mod checkbox;
 pub mod command_box;
 pub mod device_list;
 pub mod device_list_card;
+pub mod device_modal;
 pub mod layout;
 pub mod login_form;
-pub mod modal;
 pub mod navbar;
 pub mod pages;
 pub mod ring_cameras;
