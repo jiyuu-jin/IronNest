@@ -1,5 +1,6 @@
 pub mod command_box;
 pub mod device_list;
+pub mod device_list_card;
 pub mod layout;
 pub mod login_form;
 pub mod modal;
