@@ -1,17 +1,31 @@
 use {
-    crate::integrations::iron_nest::types::{Device, DeviceType},
+    super::checkbox::Checkbox,
+    crate::{
+        integrations::iron_nest::types::{Device, DeviceType},
+        server::tplink::{handle_smart_light_toggle, handle_smart_plug_toggle},
+    },
     leptos::*,
     log::debug,
 };
 
 #[component]
-pub fn DeviceView(device_type: DeviceType) -> impl IntoView {
-    match device_type {
-        DeviceType::SmartPlug => view! { <div></div> },
-        DeviceType::SmartLight => view! { <div></div> },
-        DeviceType::RingDoorbell => view! { <div></div> },
-        DeviceType::RokuTv => view! { <div></div> },
-        DeviceType::Stoplight => view! { <div></div> },
+pub fn DeviceView(device: Device) -> impl IntoView {
+    match device.device_type {
+        DeviceType::SmartPlug => view! {
+            <SmartLightView device=device />
+        },
+        DeviceType::SmartLight => view! {
+            <SmartLightView device=device />
+        },
+        DeviceType::RingDoorbell => view! {
+            <RingDoorbellView device=device />
+        },
+        DeviceType::RokuTv => view! {
+            <RokuTvView device=device />
+        },
+        DeviceType::Stoplight => view! {
+            <StoplightView device=device />
+        },
     }
 }
 
@@ -44,10 +58,10 @@ pub fn Modal(toggle_modal: WriteSignal<bool>, device: ReadSignal<Option<Device>>
                                                         class="text-base font-semibold leading-6 text-gray-900"
                                                         id="modal-title"
                                                     >
-                                                        {data.name}
+                                                        {data.name.to_owned()}
                                                     </h3>
                                                     <div class="mt-2">
-                                                        <DeviceView device_type=data.device_type/>
+                                                        <DeviceView device=data />
                                                     </div>
                                                 </div>
                                             }
@@ -68,4 +82,67 @@ pub fn Modal(toggle_modal: WriteSignal<bool>, device: ReadSignal<Option<Device>>
 }
 
 #[component]
-pub fn SmartLightView() -> impl IntoView {}
+pub fn SmartLightView(device: Device) -> impl IntoView {
+    let ip = device.ip.to_string();
+    let (signal, set_signal) = create_signal(device.power_state == 1);
+
+    view! {
+        <Checkbox value=signal.get() on_click=Box::new(move || {
+            let ip = ip.clone();
+            set_signal.set(!signal.get());
+            spawn_local(async move {
+                handle_smart_light_toggle(signal.get(), ip).await.unwrap();
+            });
+        })/>
+    }
+}
+
+#[component]
+pub fn SmartPlugView(device: Device) -> impl IntoView {
+    let ip = device.ip.to_string();
+    let (signal, set_signal) = create_signal(device.power_state == 1);
+
+    view! {
+        <Checkbox value=signal.get() on_click=Box::new(move || {
+            let ip = ip.clone();
+            set_signal.set(!signal.get());
+            spawn_local(async move {
+                handle_smart_plug_toggle(signal.get(), ip).await.unwrap();
+            })
+        })/>
+    }
+}
+
+#[component]
+pub fn RingDoorbellView(device: Device) -> impl IntoView {
+    view! {
+        <div>
+            "Power State: " {device.battery_percentage}
+        </div>
+    }
+}
+
+#[component]
+pub fn RokuTvView(device: Device) -> impl IntoView {
+    let ip = device.ip.to_string();
+    let (signal, set_signal) = create_signal(device.power_state == 1);
+
+    view! {
+        <Checkbox value=signal.get() on_click=Box::new(move || {
+            let ip = ip.clone();
+            set_signal.set(!signal.get());
+            spawn_local(async move {
+                handle_smart_plug_toggle(signal.get(), ip).await.unwrap();
+            })
+        })/>
+    }
+}
+
+#[component]
+pub fn StoplightView(device: Device) -> impl IntoView {
+    view! {
+        <div>
+            "Power State: " {device.battery_percentage}
+        </div>
+    }
+}
