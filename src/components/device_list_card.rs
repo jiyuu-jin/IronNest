@@ -90,7 +90,7 @@ pub fn DeviceListCard(device: Device, children: Children) -> impl IntoView {
     };
 
     view! {
-        <li class="col-span-1 divide-y divide-gray-200 rounded-lg bg-white shadow">
+        <li class="col-span-1 divide-y divide-gray-200 rounded-lg bg-white shadow cursor-pointer hover:shadow-indigo hover:shadow-[rgba(79,70,229,0.5)_0px_0px_4px_4px]">
             <div class="flex w-full items-center justify-between space-x-6 p-6">
                 <div class="flex-1 truncate">
                     <div class="flex items-center space-x-3">

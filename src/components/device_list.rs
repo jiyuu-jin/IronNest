@@ -92,7 +92,7 @@ pub fn SmartPlugItem(device: Device) -> impl IntoView {
 
     view! {
         <DeviceListCard device=device>
-            <Checkbox on_click=Box::new(move || {
+            <Checkbox value=signal.get() on_click=Box::new(move || {
                 let ip = ip.clone();
                 set_signal.set(!signal.get());
                 spawn_local(async move {
@@ -128,7 +128,7 @@ pub fn SmartLightItem(device: Device) -> impl IntoView {
 
     view! {
         <DeviceListCard device=device>
-            <Checkbox on_click=Box::new(move || {
+            <Checkbox value=signal.get()on_click=Box::new(move || {
                 let ip = ip.clone();
                 set_signal.set(!signal.get());
                 spawn_local(async move {
@@ -146,7 +146,7 @@ pub fn RokuTvItem(device: Device) -> impl IntoView {
 
     view! {
         <DeviceListCard device=device>
-            <Checkbox on_click=Box::new(move || {
+            <Checkbox value=signal.get() on_click=Box::new(move || {
                 let ip = ip.clone();
                 set_signal.set(!signal.get());
                 spawn_local(async move {
