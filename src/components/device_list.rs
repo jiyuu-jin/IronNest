@@ -7,7 +7,10 @@ use {
             tplink::{handle_smart_light_toggle, handle_smart_plug_toggle},
         },
     },
-    leptos::*,
+    leptos::{html::Div, *},
+    leptos_use::{
+        core::Position, use_draggable_with_options, UseDraggableOptions, UseDraggableReturn,
+    },
     log::debug,
 };
 
@@ -76,29 +79,58 @@ pub fn DeviceList(devices: Resource<(), Result<Vec<Device>, ServerFnError>>) -> 
 
 #[component]
 pub fn DeviceListItem(device: Device) -> impl IntoView {
+    let el = create_node_ref::<Div>();
+
+    // let UseDraggableReturn { x, y, style, .. } = use_draggable_with_options(
+    //     el,
+    //     UseDraggableOptions::default().initial_value(Position { x: 40.0, y: 40.0 }),
+    // );
+
     match device.device_type {
-        DeviceType::SmartPlug => view! { <SmartPlugItem device=device/> },
-        DeviceType::SmartLight => view! { <SmartLightItem device=device/> },
-        DeviceType::RingDoorbell => view! { <RingDoorbellItem device=device/> },
-        DeviceType::Stoplight => view! { <StoplightItem device=device/> },
-        DeviceType::RokuTv => view! { <RokuTvItem device=device/> },
+        DeviceType::SmartPlug => view! {
+            <div>
+                <SmartPlugItem device=device/>
+            </div>
+        },
+        DeviceType::SmartLight => view! {
+            <div>
+                <SmartLightItem device=device/>
+            </div>
+        },
+        DeviceType::RingDoorbell => view! {
+            <div>
+                <RingDoorbellItem device=device/>
+            </div>
+        },
+        DeviceType::Stoplight => view! {
+            <div>
+                <StoplightItem device=device/>
+            </div>
+        },
+        DeviceType::RokuTv => view! {
+            <div>
+                <RokuTvItem device=device/>
+            </div>
+        },
     }
 }
 
 #[component]
 pub fn SmartPlugItem(device: Device) -> impl IntoView {
-    let ip = device.ip.to_string();
-    let (signal, set_signal) = create_signal(device.power_state == 1);
+    let device_clone = device.clone();
+    let ip = device_clone.ip.clone();
 
     view! {
-        <DeviceListCard device=device>
-            <Checkbox value=signal.get() on_click=Box::new(move || {
-                let ip = ip.clone();
-                set_signal.set(!signal.get());
-                spawn_local(async move {
-                    handle_smart_plug_toggle(signal.get(), ip).await.unwrap();
+        <DeviceListCard device=device.clone()>
+            <Checkbox
+                value=device.power_state == 1
+                on_click=Box::new(move |value| {
+                    let ip = ip.clone();
+                    spawn_local(async move {
+                        handle_smart_plug_toggle(value, ip).await.unwrap();
+                    })
                 })
-            })/>
+            />
         </DeviceListCard>
     }
 }
@@ -124,17 +156,17 @@ pub fn StoplightItem(device: Device) -> impl IntoView {
 #[component]
 pub fn SmartLightItem(device: Device) -> impl IntoView {
     let ip = device.ip.to_string();
-    let (signal, set_signal) = create_signal(device.power_state == 1);
-
     view! {
-        <DeviceListCard device=device>
-            <Checkbox value=signal.get()on_click=Box::new(move || {
-                let ip = ip.clone();
-                set_signal.set(!signal.get());
-                spawn_local(async move {
-                    handle_smart_light_toggle(signal.get(), ip).await.unwrap();
-                });
-            })/>
+        <DeviceListCard device=device.clone()>
+            <Checkbox
+                value=device.power_state == 1
+                on_click=Box::new(move |value| {
+                    let ip = ip.clone();
+                    spawn_local(async move {
+                        handle_smart_light_toggle(value, ip).await.unwrap();
+                    });
+                })
+            />
         </DeviceListCard>
     }
 }
@@ -142,17 +174,17 @@ pub fn SmartLightItem(device: Device) -> impl IntoView {
 #[component]
 pub fn RokuTvItem(device: Device) -> impl IntoView {
     let ip = device.ip.to_string();
-    let (signal, set_signal) = create_signal(device.power_state == 1);
-
     view! {
-        <DeviceListCard device=device>
-            <Checkbox value=signal.get() on_click=Box::new(move || {
-                let ip = ip.clone();
-                set_signal.set(!signal.get());
-                spawn_local(async move {
-                    handle_roku_tv_toggle(signal.get(), ip).await.unwrap();
-                });
-            })/>
+        <DeviceListCard device=device.clone()>
+            <Checkbox
+                value=device.power_state == 1
+                on_click=Box::new(move |value| {
+                    let ip = ip.clone();
+                    spawn_local(async move {
+                        handle_roku_tv_toggle(value, ip).await.unwrap();
+                    });
+                })
+            />
         </DeviceListCard>
     }
 }

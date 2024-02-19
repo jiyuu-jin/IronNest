@@ -1,21 +1,23 @@
 use leptos::{logging::log, *};
 
 #[component]
-pub fn Checkbox(value: bool, on_click: Box<dyn Fn()>) -> impl IntoView {
+pub fn Checkbox(value: bool, on_click: Box<dyn Fn(bool)>) -> impl IntoView {
+    let (signal, set_signal) = create_signal(value);
     view! {
         <label
             class="relative inline-flex items-center cursor-pointer ml-2 mt-2"
             on:click:undelegated=move |e| {
                 log!("clicked propagated!");
                 e.stop_propagation();
-                on_click();
             }
         >
             <input
                 type="checkbox"
-                checked=value
-                on:click:undelegated=move |_| {
+                checked={move || signal.get()}
+                on:click:undelegated=move |ev| {
                     log!("clicked!");
+                    set_signal.set(!signal.get());
+                    on_click(event_target_checked(&ev));
                 }
                 class="sr-only peer"
             />

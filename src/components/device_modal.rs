@@ -14,7 +14,7 @@ use {
 #[component]
 pub fn DeviceView(device: Device) -> impl IntoView {
     match device.device_type {
-        DeviceType::SmartPlug => view! { <SmartLightView device=device/> },
+        DeviceType::SmartPlug => view! { <SmartPlugView device=device/> },
         DeviceType::SmartLight => view! { <SmartLightView device=device/> },
         DeviceType::RingDoorbell => view! { <RingDoorbellView device=device/> },
         DeviceType::RokuTv => view! { <RokuTvView device=device/> },
@@ -77,24 +77,21 @@ pub fn Modal(toggle_modal: WriteSignal<bool>, device: ReadSignal<Option<Device>>
 #[component]
 pub fn SmartLightView(device: Device) -> impl IntoView {
     let ip = device.ip.clone();
-    let (signal, set_signal) = create_signal(device.power_state == 1);
 
     view! {
         <div class="flex flex-col">
             <Checkbox
-                value=signal.get()
-                on_click=Box::new(move || {
+                value=device.power_state == 1
+                on_click=Box::new(move |value| {
                     let ip_clone = device.ip.clone();
-                    set_signal.set(!signal.get());
                     spawn_local(async move {
-                        handle_smart_light_toggle(signal.get(), ip_clone).await.unwrap();
+                        handle_smart_light_toggle(value, ip_clone).await.unwrap();
                     });
                 })
             />
 
             <Slider
                 on_change=Box::new(move |value| {
-                    set_signal.set(!signal.get());
                     let ip_clone = ip.clone();
                     spawn_local(async move {
                         handle_smart_light_brightness(value, ip_clone).await.unwrap();
@@ -107,16 +104,13 @@ pub fn SmartLightView(device: Device) -> impl IntoView {
 #[component]
 pub fn SmartPlugView(device: Device) -> impl IntoView {
     let ip = device.ip.to_string();
-    let (signal, set_signal) = create_signal(device.power_state == 1);
-
     view! {
         <Checkbox
-            value=signal.get()
-            on_click=Box::new(move || {
+            value=device.power_state == 1
+            on_click=Box::new(move |value| {
                 let ip = ip.clone();
-                set_signal.set(!signal.get());
                 spawn_local(async move {
-                    handle_smart_plug_toggle(signal.get(), ip).await.unwrap();
+                    handle_smart_plug_toggle(value, ip).await.unwrap();
                 })
             })
         />
@@ -131,16 +125,13 @@ pub fn RingDoorbellView(device: Device) -> impl IntoView {
 #[component]
 pub fn RokuTvView(device: Device) -> impl IntoView {
     let ip = device.ip.to_string();
-    let (signal, set_signal) = create_signal(device.power_state == 1);
-
     view! {
         <Checkbox
-            value=signal.get()
-            on_click=Box::new(move || {
+            value=device.power_state == 1
+            on_click=Box::new(move |value| {
                 let ip = ip.clone();
-                set_signal.set(!signal.get());
                 spawn_local(async move {
-                    handle_smart_plug_toggle(signal.get(), ip).await.unwrap();
+                    handle_smart_plug_toggle(value, ip).await.unwrap();
                 })
             })
         />
