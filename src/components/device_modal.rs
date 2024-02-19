@@ -1,8 +1,11 @@
 use {
     super::checkbox::Checkbox,
     crate::{
+        components::slider::Slider,
         integrations::iron_nest::types::{Device, DeviceType},
-        server::tplink::{handle_smart_light_toggle, handle_smart_plug_toggle},
+        server::tplink::{
+            handle_smart_light_brightness, handle_smart_light_toggle, handle_smart_plug_toggle,
+        },
     },
     leptos::*,
     log::debug,
@@ -11,21 +14,11 @@ use {
 #[component]
 pub fn DeviceView(device: Device) -> impl IntoView {
     match device.device_type {
-        DeviceType::SmartPlug => view! {
-            <SmartLightView device=device />
-        },
-        DeviceType::SmartLight => view! {
-            <SmartLightView device=device />
-        },
-        DeviceType::RingDoorbell => view! {
-            <RingDoorbellView device=device />
-        },
-        DeviceType::RokuTv => view! {
-            <RokuTvView device=device />
-        },
-        DeviceType::Stoplight => view! {
-            <StoplightView device=device />
-        },
+        DeviceType::SmartPlug => view! { <SmartLightView device=device/> },
+        DeviceType::SmartLight => view! { <SmartLightView device=device/> },
+        DeviceType::RingDoorbell => view! { <RingDoorbellView device=device/> },
+        DeviceType::RokuTv => view! { <RokuTvView device=device/> },
+        DeviceType::Stoplight => view! { <StoplightView device=device/> },
     }
 }
 
@@ -61,7 +54,7 @@ pub fn Modal(toggle_modal: WriteSignal<bool>, device: ReadSignal<Option<Device>>
                                                         {data.name.to_owned()}
                                                     </h3>
                                                     <div class="mt-2">
-                                                        <DeviceView device=data />
+                                                        <DeviceView device=data/>
                                                     </div>
                                                 </div>
                                             }
@@ -83,17 +76,31 @@ pub fn Modal(toggle_modal: WriteSignal<bool>, device: ReadSignal<Option<Device>>
 
 #[component]
 pub fn SmartLightView(device: Device) -> impl IntoView {
-    let ip = device.ip.to_string();
+    let ip = device.ip.clone();
     let (signal, set_signal) = create_signal(device.power_state == 1);
 
     view! {
-        <Checkbox value=signal.get() on_click=Box::new(move || {
-            let ip = ip.clone();
-            set_signal.set(!signal.get());
-            spawn_local(async move {
-                handle_smart_light_toggle(signal.get(), ip).await.unwrap();
-            });
-        })/>
+        <div class="flex flex-col">
+            <Checkbox
+                value=signal.get()
+                on_click=Box::new(move || {
+                    let ip_clone = device.ip.clone();
+                    set_signal.set(!signal.get());
+                    spawn_local(async move {
+                        handle_smart_light_toggle(signal.get(), ip_clone).await.unwrap();
+                    });
+                })
+            />
+
+            <Slider
+                on_change=Box::new(move |value| {
+                    set_signal.set(!signal.get());
+                    let ip_clone = ip.clone();
+                    spawn_local(async move {
+                        handle_smart_light_brightness(value, ip_clone).await.unwrap();
+                    });
+            })/>
+        </div>
     }
 }
 
@@ -103,23 +110,22 @@ pub fn SmartPlugView(device: Device) -> impl IntoView {
     let (signal, set_signal) = create_signal(device.power_state == 1);
 
     view! {
-        <Checkbox value=signal.get() on_click=Box::new(move || {
-            let ip = ip.clone();
-            set_signal.set(!signal.get());
-            spawn_local(async move {
-                handle_smart_plug_toggle(signal.get(), ip).await.unwrap();
+        <Checkbox
+            value=signal.get()
+            on_click=Box::new(move || {
+                let ip = ip.clone();
+                set_signal.set(!signal.get());
+                spawn_local(async move {
+                    handle_smart_plug_toggle(signal.get(), ip).await.unwrap();
+                })
             })
-        })/>
+        />
     }
 }
 
 #[component]
 pub fn RingDoorbellView(device: Device) -> impl IntoView {
-    view! {
-        <div>
-            "Power State: " {device.battery_percentage}
-        </div>
-    }
+    view! { <div>"Power State: " {device.battery_percentage}</div> }
 }
 
 #[component]
@@ -128,21 +134,20 @@ pub fn RokuTvView(device: Device) -> impl IntoView {
     let (signal, set_signal) = create_signal(device.power_state == 1);
 
     view! {
-        <Checkbox value=signal.get() on_click=Box::new(move || {
-            let ip = ip.clone();
-            set_signal.set(!signal.get());
-            spawn_local(async move {
-                handle_smart_plug_toggle(signal.get(), ip).await.unwrap();
+        <Checkbox
+            value=signal.get()
+            on_click=Box::new(move || {
+                let ip = ip.clone();
+                set_signal.set(!signal.get());
+                spawn_local(async move {
+                    handle_smart_plug_toggle(signal.get(), ip).await.unwrap();
+                })
             })
-        })/>
+        />
     }
 }
 
 #[component]
 pub fn StoplightView(device: Device) -> impl IntoView {
-    view! {
-        <div>
-            "Power State: " {device.battery_percentage}
-        </div>
-    }
+    view! { <div>"Power State: " {device.battery_percentage}</div> }
 }

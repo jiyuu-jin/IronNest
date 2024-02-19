@@ -17,3 +17,13 @@ pub async fn handle_smart_light_toggle(state: bool, ip: String) -> Result<(), Se
     tplink_turn_light_on_off(&ip, if state { 0 } else { 1 }).await;
     Ok(())
 }
+
+#[server(HandleSmartLightBrightness)]
+pub async fn handle_smart_light_brightness(
+    brightness: u8,
+    ip: String,
+) -> Result<(), ServerFnError> {
+    use crate::integrations::tplink::tplink_set_light_brightness;
+    tplink_set_light_brightness(&ip, brightness).await;
+    Ok(())
+}
