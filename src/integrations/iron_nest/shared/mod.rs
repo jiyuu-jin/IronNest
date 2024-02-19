@@ -3,7 +3,7 @@ pub struct Integration {
     pub image: &'static str,
 }
 
-pub const INTEGRATIONS: [Integration; 11] = [Integration {
+pub const INTEGRATIONS: [Integration; 12] = [Integration {
   name: "ring",
   image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTIr91eAi3NC85wLntkOtCVTHPrrmK3gbvHcLASAbbJiOlqX4dTxttliz8uDi8mDfcRTzI&usqp=CAU"
 },Integration{
@@ -36,4 +36,7 @@ pub const INTEGRATIONS: [Integration; 11] = [Integration {
 },Integration {
   name: "tp-link kasa",
   image: "https://play-lh.googleusercontent.com/HH2EMJy6xdJX9WM72G5LJ8SRzACsxCSjPKCNYiHdNuSiij1M4v5W-3XLzXVXVuhWnKA=w480-h960-rw",
+}, Integration {
+  name: "cync",
+  image: "https://play-lh.googleusercontent.com/Hso3u15eqsC4wgP5ccaaNf0RpolVtXTeZr_pNyjoyWcwyR91BUI5cTeratOuUtrq7w=w480-h960-rw"
 }];
