@@ -2,13 +2,8 @@ use {
     crate::components::{login_form::LoginForm, text_input::TextInput},
     leptos::*,
     leptos_router::*,
+    std::sync::Arc,
 };
-
-cfg_if::cfg_if! {
-    if #[cfg(feature = "ssr")] {
-        use std::sync::Arc;
-    }
-}
 
 #[component]
 pub fn LoginPage() -> impl IntoView {
@@ -31,8 +26,8 @@ pub fn LoginPageNotFound() -> impl IntoView {
     }
 }
 
-#[server(HandleLogin)]
-pub async fn handle_login(
+#[server(HandleRingLogin)]
+pub async fn handle_ring_login(
     username: String,
     password: String,
     tfa: String,
@@ -48,7 +43,7 @@ pub async fn handle_login(
 
 #[component]
 pub fn RingLoginPage() -> impl IntoView {
-    let handle_login = create_server_action::<HandleLogin>();
+    let handle_login = create_server_action::<HandleRingLogin>();
     let value: RwSignal<Option<Result<String, ServerFnError>>> = handle_login.value();
     let name = "ring".to_owned();
     let logo = "logo".to_owned();

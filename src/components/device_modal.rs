@@ -90,12 +90,11 @@ pub fn SmartLightView(device: Device) -> impl IntoView {
                 })
             />
 
-            <Slider
-                on_change=Box::new(move |value| {
-                    let ip_clone = ip.clone();
-                    spawn_local(async move {
-                        handle_smart_light_brightness(value, ip_clone).await.unwrap();
-                    });
+            <Slider on_change=Box::new(move |value| {
+                let ip_clone = ip.clone();
+                spawn_local(async move {
+                    handle_smart_light_brightness(value, ip_clone).await.unwrap();
+                });
             })/>
         </div>
     }

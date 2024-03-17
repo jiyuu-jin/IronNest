@@ -55,12 +55,7 @@ pub fn DeviceList(devices: Resource<(), Result<Vec<Device>, ServerFnError>>) -> 
                                         .into_view()
                                 }
                                 Err(e) => {
-                                    view! {
-                                        // set_current_device.set(Some(device_clone))
-
-                                        <p>{format!("DeviceList error: {e}")}</p>
-                                    }
-                                        .into_view()
+                                    view! { <p>{format!("DeviceList error: {e}")}</p> }.into_view()
                                 }
                             }
                         })
@@ -117,8 +112,7 @@ pub fn DeviceListItem(device: Device) -> impl IntoView {
 
 #[component]
 pub fn SmartPlugItem(device: Device) -> impl IntoView {
-    let device_clone = device.clone();
-    let ip = device_clone.ip.clone();
+    let ip = device.ip.clone();
 
     view! {
         <DeviceListCard device=device.clone()>
@@ -131,6 +125,7 @@ pub fn SmartPlugItem(device: Device) -> impl IntoView {
                     })
                 })
             />
+
         </DeviceListCard>
     }
 }
@@ -167,6 +162,7 @@ pub fn SmartLightItem(device: Device) -> impl IntoView {
                     });
                 })
             />
+
         </DeviceListCard>
     }
 }
@@ -185,6 +181,7 @@ pub fn RokuTvItem(device: Device) -> impl IntoView {
                     });
                 })
             />
+
         </DeviceListCard>
     }
 }
