@@ -4,9 +4,8 @@ use {
             command_box::CommandBox, device_list::DeviceList, ring_cameras::RingCameras,
             roku_tv_remote::RokuTvRemote,
         },
-        integrations::{
-            iron_nest::types::Device, ring::types::RingCamera, roku::types::AppsAppWithIcon,
-        },
+        integrations::{ring::types::RingCamera, roku::types::AppsAppWithIcon},
+        server::dashboard_page::get_devices,
     },
     leptos::*,
     serde::{Deserialize, Serialize},
@@ -138,24 +137,4 @@ pub fn DashboardPage() -> impl IntoView {
             <DeviceList devices=devices/>
         </aside>
     }
-}
-
-#[server(GetDevices)]
-pub async fn get_devices() -> Result<Vec<Device>, ServerFnError> {
-    use {
-        crate::integrations::iron_nest::types::Device,
-        sqlx::{Pool, Sqlite},
-        std::sync::Arc,
-    };
-
-    let pool = use_context::<Arc<Pool<Sqlite>>>().unwrap();
-
-    let query = "
-        SELECT id, name, device_type, ip, power_state, 0 AS battery_percentage 
-        FROM devices
-    ";
-    sqlx::query_as::<Sqlite, Device>(query)
-        .fetch_all(&*pool)
-        .await
-        .map_err(Into::into)
 }
