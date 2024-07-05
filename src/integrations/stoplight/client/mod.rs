@@ -1,19 +1,7 @@
-use {
-    async_nats::jetstream,
-    log::info,
-    serde::{Deserialize, Serialize},
-    std::error::Error,
-};
+use {super::types::Stoplight, async_nats::jetstream, log::info, std::error::Error};
 
 const STOPLIGHT_BUCKET: &str = "stoplight";
 const STOPLIGHT_SUBJECT: &str = "stoplight";
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Stoplight {
-    pub red: bool,
-    pub yellow: bool,
-    pub green: bool,
-}
 
 pub async fn stoplight_get_state() -> Result<Stoplight, Box<dyn Error>> {
     let nats = async_nats::ConnectOptions::with_credentials_file("default.creds")
