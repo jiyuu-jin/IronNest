@@ -14,7 +14,6 @@ use {
     serde_json::{json, Value},
     sqlx::{Pool, Sqlite},
     std::sync::Arc,
-    tokio::task,
     tokio_cron_scheduler::{Job, JobScheduler},
     url::Url,
 };
@@ -66,27 +65,30 @@ pub fn extract_ip(url_str: &str) -> Result<String, url::ParseError> {
 }
 
 pub async fn schedule_task(
-    function_name: String,
-    function_args: serde_json::Value,
+    function_name: Arc<String>,
+    function_args: Arc<Value>,
     schedule: &str,
-) {
-    let sched = JobScheduler::new().await.unwrap();
-
+) -> Result<(), Box<dyn std::error::Error>> {
+    let sched = JobScheduler::new().await?;
     sched
         .add(
-            Job::new(schedule, move |_uuid, _l| {
-                let function_name = function_name.clone();
-                let function_args = function_args.clone();
+            Job::new_async(schedule, move |uuid, mut l| {
+                let function_name_clone = function_name.clone();
+                let function_args_clone = function_args.clone();
 
-                task::spawn(async move {
-                    println!("Calling {}", function_name);
-                    execute_function(function_name, function_args).await;
-                });
+                Box::pin(async move {
+                    let fn_name = (*function_name_clone).clone();
+                    let fn_args = (*function_args_clone).clone();
+
+                    println!("Calling {}", fn_name);
+                    execute_function(fn_name, fn_args).await;
+                })
             })
             .unwrap(),
         )
         .await
         .unwrap();
+    Ok(())
 }
 
 pub async fn execute_function(function_name: String, function_args: serde_json::Value) -> Value {
