@@ -154,11 +154,11 @@ pub fn ActionsPage() -> impl IntoView {
                                                                     label="Function name".to_string()
                                                                     name="function-name".to_string()
                                                                     data=vec![
-                                                                        "tplink_set_light_brightness",
-                                                                        "tplink_turn_light_on_off",
-                                                                        "tplink_turn_plug_on",
-                                                                        "tplink_turn_plug_off",
-                                                                        "stoplight_toggle",
+                                                                        "tplink_set_light_brightness".to_owned(),
+                                                                        "tplink_turn_light_on_off".to_owned(),
+                                                                        "tplink_turn_plug_on".to_owned(),
+                                                                        "tplink_turn_plug_off".to_owned(),
+                                                                        "stoplight_toggle".to_owned(),
                                                                     ]
                                                                 />
 

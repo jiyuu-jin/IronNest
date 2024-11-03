@@ -164,6 +164,7 @@ fn get_start_of_day_timestamp() -> i64 {
         .date_naive()
         .and_hms_opt(0, 0, 0)
         .expect("Date should be valid with non-invalid params")
+        .and_utc()
         .timestamp_millis()
 }
 

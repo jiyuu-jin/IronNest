@@ -40,9 +40,9 @@ pub async fn insert_devices_into_db(
         )
         .bind(&device.name)
         .bind(&device.device_type)
-        .bind(&device.battery_percentage.to_string())
+        .bind(device.battery_percentage.to_string())
         .bind(&device.ip)
-        .bind(&device.power_state.to_string())
+        .bind(device.power_state.to_string())
         .execute(&*pool)
         .await?;
     }
@@ -84,7 +84,7 @@ pub async fn schedule_task(
     let sched = JobScheduler::new().await?;
     sched
         .add(
-            Job::new_async(schedule, move |uuid, mut l| {
+            Job::new_async(schedule, move |_uuid, mut _l| {
                 let function_name_clone = function_name.clone();
                 let function_args_clone = function_args.clone();
 
@@ -299,7 +299,7 @@ pub async fn insert_cameras_into_db(
             )
             .bind(&video_item.ding_id)
             .bind(camera.id)
-            .bind(&video_item.created_at.to_string())
+            .bind(video_item.created_at.to_string())
             .bind(&video_item.hq_url)
             .execute(&*pool)
             .await?;

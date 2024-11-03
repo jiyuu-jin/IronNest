@@ -2,7 +2,6 @@ use {
     crate::components::{login_form::LoginForm, text_input::TextInput},
     leptos::*,
     leptos_router::*,
-    std::sync::Arc,
 };
 
 #[component]
@@ -32,7 +31,7 @@ pub async fn handle_ring_login(
     password: String,
     tfa: String,
 ) -> Result<String, ServerFnError> {
-    use crate::integrations::ring::client::RingRestClient;
+    use {crate::integrations::ring::client::RingRestClient, std::sync::Arc};
     let ring_rest_client = use_context::<Arc<RingRestClient>>().unwrap();
     let result = ring_rest_client
         .request_auth_token(&username, &password, &tfa)
