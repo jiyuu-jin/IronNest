@@ -10,8 +10,8 @@ pub fn AccountsPage() -> impl IntoView {
                     <a href=format!("/integrations/{}", data.name)>
                         <div class="flex items-center gap-x-4 border-b border-gray-900/5 bg-gray-50 p-6">
                             <img
-                                src=data.image.clone()
-                                alt=data.name.clone()
+                                src=data.image
+                                alt=data.name
                                 class="h-12 w-12 flex-none rounded-lg bg-white object-cover ring-1 ring-gray-900/10"
                             />
                             <div class="text-sm font-medium leading-6 text-gray-900">

@@ -1,7 +1,7 @@
 use leptos::*;
 
 #[component]
-pub fn Select<'a>(label: String, name: String, data: Vec<&'a str>) -> impl IntoView {
+pub fn Select(label: String, name: String, data: Vec<String>) -> impl IntoView {
     view! {
         <div>
             <label for="function-name" class="block text-sm font-medium leading-6 text-gray-900">

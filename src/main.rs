@@ -87,7 +87,7 @@ cfg_if::cfg_if! {
                 .with_state(app_state);
 
             let auth_ring_rest_client = ring_rest_client.clone();
-            let ring_auth_refresh_job = tokio::task::spawn(async move {
+            let _ring_auth_refresh_job = tokio::task::spawn(async move {
                 let six_hours = chrono::Duration::hours(6).to_std().unwrap();
                 let mut interval = tokio::time::interval(six_hours);
                 loop {
@@ -102,7 +102,7 @@ cfg_if::cfg_if! {
 
             let shared_pool_clone1 = shared_pool.clone();
             let discovery_ring_client = ring_rest_client.clone();
-            let ring_device_discovery_job = tokio::task::spawn(async move {
+            let _ring_device_discovery_job = tokio::task::spawn(async move {
                 let five_minutes = chrono::Duration::minutes(5).to_std().unwrap();
                 let mut interval = tokio::time::interval(five_minutes);
 

@@ -8,9 +8,6 @@ use {
         },
     },
     leptos::{html::Div, *},
-    leptos_use::{
-        core::Position, use_draggable_with_options, UseDraggableOptions, UseDraggableReturn,
-    },
     log::debug,
 };
 
@@ -74,7 +71,7 @@ pub fn DeviceList(devices: Resource<(), Result<Vec<Device>, ServerFnError>>) -> 
 
 #[component]
 pub fn DeviceListItem(device: Device) -> impl IntoView {
-    let el = create_node_ref::<Div>();
+    let _el = create_node_ref::<Div>();
 
     // let UseDraggableReturn { x, y, style, .. } = use_draggable_with_options(
     //     el,

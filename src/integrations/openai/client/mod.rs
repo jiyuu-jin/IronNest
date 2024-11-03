@@ -277,7 +277,7 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
         .await
         .unwrap()
         .choices
-        .get(0)
+        .first()
         .unwrap()
         .message
         .clone();
