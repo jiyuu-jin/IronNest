@@ -1,15 +1,19 @@
 cfg_if::cfg_if! {
     if #[cfg(feature = "ssr")] {
+        use iron_nest::integrations::iron_nest::client::{
+            leptos_routes_handler, server_fn_handler, AppState,
+        };
+        use iron_nest::integrations::{
+            iron_nest::{insert_cameras_into_db, insert_initial_devices_into_db},
+            ring::{get_ring_camera, types::DevicesRes},
+        };
+        use log::info;
         use {
             axum::{
-                body::Body as AxumBody,
-                extract::{FromRef, Path, RawQuery, State},
-                response::{IntoResponse, Response},
                 routing::get,
                 Router,
             },
             dotenv::dotenv,
-            http::Request,
             iron_nest::{
                 components::layout::App,
                 fileserv::file_and_error_handler,
@@ -17,71 +21,22 @@ cfg_if::cfg_if! {
                 integrations::{
                     iron_nest::{
                         client::insert_devices_into_db,
-                        create_db_tables, extract_ip, get_auth_from_db, insert_auth,
-                        insert_cameras_into_db, insert_initial_devices_into_db,
-                        types::{AuthState, Device, DeviceType},
+                        create_db_tables,
+                        types::{Device, DeviceType},
                     },
-                    ring::{get_ring_camera, types::DevicesRes, RingRestClient},
-                    roku::{roku_discover, roku_get_device_info},
+                    ring::RingRestClient,
                     tplink::{discover_devices, types::DeviceData},
-                    tuya::{get_devices, get_refresh_token},
                 },
             },
-            leptos::{get_configuration, logging::log, provide_context, LeptosOptions},
-            leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes},
-            log::{error, info, LevelFilter},
-            reqwest::header::HeaderMap,
+            leptos::{get_configuration},
+            leptos_axum::{generate_route_list, LeptosRoutes},
+            log::{error, LevelFilter},
             simple_logger::SimpleLogger,
             sqlx::{
-                sqlite::{SqliteConnectOptions, SqlitePool},
-                Pool, Sqlite,
+                sqlite::{SqliteConnectOptions, SqlitePool}
             },
             std::{fs::File, sync::Arc, time::Duration},
         };
-
-        #[derive(FromRef, Debug, Clone)]
-        pub struct AppState {
-            pub leptos_options: LeptosOptions,
-            pub ring_rest_client: Arc<RingRestClient>,
-            pub pool: Arc<Pool<Sqlite>>,
-        }
-
-        async fn server_fn_handler(
-            State(app_state): State<AppState>,
-            path: Path<String>,
-            headers: HeaderMap,
-            raw_query: RawQuery,
-            request: Request<AxumBody>,
-        ) -> impl IntoResponse {
-            log!("{:?}", path);
-
-            handle_server_fns_with_context(
-                path,
-                headers,
-                raw_query,
-                move || {
-                    provide_context(app_state.ring_rest_client.clone());
-                    provide_context(app_state.pool.clone());
-                },
-                request,
-            )
-            .await
-        }
-
-        async fn leptos_routes_handler(
-            State(app_state): State<AppState>,
-            req: Request<AxumBody>,
-        ) -> Response {
-            let handler = leptos_axum::render_app_to_stream_with_context(
-                app_state.leptos_options.clone(),
-                move || {
-                    provide_context(app_state.ring_rest_client.clone());
-                    provide_context(app_state.pool.clone());
-                },
-                App,
-            );
-            handler(req).await.into_response()
-        }
 
         #[tokio::main]
         async fn main() {
@@ -109,7 +64,7 @@ cfg_if::cfg_if! {
             let addr = leptos_options.site_addr;
             let routes = generate_route_list(App);
 
-            let ring_rest_client = Arc::new(iron_nest::integrations::ring::RingRestClient::new(shared_pool.clone()).await);
+            let ring_rest_client = Arc::new(RingRestClient::new(shared_pool.clone()).await);
 
             let app_state = AppState {
                 leptos_options,
@@ -196,11 +151,6 @@ cfg_if::cfg_if! {
                 }
             });
 
-            let http_server = {
-                log::info!("listening on http://{}", &addr);
-                axum::Server::bind(&addr).serve(app.into_make_service())
-            };
-
             tokio::task::spawn({
                 let shared_pool = shared_pool.clone();
                 async move {
@@ -243,122 +193,126 @@ cfg_if::cfg_if! {
                                 eprintln!("Error discovering devices: {}", e);
                             }
                         }
-                        tokio::time::sleep(Duration::from_secs(20)).await;
+                        tokio::time::sleep(Duration::from_secs(60)).await;
                     }
                 }
             });
 
-            let shared_pool_3 = shared_pool.clone();
-            tokio::task::spawn(async move {
-                println!("Running thread for tuya auth");
-                let tuya_auth = get_auth_from_db(shared_pool_3.clone(), "tuya").await;
+            // let shared_pool_3 = shared_pool.clone();
+            // tokio::task::spawn(async move {
+            //     println!("Running thread for tuya auth");
+            //     let tuya_auth = get_auth_from_db(shared_pool_3.clone(), "tuya").await;
 
-                if !tuya_auth.refresh_token.is_empty() {
-                    println!("Found a refresh_token, refreshing auth_token");
-                    let res = get_refresh_token().await.unwrap();
-                    insert_auth(shared_pool_3, "tuya", AuthState {
-                        refresh_token: res.result.refresh_token,
-                        hardware_id: res.result.uid,
-                        auth_token: res.result.access_token,
-                    }).await;
-                } else {
-                    println!("No refresh_token found, getting a new one");
-                    let res = get_refresh_token().await.unwrap();
-                    insert_auth(shared_pool_3, "tuya", AuthState {
-                        refresh_token: res.result.refresh_token,
-                        hardware_id: res.result.uid,
-                        auth_token: res.result.access_token,
-                    }).await;
-                }
-                tokio::time::sleep(chrono::Duration::hours(1).to_std().unwrap()).await;
-            });
+            //     if !tuya_auth.refresh_token.is_empty() {
+            //         println!("Found a refresh_token, refreshing auth_token");
+            //         let res = get_refresh_token().await.unwrap();
+            //         insert_auth(shared_pool_3, "tuya", AuthState {
+            //             refresh_token: res.result.refresh_token,
+            //             hardware_id: res.result.uid,
+            //             auth_token: res.result.access_token,
+            //         }).await;
+            //     } else {
+            //         println!("No refresh_token found, getting a new one");
+            //         let res = get_refresh_token().await.unwrap();
+            //         insert_auth(shared_pool_3, "tuya", AuthState {
+            //             refresh_token: res.result.refresh_token,
+            //             hardware_id: res.result.uid,
+            //             auth_token: res.result.access_token,
+            //         }).await;
+            //     }
+            //     tokio::time::sleep(chrono::Duration::hours(1).to_std().unwrap()).await;
+            // });
 
-            let shared_pool_4 = shared_pool.clone();
-            tokio::task::spawn(async move {
-                println!("Running thread for tuya discovery");
-                let tuya_auth = get_auth_from_db(shared_pool_4.clone(), "tuya").await;
-                if !tuya_auth.auth_token.is_empty() {
-                    // let res = get_user_id("ebbd589a10538c471dbeaf", &tuya_auth.auth_token).await;
-                    let res = get_devices("az17063780590351Cr1b", &tuya_auth.auth_token).await.unwrap();
-                    println!("{:?}", res);
-                    let devices = res.result.iter().map(|device| Device {
-                            id: 0,
-                            name: device.name.clone(),
-                            device_type: DeviceType::SmartLight,
-                            ip: device.ip.clone(),
-                            power_state: 0,
-                            battery_percentage: 0,
-                        }).collect();
+            // let shared_pool_4 = shared_pool.clone();
+            // tokio::task::spawn(async move {
+            //     println!("Running thread for tuya discovery");
+            //     let tuya_auth = get_auth_from_db(shared_pool_4.clone(), "tuya").await;
+            //     if !tuya_auth.auth_token.is_empty() {
+            //         // let res = get_user_id("ebbd589a10538c471dbeaf", &tuya_auth.auth_token).await;
+            //         let res = get_devices("az17063780590351Cr1b", &tuya_auth.auth_token).await.unwrap();
+            //         println!("{:?}", res);
+            //         let devices = res.result.iter().map(|device| Device {
+            //                 id: 0,
+            //                 name: device.name.clone(),
+            //                 device_type: DeviceType::SmartLight,
+            //                 ip: device.ip.clone(),
+            //                 power_state: 0,
+            //                 battery_percentage: 0,
+            //             }).collect();
 
-                    insert_devices_into_db(shared_pool_4.clone(), &devices).await.unwrap();
-                }
-                tokio::time::sleep(chrono::Duration::hours(1).to_std().unwrap()).await;
-            });
+            //         insert_devices_into_db(shared_pool_4.clone(), &devices).await.unwrap();
+            //     }
+            //     tokio::time::sleep(chrono::Duration::hours(1).to_std().unwrap()).await;
+            // });
 
-            let shared_pool_5 = shared_pool.clone();
-            tokio::task::spawn(async move {
-                println!("Running thread for eufy auth");
-                let eufy_auth = get_auth_from_db(shared_pool_5.clone(), "eufy").await;
-                if !eufy_auth.refresh_token.is_empty() {
-                    println!("Found a refresh_token, refreshing auth_token");
-                } else {
-                    println!("No refresh_token found, getting a new one");
-                    let res = iron_nest::integrations::efuy::eufy_login().await;
-                    insert_auth(shared_pool_5, "eufy", AuthState {
-                        refresh_token: res.data.auth_token.to_owned(),
-                        hardware_id: res.data.user_id,
-                        auth_token: res.data.auth_token,
-                    }).await;
-                }
+            // let shared_pool_5 = shared_pool.clone();
+            // tokio::task::spawn(async move {
+            //     println!("Running thread for eufy auth");
+            //     let eufy_auth = get_auth_from_db(shared_pool_5.clone(), "eufy").await;
+            //     if !eufy_auth.refresh_token.is_empty() {
+            //         println!("Found a refresh_token, refreshing auth_token");
+            //     } else {
+            //         println!("No refresh_token found, getting a new one");
+            //         let res = iron_nest::integrations::efuy::eufy_login().await;
+            //         insert_auth(shared_pool_5, "eufy", AuthState {
+            //             refresh_token: res.data.auth_token.to_owned(),
+            //             hardware_id: res.data.user_id,
+            //             auth_token: res.data.auth_token,
+            //         }).await;
+            //     }
 
-                tokio::time::sleep(chrono::Duration::hours(1).to_std().unwrap()).await;
-            });
+            //     tokio::time::sleep(chrono::Duration::hours(1).to_std().unwrap()).await;
+            // });
 
-            let shared_pool_6 = shared_pool.clone();
-            tokio::task::spawn(async move {
-                println!("Running thread for eufy discovery");
-                let eufy_auth = get_auth_from_db(shared_pool_6.clone(), "eufy").await;
-                if !eufy_auth.auth_token.is_empty() {
-                    iron_nest::integrations::efuy::get_devices(eufy_auth.auth_token).await;
-                }
-                tokio::time::sleep(chrono::Duration::hours(1).to_std().unwrap()).await;
-            });
+            // let shared_pool_6 = shared_pool.clone();
+            // tokio::task::spawn(async move {
+            //     println!("Running thread for eufy discovery");
+            //     let eufy_auth = get_auth_from_db(shared_pool_6.clone(), "eufy").await;
+            //     if !eufy_auth.auth_token.is_empty() {
+            //         iron_nest::integrations::efuy::get_devices(eufy_auth.auth_token).await;
+            //     }
+            //     tokio::time::sleep(chrono::Duration::hours(1).to_std().unwrap()).await;
+            // });
 
-            tokio::task::spawn(async move {
-                println!("Running discovery thread for roku devices");
-                loop {
-                    let roku_devices = roku_discover().await;
-                    let mut devices: Vec<Device> = Vec::new();
+            // tokio::task::spawn(async move {
+            //     println!("Running discovery thread for roku devices");
+            //     loop {
+            //         let roku_devices = roku_discover().await;
+            //         let mut devices: Vec<Device> = Vec::new();
 
-                    for device in roku_devices.iter() {
-                        let ip = extract_ip(&device.location).unwrap();
-                        let device_info = roku_get_device_info(&ip).await;
-                        let power_state = if device_info.power_mode == "PowerOn" { 1 } else {0};
-                        devices.push(Device {
-                            id: 0,
-                            name: device_info.user_device_name,
-                            device_type: DeviceType::RokuTv,
-                            ip,
-                            power_state,
-                            battery_percentage: 0,
-                        });
-                    }
+            //         for device in roku_devices.iter() {
+            //             let ip = extract_ip(&device.location).unwrap();
+            //             let device_info = roku_get_device_info(&ip).await;
+            //             let power_state = if device_info.power_mode == "PowerOn" { 1 } else {0};
+            //             devices.push(Device {
+            //                 id: 0,
+            //                 name: device_info.user_device_name,
+            //                 device_type: DeviceType::RokuTv,
+            //                 ip,
+            //                 power_state,
+            //                 battery_percentage: 0,
+            //             });
+            //         }
 
-                    match insert_devices_into_db(shared_pool.clone(), &devices).await {
-                        Ok(_) => {},
-                        Err(e) => {
-                            print!("{e}");
-                        }
-                    };
-                    tokio::time::sleep(Duration::from_secs(30)).await;
-                }
-            });
+            //         match insert_devices_into_db(shared_pool.clone(), &devices).await {
+            //             Ok(_) => {},
+            //             Err(e) => {
+            //                 print!("{e}");
+            //             }
+            //         };
+            //         tokio::time::sleep(Duration::from_secs(30)).await;
+            //     }
+            // });
 
+            let http_server = {
+                log::info!("listening on http://{}", &addr);
+                axum::Server::bind(&addr).serve(app.into_make_service())
+            };
 
             tokio::select! {
-                e = http_server => error!("HTTP server exiting with error {e:?}"),
-                e = ring_auth_refresh_job => error!("Ring auth refresh job exiting with error {e:?}"),
-                e = ring_device_discovery_job => error!("Ring device discovery job exiting with error {e:?}")
+                e = http_server => error!("HTTP server exiting with error {e:?}")
+                // e = ring_auth_refresh_job => error!("Ring auth refresh job exiting with error {e:?}"),
+                // e = ring_device_discovery_job => error!("Ring device discovery job exiting with error {e:?}")
             }
         }
     } else {

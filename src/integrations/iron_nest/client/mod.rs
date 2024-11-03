@@ -1,16 +1,28 @@
 use {
     super::types::{AuthState, Device, DeviceType},
-    crate::integrations::{
-        ring::types::RingCamera,
-        roku::{roku_launch_app, roku_search, roku_send_keypress},
-        stoplight::toggle_stoplight,
-        tplink::{
-            tplink_set_light_brightness, tplink_turn_light_on_off, tplink_turn_plug_off,
-            tplink_turn_plug_on,
+    crate::{
+        components::layout::App,
+        integrations::{
+            ring::{client::RingRestClient, types::RingCamera},
+            roku::{roku_launch_app, roku_search, roku_send_keypress},
+            stoplight::toggle_stoplight,
+            tplink::{
+                tplink_set_light_brightness, tplink_turn_light_on_off, tplink_turn_plug_off,
+                tplink_turn_plug_on,
+            },
         },
     },
+    axum::{
+        body::Body as AxumBody,
+        extract::{FromRef, Path, RawQuery, State},
+        response::{IntoResponse, Response},
+    },
     chrono::Utc,
+    http::Request,
+    leptos::{logging::log, provide_context, LeptosOptions},
+    leptos_axum::handle_server_fns_with_context,
     log::{error, info},
+    reqwest::header::HeaderMap,
     serde_json::{json, Value},
     sqlx::{Pool, Sqlite},
     std::sync::Arc,
@@ -217,6 +229,51 @@ pub async fn create_db_tables(pool: Arc<Pool<Sqlite>>) {
     .execute(&*pool.clone())
     .await
     .unwrap();
+
+    // sqlx::query(
+    //     "CREATE TABLE IF NOT EXISTS ingredient (
+    //         id INTEGER PRIMARY KEY,
+    //         name TEXT NOT NULL,
+    //     )",
+    // )
+    // .execute(&*pool.clone())
+    // .await
+    // .unwrap();
+
+    // sqlx::query(
+    //     "CREATE TABLE IF NOT EXISTS recipe (
+    //         id INTEGER PRIMARY KEY,
+    //         name TEXT NOT NULL,
+    //     )",
+    // )
+    // .execute(&*pool.clone())
+    // .await
+    // .unwrap();
+
+    // sqlx::query(
+    //     "CREATE TABLE IF NOT EXISTS recipe_ingredient (
+    //         id INTEGER PRIMARY KEY,
+    //         recipe_id INTEGER NOT NULL,
+    //         ingredient_id INTEGER NOT NULL,
+    //         amount INTEGER NOT NULL,
+    //         FOREIGN KEY(recipe_id) REFERENCES recipe(id)
+    //         FOREIGN KEY(ingredient_id) REFERENCES ingredient(id)
+    //     )",
+    // )
+    // .execute(&*pool.clone())
+    // .await
+    // .unwrap();
+
+    // sqlx::query(
+    //     "CREATE TABLE IF NOT EXISTS amounts (
+    //         id INTEGER PRIMARY KEY,
+    //         ingredient_id INTEGER NOT NULL,
+    //         FOREIGN KEY(ingredient_id) REFERENCES ingredient(id)
+    //     )",
+    // )
+    // .execute(&*pool.clone())
+    // .await
+    // .unwrap();
 }
 
 pub async fn insert_cameras_into_db(
@@ -298,4 +355,48 @@ pub async fn get_auth_from_db(pool: Arc<Pool<Sqlite>>, name: &str) -> AuthState 
             }
         }
     }
+}
+
+pub async fn leptos_routes_handler(
+    State(app_state): State<AppState>,
+    req: Request<AxumBody>,
+) -> Response {
+    let handler = leptos_axum::render_app_to_stream_with_context(
+        app_state.leptos_options.clone(),
+        move || {
+            provide_context(app_state.ring_rest_client.clone());
+            provide_context(app_state.pool.clone());
+        },
+        App,
+    );
+    handler(req).await.into_response()
+}
+
+pub async fn server_fn_handler(
+    State(app_state): State<AppState>,
+    path: Path<String>,
+    headers: HeaderMap,
+    raw_query: RawQuery,
+    request: Request<AxumBody>,
+) -> impl IntoResponse {
+    log!("{:?}", path);
+
+    handle_server_fns_with_context(
+        path,
+        headers,
+        raw_query,
+        move || {
+            provide_context(app_state.ring_rest_client.clone());
+            provide_context(app_state.pool.clone());
+        },
+        request,
+    )
+    .await
+}
+
+#[derive(FromRef, Debug, Clone)]
+pub struct AppState {
+    pub leptos_options: LeptosOptions,
+    pub ring_rest_client: Arc<RingRestClient>,
+    pub pool: Arc<Pool<Sqlite>>,
 }

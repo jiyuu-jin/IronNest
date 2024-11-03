@@ -23,13 +23,6 @@ static SNAPSHOTS_API_BASE_URL: &str = "https://app-snaps.ring.com/snapshots/";
 static APP_API_BASE_URL: &str = "https://app.ring.com/api/v1/";
 static OAUTH_API_BASE_URL: &str = "https://oauth.ring.com/oauth/token";
 
-#[derive(Debug)]
-pub struct RingRestClient {
-    state: AuthState,
-    pub client: Client,
-    pool: Arc<Pool<Sqlite>>,
-}
-
 pub fn camera_recordings_list(recordings: VideoSearchRes) -> String {
     "<ul>"
         .chars()
@@ -318,4 +311,11 @@ fn get_start_of_today() -> i64 {
 
 fn get_end_of_today() -> i64 {
     get_start_of_today() + Duration::days(1).num_milliseconds() - 1
+}
+
+#[derive(Debug)]
+pub struct RingRestClient {
+    pub state: AuthState,
+    pub client: Client,
+    pub pool: Arc<Pool<Sqlite>>,
 }
