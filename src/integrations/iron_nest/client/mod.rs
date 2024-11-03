@@ -230,50 +230,50 @@ pub async fn create_db_tables(pool: Arc<Pool<Sqlite>>) {
     .await
     .unwrap();
 
-    // sqlx::query(
-    //     "CREATE TABLE IF NOT EXISTS ingredient (
-    //         id INTEGER PRIMARY KEY,
-    //         name TEXT NOT NULL,
-    //     )",
-    // )
-    // .execute(&*pool.clone())
-    // .await
-    // .unwrap();
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS ingredient (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL
+        )",
+    )
+    .execute(&*pool.clone())
+    .await
+    .unwrap();
 
-    // sqlx::query(
-    //     "CREATE TABLE IF NOT EXISTS recipe (
-    //         id INTEGER PRIMARY KEY,
-    //         name TEXT NOT NULL,
-    //     )",
-    // )
-    // .execute(&*pool.clone())
-    // .await
-    // .unwrap();
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS recipe (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL
+        )",
+    )
+    .execute(&*pool.clone())
+    .await
+    .unwrap();
 
-    // sqlx::query(
-    //     "CREATE TABLE IF NOT EXISTS recipe_ingredient (
-    //         id INTEGER PRIMARY KEY,
-    //         recipe_id INTEGER NOT NULL,
-    //         ingredient_id INTEGER NOT NULL,
-    //         amount INTEGER NOT NULL,
-    //         FOREIGN KEY(recipe_id) REFERENCES recipe(id)
-    //         FOREIGN KEY(ingredient_id) REFERENCES ingredient(id)
-    //     )",
-    // )
-    // .execute(&*pool.clone())
-    // .await
-    // .unwrap();
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS recipe_ingredient (
+            id INTEGER PRIMARY KEY,
+            recipe_id INTEGER NOT NULL,
+            ingredient_id INTEGER NOT NULL,
+            amount INTEGER NOT NULL,
+            FOREIGN KEY(recipe_id) REFERENCES recipe(id),
+            FOREIGN KEY(ingredient_id) REFERENCES ingredient(id)
+        )",
+    )
+    .execute(&*pool.clone())
+    .await
+    .unwrap();
 
-    // sqlx::query(
-    //     "CREATE TABLE IF NOT EXISTS amounts (
-    //         id INTEGER PRIMARY KEY,
-    //         ingredient_id INTEGER NOT NULL,
-    //         FOREIGN KEY(ingredient_id) REFERENCES ingredient(id)
-    //     )",
-    // )
-    // .execute(&*pool.clone())
-    // .await
-    // .unwrap();
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS amounts (
+            id INTEGER PRIMARY KEY,
+            ingredient_id INTEGER NOT NULL,
+            FOREIGN KEY(ingredient_id) REFERENCES ingredient(id)
+        )",
+    )
+    .execute(&*pool.clone())
+    .await
+    .unwrap();
 }
 
 pub async fn insert_cameras_into_db(
