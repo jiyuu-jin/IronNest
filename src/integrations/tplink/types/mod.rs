@@ -45,7 +45,7 @@ pub struct TPLinkDiscoveryData {
     #[serde(rename = "oemId")]
     pub oem_id: String,
     pub on_time: i64,
-    pub relay_state: u8,
+    pub relay_state: i64,
     pub rssi: i64,
     pub status: String,
     pub sw_ver: String,
@@ -76,7 +76,7 @@ pub struct ControlProtocols {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct LightState {
-    pub on_off: u8,
+    pub on_off: i64,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

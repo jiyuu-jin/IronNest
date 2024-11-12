@@ -4,6 +4,7 @@ use {
     leptos::ServerFnError,
     log::info,
     serde_json::json,
+    sqlx::{PgPool, Row},
 };
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
@@ -24,7 +25,6 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
         Client,
         config::OpenAIConfig,
     },
-        sqlx::{Pool, Sqlite, Row},
     };
 
     impl Device {
@@ -38,7 +38,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     }
 }}
 
-pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<String, ServerFnError> {
+pub async fn open_api_command(text: String, pool: &PgPool) -> Result<String, ServerFnError> {
     println!("calling assistant with {:?}", text);
     let client = Client::new();
 
@@ -53,7 +53,7 @@ pub async fn open_api_command(text: String, pool: &Pool<Sqlite>) -> Result<Strin
 
     for row in rows {
         let state_value: i64 = row.get("power_state");
-        let state: u8 = state_value.try_into().expect("Value out of range for u64");
+        let state: i64 = state_value.try_into().expect("Value out of range for u64");
         let ip: String = row.get("ip");
         // let battery_percentage_value: i64 = row.get("battery_percentage");
         // let battery_percentage: u64 = battery_percentage_value

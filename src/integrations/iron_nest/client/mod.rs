@@ -24,33 +24,35 @@ use {
     log::{error, info},
     reqwest::header::HeaderMap,
     serde_json::{json, Value},
-    sqlx::{Pool, Sqlite},
+    sqlx::PgPool,
     std::sync::Arc,
     tokio_cron_scheduler::{Job, JobScheduler},
     url::Url,
 };
 
 pub async fn insert_devices_into_db(
-    pool: Arc<Pool<Sqlite>>,
+    pool: PgPool,
     devices: &Vec<Device>,
 ) -> Result<(), sqlx::Error> {
     for device in devices {
-        sqlx::query(
-            "INSERT OR REPLACE INTO devices (name, device_type, battery_percentage, ip, power_state) VALUES (?, ?, ?, ?, ?)",
-        )
-        .bind(&device.name)
-        .bind(&device.device_type)
-        .bind(device.battery_percentage.to_string())
-        .bind(&device.ip)
-        .bind(device.power_state.to_string())
-        .execute(&*pool)
-        .await?;
+        let query = "
+            INSERT INTO devices (
+                name, device_type, battery_percentage, ip, power_state 
+           ) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (ip) DO UPDATE SET name=$1, device_type=$2, battery_percentage=$3, ip=$4, power_state=$5";
+        sqlx::query(query)
+            .bind(&device.name)
+            .bind(&device.device_type)
+            .bind(device.battery_percentage)
+            .bind(&device.ip)
+            .bind(device.power_state)
+            .execute(&pool)
+            .await?;
     }
 
     Ok(())
 }
 
-pub async fn insert_initial_devices_into_db(pool: Arc<Pool<Sqlite>>) -> Result<(), sqlx::Error> {
+pub async fn insert_initial_devices_into_db(pool: PgPool) -> Result<(), sqlx::Error> {
     insert_devices_into_db(
         pool,
         &vec![Device {
@@ -100,6 +102,7 @@ pub async fn schedule_task(
         )
         .await
         .unwrap();
+    sched.start().await?;
     Ok(())
 }
 
@@ -163,121 +166,8 @@ pub async fn execute_function(function_name: String, function_args: serde_json::
     }
 }
 
-pub async fn create_db_tables(pool: Arc<Pool<Sqlite>>) {
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS devices (
-            id INTEGER PRIMARY KEY,
-            name TEXT NOT NULL,
-            device_type TEXT NOT NULL,
-            ip TEXT NOT NULL UNIQUE,
-            battery_percentage INT8,
-            power_state INT8 NOT NULL
-        )",
-    )
-    .execute(&*pool.clone())
-    .await
-    .unwrap();
-
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS events (
-            id INTEGER PRIMARY KEY,
-            schedule TEXT NOT NULL,
-            function TEXT NOT NULL,
-            parameters TEXT NOT NULL
-        )",
-    )
-    .execute(&*pool.clone())
-    .await
-    .unwrap();
-
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS auth (
-            id INTEGER PRIMARY KEY,
-            name TEXT NOT NULL UNIQUE,
-            hardware_id TEXT,
-            auth_token TEXT,
-            refresh_token TEXT,
-            last_login DATETIME,
-            captcha TEXT
-        )",
-    )
-    .execute(&*pool.clone())
-    .await
-    .unwrap();
-
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS ring_cameras (
-            id INT8 PRIMARY KEY,
-            description TEXT NOT NULL,
-            snapshot_image TEXT NOT NULL,
-            snapshot_timestamp INT8 NOT NULL,
-            health INT8 NOT NULL
-        )",
-    )
-    .execute(&*pool.clone())
-    .await
-    .unwrap();
-
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS ring_video_item (
-            ding_id TEXT PRIMARY KEY,
-            camera_id INT8,
-            created_at INT8 NOT NULL,
-            hq_url TEXT NOT NULL
-        )",
-    )
-    .execute(&*pool.clone())
-    .await
-    .unwrap();
-
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS ingredient (
-            id INTEGER PRIMARY KEY,
-            name TEXT NOT NULL
-        )",
-    )
-    .execute(&*pool.clone())
-    .await
-    .unwrap();
-
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS recipe (
-            id INTEGER PRIMARY KEY,
-            name TEXT NOT NULL
-        )",
-    )
-    .execute(&*pool.clone())
-    .await
-    .unwrap();
-
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS recipe_ingredient (
-            id INTEGER PRIMARY KEY,
-            recipe_id INTEGER NOT NULL,
-            ingredient_id INTEGER NOT NULL,
-            amount INTEGER NOT NULL,
-            FOREIGN KEY(recipe_id) REFERENCES recipe(id),
-            FOREIGN KEY(ingredient_id) REFERENCES ingredient(id)
-        )",
-    )
-    .execute(&*pool.clone())
-    .await
-    .unwrap();
-
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS amounts (
-            id INTEGER PRIMARY KEY,
-            ingredient_id INTEGER NOT NULL,
-            FOREIGN KEY(ingredient_id) REFERENCES ingredient(id)
-        )",
-    )
-    .execute(&*pool.clone())
-    .await
-    .unwrap();
-}
-
 pub async fn insert_cameras_into_db(
-    pool: Arc<Pool<Sqlite>>,
+    pool: PgPool,
     cameras: &[RingCamera],
 ) -> Result<(), sqlx::Error> {
     info!("Inserting camera into db");
@@ -290,7 +180,7 @@ pub async fn insert_cameras_into_db(
         .bind(&camera.snapshot.image)
         .bind(&camera.snapshot.timestamp)
         .bind(camera.health)
-        .execute(&*pool)
+        .execute(&pool)
         .await?;
 
         for video_item in camera.videos.video_search.iter() {
@@ -301,14 +191,14 @@ pub async fn insert_cameras_into_db(
             .bind(camera.id)
             .bind(video_item.created_at.to_string())
             .bind(&video_item.hq_url)
-            .execute(&*pool)
+            .execute(&pool)
             .await?;
         }
     }
     Ok(())
 }
 
-pub async fn insert_auth(pool: Arc<Pool<Sqlite>>, name: &str, state: AuthState) {
+pub async fn insert_auth(pool: PgPool, name: &str, state: AuthState) {
     let dt = Utc::now();
     let timestamp: i64 = dt.timestamp();
     let query = "
@@ -327,21 +217,21 @@ pub async fn insert_auth(pool: Arc<Pool<Sqlite>>, name: &str, state: AuthState) 
         .bind(&state.refresh_token)
         .bind(&state.hardware_id)
         .bind(timestamp)
-        .execute(&*pool)
+        .execute(&pool)
         .await
         .unwrap();
 }
 
-pub async fn get_auth_from_db(pool: Arc<Pool<Sqlite>>, name: &str) -> AuthState {
+pub async fn get_auth_from_db(pool: PgPool, name: &str) -> AuthState {
     let query = "
         SELECT hardware_id, auth_token, refresh_token 
         FROM auth
         WHERE name=$1
     ";
 
-    let auth_query = sqlx::query_as::<Sqlite, AuthState>(query)
+    let auth_query = sqlx::query_as::<_, AuthState>(query)
         .bind(name)
-        .fetch_one(&*pool)
+        .fetch_one(&pool)
         .await;
 
     match auth_query {
@@ -398,5 +288,5 @@ pub async fn server_fn_handler(
 pub struct AppState {
     pub leptos_options: LeptosOptions,
     pub ring_rest_client: Arc<RingRestClient>,
-    pub pool: Arc<Pool<Sqlite>>,
+    pub pool: PgPool,
 }

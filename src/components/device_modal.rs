@@ -97,10 +97,7 @@ pub fn SmartLightView(device: Device) -> impl IntoView {
                 });
             })/>
 
-            <Color_Picker
-                label={"Color".to_string()}
-                default_value={"#e66465".to_string()}
-            />
+            <Color_Picker label="Color".to_string() default_value="#e66465".to_string()/>
         </div>
     }
 }

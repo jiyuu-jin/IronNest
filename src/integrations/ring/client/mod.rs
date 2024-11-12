@@ -11,7 +11,7 @@ use {
     log::{error, info},
     reqwest::{self, Client, Method, Response},
     serde::de::DeserializeOwned,
-    sqlx::{Pool, Sqlite},
+    sqlx::PgPool,
     std::{collections::HashMap, num::ParseFloatError, str, sync::Arc},
     uuid::Uuid,
 };
@@ -71,7 +71,7 @@ pub enum RingRestClientError {
 
 impl RingRestClient {
     #[allow(clippy::new_without_default)]
-    pub async fn new(pool: Arc<Pool<Sqlite>>) -> Self {
+    pub async fn new(pool: PgPool) -> Self {
         let auth_db_pool = pool.clone();
         Self {
             pool,
@@ -317,5 +317,5 @@ fn get_end_of_today() -> i64 {
 pub struct RingRestClient {
     pub state: AuthState,
     pub client: Client,
-    pub pool: Arc<Pool<Sqlite>>,
+    pub pool: PgPool,
 }

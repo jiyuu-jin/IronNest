@@ -6,6 +6,10 @@ use {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ssr", derive(sqlx::prelude::Type))]
 #[serde(rename_all = "kebab-case")]
+#[cfg_attr(
+    feature = "ssr",
+    sqlx(type_name = "device_type", rename_all = "kebab-case")
+)]
 pub enum DeviceType {
     SmartPlug,
     SmartLight,
@@ -33,8 +37,8 @@ pub struct Device {
     pub name: String,
     pub device_type: DeviceType,
     pub ip: String,
-    pub power_state: u8,
-    pub battery_percentage: i64,
+    pub power_state: i64,
+    pub battery_percentage: i32,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

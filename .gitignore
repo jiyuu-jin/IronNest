@@ -4,3 +4,4 @@ target
 state.json
 default.creds
 database.sqlite
+docker-data

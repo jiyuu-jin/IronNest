@@ -14,7 +14,6 @@ use {
 cfg_if::cfg_if! {
     if #[cfg(feature = "ssr")] {
         use {
-            std::sync::Arc,
             crate::integrations::ring::types::{
                 RingCameraSnapshot, RingVideoRow, VideoItem, VideoSearchRes,
             }
@@ -34,15 +33,15 @@ pub struct DashboardValues {
 pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
     use {
         crate::integrations::roku::{roku_get_apps, roku_get_channel_icon},
-        sqlx::{Pool, Row, Sqlite},
+        sqlx::{PgPool, Postgres, Row},
     };
 
-    let pool = use_context::<Arc<Pool<Sqlite>>>().unwrap();
+    let pool = use_context::<PgPool>().unwrap();
 
     let ring_camera_rows = sqlx::query(
         "SELECT id, description, snapshot_image, snapshot_timestamp, health FROM ring_cameras",
     )
-    .fetch_all(&*pool)
+    .fetch_all(&pool)
     .await?;
 
     let apps = roku_get_apps("10.0.0.217").await;
@@ -65,8 +64,8 @@ pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
             FROM ring_video_item
         ";
 
-        let ring_videos_res = sqlx::query_as::<Sqlite, RingVideoRow>(video_events_query)
-            .fetch_all(&*pool)
+        let ring_videos_res = sqlx::query_as::<Postgres, RingVideoRow>(video_events_query)
+            .fetch_all(&pool)
             .await
             .unwrap();
 

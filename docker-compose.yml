@@ -1,20 +1,29 @@
 version: '3'
 
 services:
-  traefik:
-    image: traefik:v2.5
-    command:
-      - --providers.docker
-      - --providers.file.filename=/etc/traefik/traefik.yaml
-      - --providers.file.watch=true
-      - --entrypoints.web.address=:80
-      - --api.dashboard=true
+  # traefik:
+  #   image: traefik:v2.5
+  #   command:
+  #     - --providers.docker
+  #     - --providers.file.filename=/etc/traefik/traefik.yaml
+  #     - --providers.file.watch=true
+  #     - --entrypoints.web.address=:80
+  #     - --api.dashboard=true
+  #   ports:
+  #     - "80:80"
+  #     - "8080:8080"
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #     - ./traefik.yml:/etc/traefik/traefik.yaml
+
+  postgres:
+    image: postgres:17
     ports:
-      - "80:80"
-      - "8080:8080"
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_PASSWORD: password
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./traefik.yml:/etc/traefik/traefik.yaml
+      - "./docker-data/:/var/lib/postgresql/data:rw"
 
 # version: '3.8'
 

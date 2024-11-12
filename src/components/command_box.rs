@@ -8,11 +8,8 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
 #[server(HandleAssistantCommand)]
 pub async fn handle_assistant_command(text: String) -> Result<String, ServerFnError> {
-    use {
-        sqlx::{Pool, Sqlite},
-        std::sync::Arc,
-    };
-    let pool = use_context::<Arc<Pool<Sqlite>>>().unwrap();
+    use sqlx::PgPool;
+    let pool = use_context::<PgPool>().unwrap();
     open_api_command(text, &pool).await
 }
 
