@@ -1,7 +1,7 @@
 use {
     super::checkbox::Checkbox,
     crate::{
-        components::slider::Slider,
+        components::{color_picker::Color_Picker, slider::Slider},
         integrations::iron_nest::types::{Device, DeviceType},
         server::tplink::{
             handle_smart_light_brightness, handle_smart_light_toggle, handle_smart_plug_toggle,
@@ -96,6 +96,11 @@ pub fn SmartLightView(device: Device) -> impl IntoView {
                     handle_smart_light_brightness(value, ip_clone).await.unwrap();
                 });
             })/>
+
+            <Color_Picker
+                label={"Color".to_string()}
+                default_value={"#e66465".to_string()}
+            />
         </div>
     }
 }

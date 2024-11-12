@@ -1,4 +1,5 @@
 pub mod checkbox;
+pub mod color_picker;
 pub mod command_box;
 pub mod device_list;
 pub mod device_list_card;
