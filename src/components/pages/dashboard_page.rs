@@ -1,8 +1,8 @@
 use {
     crate::{
         components::{
-            command_box::CommandBox, device_list::DeviceList, ring_cameras::RingCameras,
-            roku_tv_remote::RokuTvRemote,
+            command_box::CommandBox, device_list::DeviceList, planned_meals::PlannedMeals,
+            ring_cameras::RingCameras, roku_tv_remote::RokuTvRemote,
         },
         integrations::{ring::types::RingCamera, roku::types::AppsAppWithIcon},
         server::dashboard_page::get_devices,
@@ -23,11 +23,24 @@ cfg_if::cfg_if! {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct Ingredient {
+    pub name: String,
+    pub amount: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ScheduledMeal {
+    pub recipie_name: String,
+    pub ingredients: Ingredient,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct DashboardValues {
     pub ws_url: String,
     pub location_name: String,
     pub cameras: Vec<RingCamera>,
     pub roku_apps: Vec<AppsAppWithIcon>,
+    pub scheduled_meals: Vec<ScheduledMeal>,
 }
 
 #[server(GetDashboardValues)]
@@ -114,6 +127,13 @@ pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
         cameras,
         ws_url: "".to_string(),
         roku_apps: apps_with_icon,
+        scheduled_meals: vec![ScheduledMeal {
+            recipie_name: "Pizza".to_owned(),
+            ingredients: Ingredient {
+                name: "Doh".to_owned(),
+                amount: "1 lb".to_owned(),
+            },
+        }],
     })
 }
 
@@ -129,6 +149,7 @@ pub fn DashboardPage() -> impl IntoView {
                     <RingCameras ring_values=dashboard_values/>
                     <RokuTvRemote dashboard_values=dashboard_values/>
                     <CommandBox/>
+                    <PlannedMeals dashboard_values=dashboard_values/>
                 </div>
             </div>
         </main>

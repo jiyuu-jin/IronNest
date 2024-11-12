@@ -8,6 +8,7 @@ pub mod layout;
 pub mod login_form;
 pub mod navbar;
 pub mod pages;
+pub mod planned_meals;
 pub mod ring_cameras;
 pub mod roku_tv_remote;
 pub mod select;
