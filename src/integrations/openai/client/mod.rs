@@ -1,5 +1,6 @@
 use {
     crate::integrations::iron_nest::{execute_function, types::Device},
+    chrono::Utc,
     futures::future::join_all,
     leptos::ServerFnError,
     log::info,
@@ -47,7 +48,7 @@ pub async fn open_api_command(text: String, pool: &PgPool) -> Result<String, Ser
     let mut roku_ips: Vec<String> = Vec::new();
     let mut devices: Vec<Device> = Vec::new();
 
-    let rows = sqlx::query("SELECT id, name, device_type, ip, power_state FROM devices")
+    let rows = sqlx::query("SELECT id, name, device_type, ip, power_state, last_seen FROM devices")
         .fetch_all(pool)
         .await?;
 
@@ -67,6 +68,7 @@ pub async fn open_api_command(text: String, pool: &PgPool) -> Result<String, Ser
             ip: ip.to_string(),
             power_state: state,
             battery_percentage: 0,
+            last_seen: Utc::now(),
         });
 
         let device_type: String = row.get("device_type");

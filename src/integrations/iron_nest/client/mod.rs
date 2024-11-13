@@ -37,14 +37,28 @@ pub async fn insert_devices_into_db(
     for device in devices {
         let query = "
             INSERT INTO devices (
-                name, device_type, battery_percentage, ip, power_state 
-           ) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (ip) DO UPDATE SET name=$1, device_type=$2, battery_percentage=$3, ip=$4, power_state=$5";
+                name,
+                device_type,
+                battery_percentage,
+                ip,
+                power_state,
+                last_seen
+            ) VALUES ($1, $2, $3, $4, $5, $6)
+            ON CONFLICT (ip) DO UPDATE
+            SET name=$1,
+                device_type=$2,
+                battery_percentage=$3,
+                ip=$4,
+                power_state=$5,
+                last_seen=$6
+        ";
         sqlx::query(query)
             .bind(&device.name)
             .bind(&device.device_type)
             .bind(device.battery_percentage)
             .bind(&device.ip)
             .bind(device.power_state)
+            .bind(device.last_seen)
             .execute(&pool)
             .await?;
     }
@@ -62,6 +76,7 @@ pub async fn insert_initial_devices_into_db(pool: PgPool) -> Result<(), sqlx::Er
             ip: "0.0.0.1".to_owned(),
             battery_percentage: 0,
             power_state: 0,
+            last_seen: Utc::now(),
         }],
     )
     .await

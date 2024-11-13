@@ -3,6 +3,7 @@
 async fn main() {
     use {
         axum::{routing::get, Router},
+        chrono::Utc,
         dotenv::dotenv,
         iron_nest::{
             components::layout::App,
@@ -126,6 +127,7 @@ async fn main() {
                     device_type: DeviceType::RingDoorbell,
                     power_state: 1,
                     battery_percentage: camera.health,
+                    last_seen: Utc::now(),
                 });
             }
             match insert_cameras_into_db(shared_pool_clone1.clone(), &cameras).await {
@@ -158,6 +160,7 @@ async fn main() {
                                             ip: ip.to_string(),
                                             power_state: data.relay_state,
                                             battery_percentage: 0,
+                                            last_seen: Utc::now(),
                                         });
                                     }
                                 }
@@ -170,6 +173,7 @@ async fn main() {
                                             ip: ip.to_string(),
                                             power_state: data.light_state.on_off,
                                             battery_percentage: 0,
+                                            last_seen: Utc::now(),
                                         });
                                     }
                                 }

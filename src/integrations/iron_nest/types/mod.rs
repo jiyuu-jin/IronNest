@@ -1,4 +1,5 @@
 use {
+    chrono::{DateTime, Utc},
     serde::{Deserialize, Serialize},
     std::fmt,
 };
@@ -39,6 +40,7 @@ pub struct Device {
     pub ip: String,
     pub power_state: i64,
     pub battery_percentage: i32,
+    pub last_seen: DateTime<Utc>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

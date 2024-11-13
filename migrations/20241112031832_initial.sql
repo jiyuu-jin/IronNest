@@ -7,7 +7,8 @@ CREATE TABLE devices (
     device_type device_type NOT NULL,
     ip TEXT NOT NULL UNIQUE,
     battery_percentage INT8,
-    power_state INT8 NOT NULL
+    power_state INT8 NOT NULL,
+    last_seen TIMESTAMPTZ NOT NULL
 );
 
 CREATE TABLE events (
