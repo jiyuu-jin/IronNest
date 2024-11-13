@@ -12,6 +12,7 @@ pub async fn get_devices() -> Result<Vec<Device>, ServerFnError> {
     let query = "
         SELECT id, name, device_type, ip, power_state, 0 AS battery_percentage, last_seen
         FROM devices
+        ORDER BY name
     ";
     sqlx::query_as::<Postgres, Device>(query)
         .fetch_all(&pool)
