@@ -200,15 +200,14 @@ pub async fn insert_cameras_into_db(
 
 pub async fn insert_auth(pool: PgPool, name: &str, state: AuthState) {
     let dt = Utc::now();
-    let timestamp: i64 = dt.timestamp();
     let query = "
         INSERT INTO auth (name, auth_token, refresh_token, hardware_id, last_login) 
-        VALUES (?, ?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT(name) DO UPDATE SET
-            auth_token = excluded.auth_token,
-            refresh_token = excluded.refresh_token,
-            hardware_id = excluded.hardware_id,
-            last_login = excluded.last_login;
+            auth_token = EXCLUDED.auth_token,
+            refresh_token = EXCLUDED.refresh_token,
+            hardware_id = EXCLUDED.hardware_id,
+            last_login = EXCLUDED.last_login;
     ";
 
     sqlx::query(query)
@@ -216,7 +215,7 @@ pub async fn insert_auth(pool: PgPool, name: &str, state: AuthState) {
         .bind(&state.auth_token)
         .bind(&state.refresh_token)
         .bind(&state.hardware_id)
-        .bind(timestamp)
+        .bind(dt)
         .execute(&pool)
         .await
         .unwrap();

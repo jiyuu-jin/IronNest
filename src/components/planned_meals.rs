@@ -17,24 +17,25 @@ pub fn PlannedMeals(
                                 Ok(data) => {
                                     view! {
                                         <ul>
-                                            {data.scheduled_meals.into_iter().map(|meal| {
-                                                view!{
-                                                    <li>
-                                                        {meal.recipie_name}
-                                                    </li>
-                                                }
-                                            }).collect::<Vec<_>>()}
+                                            {data
+                                                .scheduled_meals
+                                                .into_iter()
+                                                .map(|meal| {
+                                                    view! { <li>{meal.recipie_name}</li> }
+                                                })
+                                                .collect::<Vec<_>>()}
                                         </ul>
-                                    }.into_view()
+                                    }
+                                        .into_view()
                                 }
                                 Err(e) => {
-                                    view! {
-                                        <div>{format!("PlannedMeals error: {e}")}</div>
-                                    }.into_view()
+                                    view! { <div>{format!("PlannedMeals error: {e}")}</div> }
+                                        .into_view()
                                 }
                             }
                         })
                 }}
+
             </Suspense>
         </div>
     }
