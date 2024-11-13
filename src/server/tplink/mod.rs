@@ -2,7 +2,22 @@ use leptos::*;
 
 #[server(HandleSmartPlugToggle)]
 pub async fn handle_smart_plug_toggle(state: bool, ip: String) -> Result<(), ServerFnError> {
-    use crate::integrations::tplink::{tplink_turn_plug_off, tplink_turn_plug_on};
+    use {
+        crate::integrations::tplink::{tplink_turn_plug_off, tplink_turn_plug_on},
+        sqlx::PgPool,
+    };
+
+    let pool = use_context::<PgPool>().unwrap();
+    let query = "
+        UPDATE devices
+        SET power_state = $1
+        WHERE ip = $2
+    ";
+    sqlx::query(query)
+        .bind(if state { 1 } else { 0 })
+        .bind(&ip)
+        .execute(&pool)
+        .await?;
     if state {
         tplink_turn_plug_on(&ip).await;
     } else {
@@ -13,8 +28,22 @@ pub async fn handle_smart_plug_toggle(state: bool, ip: String) -> Result<(), Ser
 
 #[server(HandleSmartLightToggle)]
 pub async fn handle_smart_light_toggle(state: bool, ip: String) -> Result<(), ServerFnError> {
-    use crate::integrations::tplink::tplink_turn_light_on_off;
-    tplink_turn_light_on_off(&ip, if state { 1 } else { 0 }).await;
+    use {crate::integrations::tplink::tplink_turn_light_on_off, sqlx::PgPool};
+
+    let state = if state { 1 } else { 0 };
+
+    let pool = use_context::<PgPool>().unwrap();
+    let query = "
+        UPDATE devices
+        SET power_state = $1
+        WHERE ip = $2
+    ";
+    sqlx::query(query)
+        .bind(state as i8)
+        .bind(&ip)
+        .execute(&pool)
+        .await?;
+    tplink_turn_light_on_off(&ip, state).await;
     Ok(())
 }
 
