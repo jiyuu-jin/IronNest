@@ -1,5 +1,6 @@
 use {
     crate::integrations::iron_nest::types::Device,
+    chrono::{Date, DateTime, Utc},
     serde::{Deserialize, Serialize},
     std::str,
 };
@@ -57,7 +58,7 @@ pub struct LocationsRes {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DoorBotHealth {
-    pub battery_percentage: i32,
+    pub battery_percentage: i64,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -106,7 +107,7 @@ pub struct VideoSearchRes {
 #[derive(Deserialize, Clone, Serialize, Debug)]
 pub struct VideoItem {
     pub ding_id: String,
-    pub created_at: i64,
+    pub created_at: DateTime<Utc>,
     pub updated_at: u64,
     pub hq_url: String,
     pub lq_url: String,
@@ -128,7 +129,7 @@ pub struct VideoItem {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RingCameraSnapshot {
     pub image: String,
-    pub timestamp: String,
+    pub timestamp: DateTime<Utc>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -136,7 +137,7 @@ pub struct RingCamera {
     pub id: i64,
     pub description: String,
     pub snapshot: RingCameraSnapshot,
-    pub health: i32,
+    pub health: i64,
     pub videos: VideoSearchRes,
 }
 
@@ -152,7 +153,7 @@ pub struct RingValues {
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 pub struct RingVideoRow {
     pub ding_id: String,
-    pub created_at: i64,
+    pub created_at: DateTime<Utc>,
     pub camera_id: i64,
     pub hq_url: String,
 }

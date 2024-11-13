@@ -39,7 +39,7 @@ pub struct Device {
     pub device_type: DeviceType,
     pub ip: String,
     pub power_state: i64,
-    pub battery_percentage: i32,
+    pub battery_percentage: i64,
     pub last_seen: DateTime<Utc>,
 }
 

@@ -1,6 +1,7 @@
 use {
     super::pages::dashboard_page::DashboardValues,
     crate::integrations::ring::types::{RingCamera, VideoItem},
+    chrono::{DateTime, Utc},
     leptos::*,
 };
 
@@ -104,7 +105,7 @@ fn camera_component(start_of_day_timestamp: i64, camera: RingCamera) -> impl Int
                 }
             }}
 
-            <p>{"Time: "} {camera.snapshot.timestamp}</p>
+            <p>{"Time: "} {camera.snapshot.timestamp.to_string()}</p>
             <div style="max-width: 100%; overflow-x: auto;">{video_timeline}</div>
         </div>
     }
@@ -168,9 +169,17 @@ fn get_start_of_day_timestamp() -> i64 {
         .timestamp_millis()
 }
 
-fn calculate_position(timestamp: i64, start_of_day_timestamp: i64, timeline_width: i32) -> i32 {
-    let position = timestamp - start_of_day_timestamp;
-    let position_percentage = (position as f64 / 86_400_000f64) * 100.0;
+fn calculate_position(
+    timestamp: DateTime<Utc>,
+    start_of_day_timestamp: i64,
+    timeline_width: i32,
+) -> i32 {
+    let start_of_day = DateTime::<Utc>::from_utc(
+        chrono::NaiveDateTime::from_timestamp_opt(start_of_day_timestamp, 0).unwrap(),
+        Utc,
+    );
+    let position = (timestamp - start_of_day).num_seconds() as f64;
+    let position_percentage = (position / 86_400.0) * 100.0;
     (position_percentage * timeline_width as f64 / 100.0) as i32
 }
 
