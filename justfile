@@ -16,4 +16,6 @@ dev: lint
 wipe:
   docker compose down postgres
   rm -rf docker-data
-  docker compose up -d postgres
+
+infra:
+  docker compose up postgres
