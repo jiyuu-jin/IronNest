@@ -53,7 +53,7 @@ pub async fn open_api_command(text: String, pool: &PgPool) -> Result<String, Ser
 
     for row in rows {
         let state_value: i64 = row.get("power_state");
-        let state: i64 = state_value.try_into().expect("Value out of range for u64");
+        let state: i64 = state_value;
         let ip: String = row.get("ip");
         // let battery_percentage_value: i64 = row.get("battery_percentage");
         // let battery_percentage: u64 = battery_percentage_value
