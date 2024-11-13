@@ -30,7 +30,8 @@ async fn main() {
 
     dotenv().ok();
 
-    let postgres_uri = std::env::var("POSTGRES_URI").unwrap();
+    let postgres_uri = std::env::var("POSTGRES_URI")
+        .unwrap_or("postgres://postgres:password@127.0.0.1:5433/postgres".to_string());
     println!("postgres_uri: {postgres_uri}");
     let shared_pool = PgPoolOptions::new().connect(&postgres_uri).await.unwrap();
     sqlx::migrate!("./migrations")
