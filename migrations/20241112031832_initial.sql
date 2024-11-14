@@ -11,11 +11,9 @@ CREATE TABLE devices (
     last_seen TIMESTAMPTZ NOT NULL
 );
 
-CREATE TABLE events (
+CREATE TABLE actions (
     id BIGSERIAL PRIMARY KEY,
-    schedule TEXT NOT NULL,
-    function TEXT NOT NULL,
-    parameters TEXT NOT NULL
+    name TEXT NOT NULL
 );
 
 CREATE TABLE auth (

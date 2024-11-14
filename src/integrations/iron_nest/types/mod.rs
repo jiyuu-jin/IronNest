@@ -50,3 +50,10 @@ pub struct AuthState {
     pub hardware_id: String,
     pub auth_token: String,
 }
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+pub struct Action {
+    pub id: i64,
+    pub name: String,
+}

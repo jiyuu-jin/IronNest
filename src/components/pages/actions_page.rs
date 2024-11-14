@@ -1,28 +1,63 @@
 use {
-    crate::components::{select::Select, text_input::TextInput},
+    crate::{
+        components::{select::Select, text_input::TextInput},
+        server::actions::{get_actions, AddAction},
+    },
     leptos::*,
+    leptos_router::ActionForm,
 };
-
-// #[server(HandleCreateAction)]
-// pub async fn handle_ring_login(
-//     username: String,
-//     password: String,
-//     tfa: String,
-// ) -> Result<String, ServerFnError> {
-//     use crate::integrations::iron_nest::execute_function;
-//     let function_name = tool_call.function.name.to_string();
-//     let function_args: serde_json::Value = tool_call.function.arguments.parse().unwrap();
-//     let function_response = execute_function(function_name, function_args).await;
-
-//     Ok(result)
-// }
 
 #[component]
 pub fn ActionsPage() -> impl IntoView {
+    let actions = create_resource(|| (), |_| get_actions());
+    let create_action_action = create_server_action::<AddAction>();
+
+    // TODO we're not supposed to use effects for this use case
+    create_effect(move |_| {
+        create_action_action.version().track();
+        actions.refetch();
+    });
+
     view! {
         <main class="lg:p-40 lg:pt-20 cursor-pointer">
             <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
-                <h1>"No Actions"</h1>
+                <h1 class="text-lg">"Actions"</h1>
+                <hr class="mb-2"/>
+                <Suspense fallback=|| {
+                    view! { <p>"Loading actions..."</p> }
+                }>
+                    {move || {
+                        actions
+                            .get()
+                            .map(|data| {
+                                match data {
+                                    Ok(data) => {
+                                        if data.is_empty() {
+                                            view! { <p>"No actions found"</p> }.into_view()
+                                        } else {
+                                            view! {
+                                                <ul class="device-list space-y-2">
+                                                    {data
+                                                        .into_iter()
+                                                        .map(|action| {
+                                                            view! { <li>{action.name}</li> }
+                                                        })
+                                                        .collect::<Vec<_>>()}
+
+                                                </ul>
+                                            }
+                                                .into_view()
+                                        }
+                                    }
+                                    Err(e) => {
+                                        view! { <p>{format!("DeviceList error: {e}")}</p> }
+                                            .into_view()
+                                    }
+                                }
+                            })
+                    }}
+
+                </Suspense>
                 <div
                     class="relative z-10"
                     aria-labelledby="slide-over-title"
@@ -35,7 +70,10 @@ pub fn ActionsPage() -> impl IntoView {
                         <div class="absolute inset-0 overflow-hidden">
                             <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10 sm:pl-16">
                                 <div class="pointer-events-auto w-screen max-w-md">
-                                    <form class="flex h-full flex-col divide-y divide-gray-200 bg-white shadow-xl">
+                                    <ActionForm
+                                        action=create_action_action
+                                        class="flex h-full flex-col divide-y divide-gray-200 bg-white shadow-xl"
+                                    >
                                         <div class="h-0 flex-1 overflow-y-auto">
                                             <div class="bg-indigo-700 px-4 py-6 sm:px-6">
                                                 <div class="flex items-center justify-between">
@@ -182,7 +220,7 @@ pub fn ActionsPage() -> impl IntoView {
                                                 Create
                                             </button>
                                         </div>
-                                    </form>
+                                    </ActionForm>
                                 </div>
                             </div>
                         </div>
