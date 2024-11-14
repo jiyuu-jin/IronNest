@@ -10,7 +10,7 @@ pub async fn get_devices() -> Result<Vec<Device>, ServerFnError> {
     let pool = use_context::<PgPool>().unwrap();
 
     let query = "
-        SELECT id, name, device_type, ip, power_state, 0 AS battery_percentage, last_seen
+        SELECT id, name, device_type, ip, power_state, battery_percentage, last_seen 
         FROM devices
         ORDER BY name
     ";

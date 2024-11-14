@@ -30,14 +30,14 @@ CREATE TABLE ring_cameras (
     id BIGSERIAL PRIMARY KEY,
     description TEXT NOT NULL,
     snapshot_image TEXT NOT NULL,
-    snapshot_timestamp INT8 NOT NULL,
+    snapshot_timestamp TIMESTAMPTZ NOT NULL,
     health INT8 NOT NULL
 );
 
 CREATE TABLE ring_video_item (
     ding_id TEXT PRIMARY KEY,
     camera_id INT8,
-    created_at INT8 NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
     hq_url TEXT NOT NULL
 );
 

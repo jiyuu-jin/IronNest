@@ -185,22 +185,37 @@ pub async fn insert_cameras_into_db(
     pool: PgPool,
     cameras: &[RingCamera],
 ) -> Result<(), sqlx::Error> {
-    info!("Inserting camera into db");
+    info!("Inserting cameras into db");
     for camera in cameras.iter() {
         sqlx::query(
-            "INSERT OR REPLACE INTO ring_cameras (id, description, snapshot_image, snapshot_timestamp, health) VALUES (?, ?, ?, ?, ?)",
+            "
+            INSERT INTO ring_cameras (id, description, snapshot_image, snapshot_timestamp, health) 
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (id) DO UPDATE SET
+                description = EXCLUDED.description,
+                snapshot_image = EXCLUDED.snapshot_image,
+                snapshot_timestamp = EXCLUDED.snapshot_timestamp,
+                health = EXCLUDED.health
+            ",
         )
         .bind(camera.id)
         .bind(&camera.description)
         .bind(&camera.snapshot.image)
-        .bind(&camera.snapshot.timestamp)
+        .bind(camera.snapshot.timestamp)
         .bind(camera.health)
         .execute(&pool)
         .await?;
 
         for video_item in camera.videos.video_search.iter() {
             sqlx::query(
-                "INSERT OR REPLACE INTO ring_video_item (ding_id, camera_id, created_at, hq_url) VALUES (?, ?, ?, ?)",
+                "
+                INSERT INTO ring_video_item (ding_id, camera_id, created_at, hq_url) 
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (ding_id) DO UPDATE SET
+                    camera_id = EXCLUDED.camera_id,
+                    created_at = EXCLUDED.created_at,
+                    hq_url = EXCLUDED.hq_url
+                ",
             )
             .bind(&video_item.ding_id)
             .bind(camera.id)
