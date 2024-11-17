@@ -1,20 +1,9 @@
-version: '3'
-
 services:
-  # traefik:
-  #   image: traefik:v2.5
-  #   command:
-  #     - --providers.docker
-  #     - --providers.file.filename=/etc/traefik/traefik.yaml
-  #     - --providers.file.watch=true
-  #     - --entrypoints.web.address=:80
-  #     - --api.dashboard=true
-  #   ports:
-  #     - "80:80"
-  #     - "8080:8080"
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock
-  #     - ./traefik.yml:/etc/traefik/traefik.yaml
+  iron_nest:
+    build: .
+    network_mode: "host"
+    volumes:
+      - "./docker-data/app/:/app/data/"
 
   postgres:
     image: postgres:17
@@ -23,11 +12,8 @@ services:
     environment:
       POSTGRES_PASSWORD: password
     volumes:
-      - "./docker-data/:/var/lib/postgresql/data:rw"
+      - "./docker-data/postgres:/var/lib/postgresql/data:rw"
 
-# version: '3.8'
-
-# services:
 #   traefik:
 #     image: "traefik:v2.9"
 #     restart: always
@@ -43,12 +29,3 @@ services:
 #     volumes:
 #       - "./data/letsencrypt:/letsencrypt"
 #       - "/var/run/docker.sock:/var/run/docker.sock:ro"
-  # iron_nest:
-  #   build: .
-  #   # network_mode: "host"
-  #   ports:
-  #     - "3000:3000"
-  #   volumes:
-  #     - "./data/app/:/app/data/"
-  #     - "./traefik.yaml:/etc/traefik/traefik.yml"
-  #     - "./traefik-config.yml:/etc/traefik/traefik-config.yml"
