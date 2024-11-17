@@ -139,6 +139,12 @@ pub async fn tplink_set_light_brightness(ip: &str, brightness: u8) {
         .unwrap();
 }
 
+pub async fn tplink_set_light_saturation(ip: &str, saturation: u8) {
+    send(ip, json!({"smartlife.iot.smartbulb.lightingservice":{"transition_light_state":{"saturation":saturation,"transition_period":0}}}))
+        .await
+        .unwrap();
+}
+
 fn encrypt_with_header(input: &[u8], first_key: u8) -> Vec<u8> {
     (input.len() as u32)
         .to_be_bytes()
