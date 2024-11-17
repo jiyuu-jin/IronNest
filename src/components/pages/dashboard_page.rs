@@ -146,9 +146,11 @@ pub fn DashboardPage() -> impl IntoView {
             <div class="xl:pl-96">
                 <div class="px-4 py-10 sm:px-6 lg:px-8 lg:py-6">
                     <RingCameras ring_values=dashboard_values/>
-                    <RokuTvRemote dashboard_values=dashboard_values/>
+                    <div class="grid lg:grid-cols-12 grid-col-1 my-4 gap-2 max-h-60 overflow-auto">
+                        <RokuTvRemote dashboard_values=dashboard_values/>
+                        <PlannedMeals dashboard_values=dashboard_values/>
+                    </div>
                     <CommandBox/>
-                    <PlannedMeals dashboard_values=dashboard_values/>
                 </div>
             </div>
         </main>

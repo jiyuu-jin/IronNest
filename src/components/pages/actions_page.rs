@@ -50,7 +50,7 @@ pub fn ActionsPage() -> impl IntoView {
                                         }
                                     }
                                     Err(e) => {
-                                        view! { <p>{format!("DeviceList error: {e}")}</p> }
+                                        view! { <p>{format!("GetActions error: {e}")}</p> }
                                             .into_view()
                                     }
                                 }

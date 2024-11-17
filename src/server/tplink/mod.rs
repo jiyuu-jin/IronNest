@@ -14,7 +14,7 @@ pub async fn handle_smart_plug_toggle(state: bool, ip: String) -> Result<(), Ser
         WHERE ip = $2
     ";
     sqlx::query(query)
-        .bind(if state { 1 } else { 0 })
+        .bind(if state { 1 } else { 0 } as i32)
         .bind(&ip)
         .execute(&pool)
         .await?;
@@ -38,8 +38,10 @@ pub async fn handle_smart_light_toggle(state: bool, ip: String) -> Result<(), Se
         SET power_state = $1
         WHERE ip = $2
     ";
+    println!("state: {state}");
+    println!("ip: {ip}");
     sqlx::query(query)
-        .bind(state as i8)
+        .bind(state as i32)
         .bind(&ip)
         .execute(&pool)
         .await?;
@@ -54,5 +56,15 @@ pub async fn handle_smart_light_brightness(
 ) -> Result<(), ServerFnError> {
     use crate::integrations::tplink::tplink_set_light_brightness;
     tplink_set_light_brightness(&ip, brightness).await;
+    Ok(())
+}
+
+#[server(HandleSmartLightSaturation)]
+pub async fn handle_smart_light_saturation(
+    saturation: u8,
+    ip: String,
+) -> Result<(), ServerFnError> {
+    use crate::integrations::tplink::tplink_set_light_saturation;
+    tplink_set_light_saturation(&ip, saturation).await;
     Ok(())
 }

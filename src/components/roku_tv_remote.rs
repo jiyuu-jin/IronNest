@@ -12,7 +12,7 @@ pub fn RokuTvRemote(
     dashboard_values: Resource<(), Result<DashboardValues, ServerFnError>>,
 ) -> impl IntoView {
     view! {
-        <div class="grid lg:grid-cols-12 grid-col-1 my-4 gap-2 max-h-60 overflow-auto">
+        <div class="col-span-6 rounded-lg bg-slate-900">
             <Suspense fallback=|| {
                 view! { <div>"Loading"</div> }
             }>
@@ -23,7 +23,7 @@ pub fn RokuTvRemote(
                             match data {
                                 Ok(data) => {
                                     view! {
-                                        <div class="col-span-6 rounded-lg bg-slate-900">
+                                        <div>
                                             <div class="rounded-lg shadow-md col-span-6 h-full resize">
                                                 <div class="border-slate-100 h-full rounded-lg transition-all duration-500 dark:bg-slate-800 transition-all duration-500 dark:border-slate-500 p-6 xl:p-10">
                                                     <div class="grid grid-cols-4 gap-2 rounded-lg">

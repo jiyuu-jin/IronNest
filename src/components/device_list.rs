@@ -109,19 +109,20 @@ pub fn DeviceListItem(device: Device) -> impl IntoView {
 
 #[component]
 pub fn SmartPlugItem(device: Device) -> impl IntoView {
-    let ip = device.ip.clone();
+    let toggle_action = create_action({
+        let ip = device.ip.clone();
+        move |value| {
+            let ip = ip.clone();
+            let value = *value;
+            async move {
+                handle_smart_plug_toggle(value, ip).await.unwrap();
+            }
+        }
+    });
 
     view! {
         <DeviceListCard device=device.clone()>
-            <Checkbox
-                value=device.power_state == 1
-                on_click=Box::new(move |value| {
-                    let ip = ip.clone();
-                    spawn_local(async move {
-                        handle_smart_plug_toggle(value, ip).await.unwrap();
-                    })
-                })
-            />
+            <Checkbox value=device.power_state == 1 on_click=toggle_action/>
 
         </DeviceListCard>
     }
@@ -147,18 +148,20 @@ pub fn StoplightItem(device: Device) -> impl IntoView {
 
 #[component]
 pub fn SmartLightItem(device: Device) -> impl IntoView {
-    let ip = device.ip.to_string();
+    let toggle_action = create_action({
+        let ip = device.ip.clone();
+        move |value| {
+            let ip = ip.clone();
+            let value = *value;
+            async move {
+                handle_smart_light_toggle(value, ip).await.unwrap();
+            }
+        }
+    });
+
     view! {
         <DeviceListCard device=device.clone()>
-            <Checkbox
-                value=device.power_state == 1
-                on_click=Box::new(move |value| {
-                    let ip = ip.clone();
-                    spawn_local(async move {
-                        handle_smart_light_toggle(value, ip).await.unwrap();
-                    });
-                })
-            />
+            <Checkbox value=device.power_state == 1 on_click=toggle_action/>
 
         </DeviceListCard>
     }
@@ -166,18 +169,20 @@ pub fn SmartLightItem(device: Device) -> impl IntoView {
 
 #[component]
 pub fn RokuTvItem(device: Device) -> impl IntoView {
-    let ip = device.ip.to_string();
+    let toggle_action = create_action({
+        let ip = device.ip.clone();
+        move |value| {
+            let ip = ip.clone();
+            let value = *value;
+            async move {
+                handle_roku_tv_toggle(value, ip).await.unwrap();
+            }
+        }
+    });
+
     view! {
         <DeviceListCard device=device.clone()>
-            <Checkbox
-                value=device.power_state == 1
-                on_click=Box::new(move |value| {
-                    let ip = ip.clone();
-                    spawn_local(async move {
-                        handle_roku_tv_toggle(value, ip).await.unwrap();
-                    });
-                })
-            />
+            <Checkbox value=device.power_state == 1 on_click=toggle_action/>
 
         </DeviceListCard>
     }

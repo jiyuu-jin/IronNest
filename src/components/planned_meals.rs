@@ -5,7 +5,7 @@ pub fn PlannedMeals(
     dashboard_values: Resource<(), Result<DashboardValues, ServerFnError>>,
 ) -> impl IntoView {
     view! {
-        <div>
+        <div class="col-span-6 rounded-lg bg-slate-900">
             <Suspense fallback=|| {
                 view! { <div>"Loading"</div> }
             }>
@@ -21,7 +21,7 @@ pub fn PlannedMeals(
                                                 .scheduled_meals
                                                 .into_iter()
                                                 .map(|meal| {
-                                                    view! { <li>{meal.recipie_name}</li> }
+                                                    view! { <li class="text-white">{meal.recipie_name}</li> }
                                                 })
                                                 .collect::<Vec<_>>()}
                                         </ul>

@@ -1,7 +1,7 @@
 use leptos::{logging::log, *};
 
 #[component]
-pub fn Checkbox(value: bool, on_click: Box<dyn Fn(bool)>) -> impl IntoView {
+pub fn Checkbox(value: bool, on_click: Action<bool, ()>) -> impl IntoView {
     let (signal, set_signal) = create_signal(value);
     view! {
         <label
@@ -18,7 +18,7 @@ pub fn Checkbox(value: bool, on_click: Box<dyn Fn(bool)>) -> impl IntoView {
                 on:click:undelegated=move |ev| {
                     log!("clicked!");
                     set_signal.set(!signal.get());
-                    on_click(event_target_checked(&ev));
+                    on_click.dispatch(event_target_checked(&ev));
                 }
 
                 class="sr-only peer"
