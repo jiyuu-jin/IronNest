@@ -1,5 +1,6 @@
 services:
   iron_nest:
+    image: ghcr.io/jiyuu-jin/ironnest:latest
     build: .
     network_mode: "host"
     volumes:
