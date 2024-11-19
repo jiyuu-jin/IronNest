@@ -1,12 +1,15 @@
-FROM rust:1.73-bookworm as builder
+FROM rust:1.82-bookworm as builder
 
 # Install cargo-binstall to install cargo-leptos
-RUN wget https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-armv7-unknown-linux-musleabihf.full.tgz
-RUN tar -xvf cargo-binstall-armv7-unknown-linux-musleabihf.full.tgz
-RUN cp cargo-binstall /usr/local/cargo/bin
+# RUN wget https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-armv7-unknown-linux-musleabihf.full.tgz
+# RUN tar -xvf cargo-binstall-armv7-unknown-linux-musleabihf.full.tgz
+# RUN cp cargo-binstall /usr/local/cargo/bin
 
 # Install cargo-leptos
-RUN cargo binstall cargo-leptos -y
+RUN cargo install cargo-leptos
+
+RUN apt update && apt install -y npm
+RUN npm install -g sass
 
 # Add the WASM target
 RUN rustup target add wasm32-unknown-unknown
@@ -16,6 +19,7 @@ WORKDIR /ironnest
 COPY ./Cargo.lock ./Cargo.lock
 COPY ./Cargo.toml ./Cargo.toml
 COPY ./src ./src
+COPY ./migrations ./migrations
 COPY ./public ./public
 COPY ./style ./style
 
