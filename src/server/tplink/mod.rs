@@ -14,7 +14,7 @@ pub async fn handle_smart_plug_toggle(state: bool, ip: String) -> Result<(), Ser
         WHERE ip = $2
     ";
     sqlx::query(query)
-        .bind(if state { 1 } else { 0 } as i32)
+        .bind(if state { 1 } else { 0 })
         .bind(&ip)
         .execute(&pool)
         .await?;

@@ -5,7 +5,7 @@ use {
     },
     crate::integrations::iron_nest::{get_auth_from_db, insert_auth, types::AuthState},
     base64::{engine::general_purpose::STANDARD as base64, Engine},
-    chrono::{DateTime, Duration, Local, TimeZone, Utc},
+    chrono::{DateTime, Duration, Local, Utc},
     chrono_tz::US::Eastern,
     http::{header::ToStrError, StatusCode},
     log::{error, info},

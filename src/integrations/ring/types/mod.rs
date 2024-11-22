@@ -1,6 +1,6 @@
 use {
     crate::integrations::iron_nest::types::Device,
-    chrono::{Date, DateTime, Utc},
+    chrono::{DateTime, Utc},
     serde::{Deserialize, Serialize},
     std::str,
 };
