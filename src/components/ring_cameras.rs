@@ -174,7 +174,7 @@ fn calculate_position(
     start_of_day_timestamp: i64,
     timeline_width: i32,
 ) -> i32 {
-    let start_of_day = DateTime::<Utc>::from_utc(
+    let start_of_day = DateTime::from_naive_utc_and_offset(
         chrono::NaiveDateTime::from_timestamp_opt(start_of_day_timestamp, 0).unwrap(),
         Utc,
     );

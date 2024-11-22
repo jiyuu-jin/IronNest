@@ -17,8 +17,8 @@ pub fn WebSocketPage() -> impl IntoView {
                     .get()
                     .map(|ring_values| {
                         match ring_values {
-                            Ok(ring_values) => {
-                                view! { <WebSocketComponent ring_values=ring_values/> }.into_view()
+                            Ok(_ring_values) => {
+                                view! { <div></div>}.into_view()
                             }
                             Err(e) => {
                                 view! { <p>{format!("WebSocketPage error: {e}")}</p> }.into_view()
@@ -32,7 +32,7 @@ pub fn WebSocketPage() -> impl IntoView {
 }
 
 #[component]
-fn WebSocketComponent(ring_values: DashboardValues) -> impl IntoView {
+fn WebSocketComponent(_ring_values: DashboardValues) -> impl IntoView {
     // let UseWebsocketReturn {
     //     ready_state,
     //     message,
@@ -91,27 +91,23 @@ fn WebSocketComponent(ring_values: DashboardValues) -> impl IntoView {
     // };
 
     view! {
-        <div>
-            // <p>"status: " {status}</p>
+        // "Send"
+        <div>// </button>
+        // // <button on:click=send_byte_message disabled=move || !connected()>
+        // // "Send bytes"
+        // // </button>
+        // <button on:click=open_connection disabled=connected>
+        // "Open"
+        // </button>
+        // <button on:click=close_connection disabled=move || !connected()>
+        // "Close"
+        // </button>
 
-            // <button on:click=send_message disabled=move || !connected()>
-            //     "Send"
-            // </button>
-            // // <button on:click=send_byte_message disabled=move || !connected()>
-            // // "Send bytes"
-            // // </button>
-            // <button on:click=open_connection disabled=connected>
-            //     "Open"
-            // </button>
-            // <button on:click=close_connection disabled=move || !connected()>
-            //     "Close"
-            // </button>
-
-            // <h2>"Receive message: "</h2>
-            // <pre style="text-wrap: wrap; word-break: break-all;">
-            //     {move || format!("{:?}", message.get())}
-            // </pre>
-            // <p>"Receive byte message: " {move || format!("{:?}", message_bytes.get())}</p>
+        // <h2>"Receive message: "</h2>
+        // <pre style="text-wrap: wrap; word-break: break-all;">
+        // {move || format!("{:?}", message.get())}
+        // </pre>
+        // <p>"Receive byte message: " {move || format!("{:?}", message_bytes.get())}</p>
         </div>
     }
 }

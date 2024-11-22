@@ -3,7 +3,6 @@
 async fn main() {
     use {
         axum::{routing::get, Router},
-        chrono::Utc,
         dotenv::dotenv,
         iron_nest::{
             components::layout::App,
@@ -11,14 +10,11 @@ async fn main() {
             handlers::roku_keypress_handler,
             integrations::{
                 iron_nest::{
-                    client::{
-                        insert_devices_into_db, leptos_routes_handler, server_fn_handler, AppState,
-                    },
-                    insert_cameras_into_db, insert_initial_devices_into_db,
-                    types::{Device, DeviceType},
+                    client::{leptos_routes_handler, server_fn_handler, AppState},
+                    insert_initial_devices_into_db, ring_discovery_job, roku_discovery_job,
+                    tplink_discovery_job,
                 },
-                ring::{get_ring_camera, types::DevicesRes, RingRestClient},
-                tplink::{discover_devices, types::DeviceData},
+                ring::RingRestClient,
             },
         },
         leptos::get_configuration,
@@ -89,214 +85,9 @@ async fn main() {
         .await
         .unwrap();
 
-    let shared_pool_clone1 = shared_pool.clone();
-    let discovery_ring_client = ring_rest_client.clone();
-    let _ring_device_discovery_job = tokio::task::spawn(async move {
-        let five_minutes = chrono::Duration::minutes(5).to_std().unwrap();
-        let mut interval = tokio::time::interval(five_minutes);
-
-        loop {
-            interval.tick().await;
-
-            info!("Refreshing Ring Device Data");
-            let ring_devices = match discovery_ring_client.get_devices().await {
-                Ok(data) => data,
-                Err(_) => DevicesRes {
-                    doorbots: Vec::new(),
-                    authorized_doorbots: Vec::new(),
-                },
-            };
-
-            let doorbots = ring_devices
-                .doorbots
-                .into_iter()
-                .chain(ring_devices.authorized_doorbots.into_iter())
-                .collect::<Vec<_>>();
-
-            let mut cameras = Vec::with_capacity(20);
-            for doorbot in doorbots.iter() {
-                cameras.push(get_ring_camera(&ring_rest_client, doorbot).await)
-            }
-
-            let mut devices = Vec::with_capacity(20);
-            for camera in cameras.iter() {
-                devices.push(Device {
-                    id: 0,
-                    name: camera.description.to_string(),
-                    ip: camera.id.to_string(),
-                    device_type: DeviceType::RingDoorbell,
-                    power_state: 1,
-                    battery_percentage: camera.health,
-                    last_seen: Utc::now(),
-                });
-            }
-            match insert_cameras_into_db(shared_pool_clone1.clone(), &cameras).await {
-                Ok(_) => print!("success"),
-                Err(err) => error!("{err}"),
-            }
-            match insert_devices_into_db(shared_pool_clone1.clone(), &devices).await {
-                Ok(_) => print!("success"),
-                Err(err) => error!("{err}"),
-            }
-        }
-    });
-
-    tokio::task::spawn({
-        let shared_pool = shared_pool.clone();
-        async move {
-            loop {
-                match discover_devices().await {
-                    Ok(tp_link_devices) => {
-                        let mut devices: Vec<Device> = Vec::new();
-
-                        for device_data in tp_link_devices {
-                            match device_data {
-                                DeviceData::SmartPlug(data) => {
-                                    if let Some(ip) = data.ip {
-                                        devices.push(Device {
-                                            id: 0,
-                                            name: data.alias,
-                                            device_type: DeviceType::SmartPlug,
-                                            ip: ip.to_string(),
-                                            power_state: data.relay_state,
-                                            battery_percentage: 0,
-                                            last_seen: Utc::now(),
-                                        });
-                                    }
-                                }
-                                DeviceData::SmartLight(data) => {
-                                    if let Some(ip) = data.ip {
-                                        devices.push(Device {
-                                            id: 0,
-                                            name: data.alias,
-                                            device_type: DeviceType::SmartLight,
-                                            ip: ip.to_string(),
-                                            power_state: data.light_state.on_off,
-                                            battery_percentage: 0,
-                                            last_seen: Utc::now(),
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                        insert_devices_into_db(shared_pool.clone(), &devices)
-                            .await
-                            .unwrap();
-                    }
-                    Err(e) => {
-                        eprintln!("Error discovering devices: {}", e);
-                    }
-                }
-                tokio::time::sleep(Duration::from_secs(60)).await;
-            }
-        }
-    });
-
-    // let shared_pool_3 = shared_pool.clone();
-    // tokio::task::spawn(async move {
-    //     println!("Running thread for tuya auth");
-    //     let tuya_auth = get_auth_from_db(shared_pool_3.clone(), "tuya").await;
-
-    //     if !tuya_auth.refresh_token.is_empty() {
-    //         println!("Found a refresh_token, refreshing auth_token");
-    //         let res = get_refresh_token().await.unwrap();
-    //         insert_auth(shared_pool_3, "tuya", AuthState {
-    //             refresh_token: res.result.refresh_token,
-    //             hardware_id: res.result.uid,
-    //             auth_token: res.result.access_token,
-    //         }).await;
-    //     } else {
-    //         println!("No refresh_token found, getting a new one");
-    //         let res = get_refresh_token().await.unwrap();
-    //         insert_auth(shared_pool_3, "tuya", AuthState {
-    //             refresh_token: res.result.refresh_token,
-    //             hardware_id: res.result.uid,
-    //             auth_token: res.result.access_token,
-    //         }).await;
-    //     }
-    //     tokio::time::sleep(chrono::Duration::hours(1).to_std().unwrap()).await;
-    // });
-
-    // let shared_pool_4 = shared_pool.clone();
-    // tokio::task::spawn(async move {
-    //     println!("Running thread for tuya discovery");
-    //     let tuya_auth = get_auth_from_db(shared_pool_4.clone(), "tuya").await;
-    //     if !tuya_auth.auth_token.is_empty() {
-    //         // let res = get_user_id("ebbd589a10538c471dbeaf", &tuya_auth.auth_token).await;
-    //         let res = get_devices("az17063780590351Cr1b", &tuya_auth.auth_token).await.unwrap();
-    //         println!("{:?}", res);
-    //         let devices = res.result.iter().map(|device| Device {
-    //                 id: 0,
-    //                 name: device.name.clone(),
-    //                 device_type: DeviceType::SmartLight,
-    //                 ip: device.ip.clone(),
-    //                 power_state: 0,
-    //                 battery_percentage: 0,
-    //             }).collect();
-
-    //         insert_devices_into_db(shared_pool_4.clone(), &devices).await.unwrap();
-    //     }
-    //     tokio::time::sleep(chrono::Duration::hours(1).to_std().unwrap()).await;
-    // });
-
-    // let shared_pool_5 = shared_pool.clone();
-    // tokio::task::spawn(async move {
-    //     println!("Running thread for eufy auth");
-    //     let eufy_auth = get_auth_from_db(shared_pool_5.clone(), "eufy").await;
-    //     if !eufy_auth.refresh_token.is_empty() {
-    //         println!("Found a refresh_token, refreshing auth_token");
-    //     } else {
-    //         println!("No refresh_token found, getting a new one");
-    //         let res = iron_nest::integrations::efuy::eufy_login().await;
-    //         insert_auth(shared_pool_5, "eufy", AuthState {
-    //             refresh_token: res.data.auth_token.to_owned(),
-    //             hardware_id: res.data.user_id,
-    //             auth_token: res.data.auth_token,
-    //         }).await;
-    //     }
-
-    //     tokio::time::sleep(chrono::Duration::hours(1).to_std().unwrap()).await;
-    // });
-
-    // let shared_pool_6 = shared_pool.clone();
-    // tokio::task::spawn(async move {
-    //     println!("Running thread for eufy discovery");
-    //     let eufy_auth = get_auth_from_db(shared_pool_6.clone(), "eufy").await;
-    //     if !eufy_auth.auth_token.is_empty() {
-    //         iron_nest::integrations::efuy::get_devices(eufy_auth.auth_token).await;
-    //     }
-    //     tokio::time::sleep(chrono::Duration::hours(1).to_std().unwrap()).await;
-    // });
-
-    // tokio::task::spawn(async move {
-    //     println!("Running discovery thread for roku devices");
-    //     loop {
-    //         let roku_devices = roku_discover().await;
-    //         let mut devices: Vec<Device> = Vec::new();
-
-    //         for device in roku_devices.iter() {
-    //             let ip = extract_ip(&device.location).unwrap();
-    //             let device_info = roku_get_device_info(&ip).await;
-    //             let power_state = if device_info.power_mode == "PowerOn" { 1 } else {0};
-    //             devices.push(Device {
-    //                 id: 0,
-    //                 name: device_info.user_device_name,
-    //                 device_type: DeviceType::RokuTv,
-    //                 ip,
-    //                 power_state,
-    //                 battery_percentage: 0,
-    //             });
-    //         }
-
-    //         match insert_devices_into_db(shared_pool.clone(), &devices).await {
-    //             Ok(_) => {},
-    //             Err(e) => {
-    //                 print!("{e}");
-    //             }
-    //         };
-    //         tokio::time::sleep(Duration::from_secs(30)).await;
-    //     }
-    // });
+    ring_discovery_job(shared_pool.clone(), ring_rest_client.clone());
+    tplink_discovery_job(shared_pool.clone());
+    roku_discovery_job(shared_pool.clone());
 
     let http_server = {
         log::info!("listening on http://{}", &addr);
@@ -305,8 +96,6 @@ async fn main() {
 
     tokio::select! {
         e = http_server => error!("HTTP server exiting with error {e:?}")
-        // e = ring_auth_refresh_job => error!("Ring auth refresh job exiting with error {e:?}"),
-        // e = ring_device_discovery_job => error!("Ring device discovery job exiting with error {e:?}")
     }
 }
 
