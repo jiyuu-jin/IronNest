@@ -1,6 +1,7 @@
 use {
     chrono::{DateTime, Utc},
     serde::{Deserialize, Serialize},
+    serde_json::Value,
     std::fmt,
 };
 
@@ -53,9 +54,20 @@ pub struct AuthState {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
-pub struct Action {
+pub struct FullAction {
     pub id: i64,
+    #[serde(flatten)]
+    #[cfg_attr(feature = "ssr", sqlx(flatten))]
+    pub fields: RequiredAction,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+pub struct RequiredAction {
     pub name: String,
+    pub cron: String,
+    pub function_name: String,
+    pub function_args: Value,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

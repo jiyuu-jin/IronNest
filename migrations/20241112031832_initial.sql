@@ -13,7 +13,10 @@ CREATE TABLE devices (
 
 CREATE TABLE actions (
     id BIGSERIAL PRIMARY KEY,
-    name TEXT NOT NULL
+    name VARCHAR(255) NOT NULL,
+    cron VARCHAR(255) NOT NULL,
+    function_name VARCHAR(255) NOT NULL,
+    function_args JSONB NOT NULL
 );
 
 CREATE TABLE auth (

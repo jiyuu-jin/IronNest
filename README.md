@@ -28,7 +28,7 @@ The project has the following main files:
 
 ```bash
 rustup target add wasm32-unknown-unknown
-cargo install trunk cargo-leptos leptosfmt just
+cargo install trunk wasm-bindgen-cli cargo-leptos leptosfmt just
 ```
 
 ## Running the Project

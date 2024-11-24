@@ -1,5 +1,8 @@
 use {
-    super::types::{AuthState, Device, DeviceType, Integration},
+    super::{
+        cron::CronClient,
+        types::{AuthState, Device, DeviceType, Integration},
+    },
     crate::{
         components::layout::App,
         integrations::{
@@ -343,6 +346,7 @@ pub async fn leptos_routes_handler(
         move || {
             provide_context(app_state.ring_rest_client.clone());
             provide_context(app_state.pool.clone());
+            provide_context(app_state.cron_client.clone());
         },
         App,
     );
@@ -365,6 +369,7 @@ pub async fn server_fn_handler(
         move || {
             provide_context(app_state.ring_rest_client.clone());
             provide_context(app_state.pool.clone());
+            provide_context(app_state.cron_client.clone());
         },
         request,
     )
@@ -376,6 +381,7 @@ pub struct AppState {
     pub leptos_options: LeptosOptions,
     pub ring_rest_client: Arc<RingRestClient>,
     pub pool: PgPool,
+    pub cron_client: CronClient,
 }
 
 pub fn tuya_auth_job(shared_pool: Pool<Postgres>) {

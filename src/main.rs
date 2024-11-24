@@ -11,6 +11,7 @@ async fn main() {
             integrations::{
                 iron_nest::{
                     client::{leptos_routes_handler, server_fn_handler, AppState},
+                    cron::CronClient,
                     run_devices_tasks,
                 },
                 ring::RingRestClient,
@@ -52,7 +53,14 @@ async fn main() {
         leptos_options,
         ring_rest_client: ring_rest_client.clone(),
         pool: shared_pool.clone(),
+        cron_client: CronClient::new().await,
     };
+
+    app_state
+        .cron_client
+        .schedule_tasks(&shared_pool)
+        .await
+        .unwrap();
 
     let iron_nest_router = Router::new()
         .route("/roku/:device_id/keypress/:key", get(roku_keypress_handler))
