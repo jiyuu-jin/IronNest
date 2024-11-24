@@ -1,5 +1,5 @@
 use {
-    super::types::{AuthState, Device, DeviceType, Integration},
+    super::types::{AuthState, ControlMessage, Device, DeviceType, Integration},
     crate::{
         components::layout::App,
         integrations::{
@@ -27,16 +27,14 @@ use {
         response::{IntoResponse, Response},
     },
     chrono::Utc,
-    http::Request,
+    http::{HeaderMap, Request},
     leptos::{logging::log, provide_context, LeptosOptions},
     leptos_axum::handle_server_fns_with_context,
     log::{error, info},
-    rand::random,
-    reqwest::header::HeaderMap,
-    serde::de::Error,
     serde_json::{json, Value},
     sqlx::{PgPool, Pool, Postgres},
-    std::{net::Ipv4Addr, sync::Arc},
+    std::{collections::HashMap, net::Ipv4Addr, sync::Arc},
+    tokio::sync::mpsc::{self, Receiver},
     tokio_cron_scheduler::{Job, JobScheduler},
     url::Url,
 };
@@ -527,53 +525,70 @@ pub fn roku_discovery_job(shared_pool: Pool<Postgres>) {
     });
 }
 
-pub fn tplink_discovery_job(shared_pool: Pool<Postgres>) {
-    tokio::task::spawn({
-        async move {
-            loop {
-                match discover_devices().await {
-                    Ok(tp_link_devices) => {
-                        let mut devices: Vec<Device> = Vec::new();
+pub fn tplink_discovery_job(shared_pool: Pool<Postgres>, mut control_rx: Receiver<ControlMessage>) {
+    tokio::task::spawn(async move {
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(60));
+        let mut running = true;
 
-                        for device_data in tp_link_devices {
-                            match device_data {
-                                DeviceData::SmartPlug(data) => {
-                                    if let Some(ip) = data.ip {
-                                        devices.push(Device {
-                                            id: 0,
-                                            name: data.alias,
-                                            device_type: DeviceType::SmartPlug,
-                                            ip: ip.to_string(),
-                                            power_state: data.relay_state,
-                                            battery_percentage: 0,
-                                            last_seen: Utc::now(),
-                                        });
+        loop {
+            tokio::select! {
+                _ = interval.tick(), if running => {
+                    match discover_devices().await {
+                        Ok(tp_link_devices) => {
+                            let mut devices: Vec<Device> = Vec::new();
+
+                            for device_data in tp_link_devices {
+                                match device_data {
+                                    DeviceData::SmartPlug(data) => {
+                                        if let Some(ip) = data.ip {
+                                            devices.push(Device {
+                                                id: 0,
+                                                name: data.alias,
+                                                device_type: DeviceType::SmartPlug,
+                                                ip: ip.to_string(),
+                                                power_state: data.relay_state,
+                                                battery_percentage: 0,
+                                                last_seen: Utc::now(),
+                                            });
+                                        }
                                     }
-                                }
-                                DeviceData::SmartLight(data) => {
-                                    if let Some(ip) = data.ip {
-                                        devices.push(Device {
-                                            id: 0,
-                                            name: data.alias,
-                                            device_type: DeviceType::SmartLight,
-                                            ip: ip.to_string(),
-                                            power_state: data.light_state.on_off,
-                                            battery_percentage: 0,
-                                            last_seen: Utc::now(),
-                                        });
+                                    DeviceData::SmartLight(data) => {
+                                        if let Some(ip) = data.ip {
+                                            devices.push(Device {
+                                                id: 0,
+                                                name: data.alias,
+                                                device_type: DeviceType::SmartLight,
+                                                ip: ip.to_string(),
+                                                power_state: data.light_state.on_off,
+                                                battery_percentage: 0,
+                                                last_seen: Utc::now(),
+                                            });
+                                        }
                                     }
                                 }
                             }
+                            insert_devices_into_db(shared_pool.clone(), &devices)
+                                .await
+                                .unwrap();
+                        },
+                        Err(e) => {
+                            eprintln!("Error discovering devices: {}", e);
                         }
-                        insert_devices_into_db(shared_pool.clone(), &devices)
-                            .await
-                            .unwrap();
                     }
-                    Err(e) => {
-                        eprintln!("Error discovering devices: {}", e);
+                },
+                Some(msg) = control_rx.recv() => {
+                    match msg {
+                        ControlMessage::Start => {
+                            running = true;
+                        }
+                        ControlMessage::Stop => {
+                            running = false;
+                        }
+                        ControlMessage::Shutdown => {
+                            break;
+                        }
                     }
                 }
-                tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
             }
         }
     });
@@ -660,27 +675,30 @@ pub async fn run_devices_tasks(
     insert_integrations_into_db(shared_pool.clone()).await?;
     insert_initial_devices_into_db(shared_pool.clone()).await?;
     let integrations = get_integrations(shared_pool.clone()).await.unwrap();
+    let mut control_senders = HashMap::new();
 
     for integration in integrations {
         match integration.name.as_str() {
             "tplink" => {
-                tplink_discovery_job(shared_pool.clone());
+                let (tx, rx) = mpsc::channel(10);
+                tplink_discovery_job(shared_pool.clone(), rx);
+                control_senders.insert("tplink".to_string(), tx);
             }
             "roku" => {
                 roku_discovery_job(shared_pool.clone());
             }
-            // "ring" => {
-            //     ring_auth_job(ring_rest_client.clone());
-            //     ring_discovery_job(shared_pool.clone(), ring_rest_client.clone());
-            // }
+            "ring" => {
+                ring_auth_job(ring_rest_client.clone());
+                ring_discovery_job(shared_pool.clone(), ring_rest_client.clone());
+            }
             "tuya" => {
                 tuya_auth_job(shared_pool.clone());
                 tuya_discovery_job(shared_pool.clone());
             }
-            // "eufy" => {
-            //     eufy_auth_job(shared_pool.clone());
-            //     eufy_discovery_job(shared_pool.clone());
-            // }
+            "eufy" => {
+                eufy_auth_job(shared_pool.clone());
+                eufy_discovery_job(shared_pool.clone());
+            }
             _ => {}
         }
     }
