@@ -46,7 +46,6 @@ async fn main() {
     let leptos_options = conf.leptos_options;
     let addr = leptos_options.site_addr;
     let routes = generate_route_list(App);
-
     let ring_rest_client = Arc::new(RingRestClient::new(shared_pool.clone()).await);
 
     let app_state = AppState {

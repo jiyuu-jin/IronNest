@@ -89,13 +89,8 @@ fn WebSocketComponent(_ring_values: DashboardValues) -> impl IntoView {
     // };
 
     view! {
-        // <button on:click=close_connection disabled=move || !connected()>
-        <div>// "Close"
-        // </button>
-
-        // <h2>"Receive message: "</h2>
         // <pre style="text-wrap: wrap; word-break: break-all;">
-        // {move || format!("{:?}", message.get())}
+        <div>// {move || format!("{:?}", message.get())}
         // </pre>
         // <p>"Receive byte message: " {move || format!("{:?}", message_bytes.get())}</p>
         </div>

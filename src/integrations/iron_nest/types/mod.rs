@@ -77,3 +77,9 @@ pub struct Integration {
     pub name: String,
     pub enabled: bool,
 }
+
+pub enum ControlMessage {
+    Start,
+    Stop,
+    Shutdown,
+}
