@@ -17,9 +17,7 @@ pub fn WebSocketPage() -> impl IntoView {
                     .get()
                     .map(|ring_values| {
                         match ring_values {
-                            Ok(_ring_values) => {
-                                view! { <div></div>}.into_view()
-                            }
+                            Ok(_ring_values) => view! { <div></div> }.into_view(),
                             Err(e) => {
                                 view! { <p>{format!("WebSocketPage error: {e}")}</p> }.into_view()
                             }
@@ -91,16 +89,8 @@ fn WebSocketComponent(_ring_values: DashboardValues) -> impl IntoView {
     // };
 
     view! {
-        // "Send"
-        <div>// </button>
-        // // <button on:click=send_byte_message disabled=move || !connected()>
-        // // "Send bytes"
-        // // </button>
-        // <button on:click=open_connection disabled=connected>
-        // "Open"
-        // </button>
         // <button on:click=close_connection disabled=move || !connected()>
-        // "Close"
+        <div>// "Close"
         // </button>
 
         // <h2>"Receive message: "</h2>

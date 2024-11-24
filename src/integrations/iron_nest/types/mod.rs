@@ -57,3 +57,11 @@ pub struct Action {
     pub id: i64,
     pub name: String,
 }
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
+pub struct Integration {
+    pub id: i64,
+    pub name: String,
+    pub enabled: bool,
+}

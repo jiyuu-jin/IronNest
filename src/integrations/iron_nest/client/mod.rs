@@ -1,5 +1,5 @@
 use {
-    super::types::{AuthState, Device, DeviceType},
+    super::types::{AuthState, Device, DeviceType, Integration},
     crate::{
         components::layout::App,
         integrations::{
@@ -31,10 +31,12 @@ use {
     leptos::{logging::log, provide_context, LeptosOptions},
     leptos_axum::handle_server_fns_with_context,
     log::{error, info},
+    rand::random,
     reqwest::header::HeaderMap,
+    serde::de::Error,
     serde_json::{json, Value},
     sqlx::{PgPool, Pool, Postgres},
-    std::sync::Arc,
+    std::{net::Ipv4Addr, sync::Arc},
     tokio_cron_scheduler::{Job, JobScheduler},
     url::Url,
 };
@@ -90,6 +92,53 @@ pub async fn insert_initial_devices_into_db(pool: PgPool) -> Result<(), sqlx::Er
     )
     .await
     .unwrap();
+
+    Ok(())
+}
+
+pub async fn insert_integrations_into_db(pool: PgPool) -> Result<(), sqlx::Error> {
+    let default_integrations = vec![
+        Integration {
+            id: 0,
+            name: "tplink".to_string(),
+            enabled: false,
+        },
+        Integration {
+            id: 1,
+            name: "roku".to_string(),
+            enabled: false,
+        },
+        Integration {
+            id: 2,
+            name: "ring".to_string(),
+            enabled: false,
+        },
+        Integration {
+            id: 3,
+            name: "tuya".to_string(),
+            enabled: false,
+        },
+        Integration {
+            id: 4,
+            name: "eufy".to_string(),
+            enabled: false,
+        },
+    ];
+
+    for integration in default_integrations {
+        let query = "
+            INSERT INTO integrations (
+                name,
+                enabled
+            ) VALUES ($1, $2)
+            ON CONFLICT (name) DO NOTHING;
+        ";
+        sqlx::query(query)
+            .bind(&integration.name)
+            .bind(integration.enabled)
+            .execute(&pool)
+            .await?;
+    }
 
     Ok(())
 }
@@ -330,16 +379,15 @@ pub struct AppState {
 }
 
 pub fn tuya_auth_job(shared_pool: Pool<Postgres>) {
-    let shared_pool_1 = shared_pool.clone();
     tokio::task::spawn(async move {
         println!("Running thread for tuya auth");
-        let tuya_auth = get_auth_from_db(shared_pool_1.clone(), "tuya").await;
+        let tuya_auth = get_auth_from_db(shared_pool.clone(), "tuya").await;
 
         if !tuya_auth.refresh_token.is_empty() {
             println!("Found a refresh_token, refreshing auth_token");
             let res = get_refresh_token().await.unwrap();
             insert_auth(
-                shared_pool_1,
+                shared_pool,
                 "tuya",
                 AuthState {
                     refresh_token: res.result.refresh_token,
@@ -352,7 +400,7 @@ pub fn tuya_auth_job(shared_pool: Pool<Postgres>) {
             println!("No refresh_token found, getting a new one");
             let res = get_refresh_token().await.unwrap();
             insert_auth(
-                shared_pool_1,
+                shared_pool,
                 "tuya",
                 AuthState {
                     refresh_token: res.result.refresh_token,
@@ -367,31 +415,39 @@ pub fn tuya_auth_job(shared_pool: Pool<Postgres>) {
 }
 
 pub fn tuya_discovery_job(shared_pool: Pool<Postgres>) {
-    let shared_pool_1 = shared_pool.clone();
     tokio::task::spawn(async move {
         println!("Running thread for tuya discovery");
-        let tuya_auth = get_auth_from_db(shared_pool_1.clone(), "tuya").await;
+        let tuya_auth = get_auth_from_db(shared_pool.clone(), "tuya").await;
         if !tuya_auth.auth_token.is_empty() {
             // let res = get_user_id("ebbd589a10538c471dbeaf", &tuya_auth.auth_token).await;
             let res = get_devices("az17063780590351Cr1b", &tuya_auth.auth_token)
                 .await
                 .unwrap();
             println!("{:?}", res);
-            let devices = res
+            let devices: Vec<Device> = res
                 .result
                 .iter()
-                .map(|device| Device {
-                    id: 0,
-                    name: device.name.clone(),
-                    device_type: DeviceType::SmartLight,
-                    ip: device.ip.clone(),
-                    power_state: 0,
-                    battery_percentage: 0,
-                    last_seen: Utc::now(),
+                .map(|device| {
+                    let ip = Ipv4Addr::new(
+                        rand::random::<u8>(),
+                        rand::random::<u8>(),
+                        rand::random::<u8>(),
+                        rand::random::<u8>(),
+                    )
+                    .to_string();
+                    Device {
+                        id: 0,
+                        name: device.name.clone(),
+                        device_type: DeviceType::SmartLight,
+                        ip,
+                        power_state: 0,
+                        battery_percentage: 0,
+                        last_seen: Utc::now(),
+                    }
                 })
                 .collect();
 
-            insert_devices_into_db(shared_pool_1.clone(), &devices)
+            insert_devices_into_db(shared_pool.clone(), &devices)
                 .await
                 .unwrap();
         }
@@ -400,17 +456,16 @@ pub fn tuya_discovery_job(shared_pool: Pool<Postgres>) {
 }
 
 pub fn eufy_auth_job(shared_pool: Pool<Postgres>) {
-    let shared_pool_1 = shared_pool.clone();
     tokio::task::spawn(async move {
         println!("Running thread for eufy auth");
-        let eufy_auth = get_auth_from_db(shared_pool_1.clone(), "eufy").await;
+        let eufy_auth = get_auth_from_db(shared_pool.clone(), "eufy").await;
         if !eufy_auth.refresh_token.is_empty() {
             println!("Found a refresh_token, refreshing auth_token");
         } else {
             println!("No refresh_token found, getting a new one");
             let res = efuy::eufy_login().await;
             insert_auth(
-                shared_pool_1,
+                shared_pool,
                 "eufy",
                 AuthState {
                     refresh_token: res.data.auth_token.to_owned(),
@@ -420,16 +475,14 @@ pub fn eufy_auth_job(shared_pool: Pool<Postgres>) {
             )
             .await;
         }
-
         tokio::time::sleep(chrono::Duration::hours(1).to_std().unwrap()).await;
     });
 }
 
 pub fn eufy_discovery_job(shared_pool: Pool<Postgres>) {
-    let shared_pool_1 = shared_pool.clone();
     tokio::task::spawn(async move {
         println!("Running thread for eufy discovery");
-        let eufy_auth = get_auth_from_db(shared_pool_1.clone(), "eufy").await;
+        let eufy_auth = get_auth_from_db(shared_pool.clone(), "eufy").await;
         if !eufy_auth.auth_token.is_empty() {
             efuy::get_devices(eufy_auth.auth_token).await;
         }
@@ -526,8 +579,21 @@ pub fn tplink_discovery_job(shared_pool: Pool<Postgres>) {
     });
 }
 
+pub fn ring_auth_job(ring_rest_client: Arc<RingRestClient>) {
+    tokio::task::spawn(async move {
+        let six_hours = chrono::Duration::hours(6).to_std().unwrap();
+        let mut interval = tokio::time::interval(six_hours);
+        loop {
+            interval.tick().await;
+
+            info!("Refreshing Ring auth token");
+            ring_rest_client.refresh_auth_token().await;
+        }
+    });
+}
+
 pub fn ring_discovery_job(shared_pool: Pool<Postgres>, ring_rest_client: Arc<RingRestClient>) {
-    let _ring_device_discovery_job = tokio::task::spawn(async move {
+    tokio::task::spawn(async move {
         let five_minutes = chrono::Duration::minutes(5).to_std().unwrap();
         let mut interval = tokio::time::interval(five_minutes);
 
@@ -546,7 +612,7 @@ pub fn ring_discovery_job(shared_pool: Pool<Postgres>, ring_rest_client: Arc<Rin
             let doorbots = ring_devices
                 .doorbots
                 .into_iter()
-                .chain(ring_devices.authorized_doorbots.into_iter())
+                .chain(ring_devices.authorized_doorbots)
                 .collect::<Vec<_>>();
 
             let mut cameras = Vec::with_capacity(20);
@@ -577,3 +643,49 @@ pub fn ring_discovery_job(shared_pool: Pool<Postgres>, ring_rest_client: Arc<Rin
         }
     });
 }
+
+pub async fn get_integrations(pool: Pool<Postgres>) -> Result<Vec<Integration>, sqlx::Error> {
+    let query = "
+    SELECT id, name, enabled 
+    FROM integrations
+    WHERE enabled=true
+";
+    sqlx::query_as(query).fetch_all(&pool).await
+}
+
+pub async fn run_devices_tasks(
+    ring_rest_client: Arc<RingRestClient>,
+    shared_pool: Pool<Postgres>,
+) -> Result<(), sqlx::Error> {
+    insert_integrations_into_db(shared_pool.clone()).await?;
+    insert_initial_devices_into_db(shared_pool.clone()).await?;
+    let integrations = get_integrations(shared_pool.clone()).await.unwrap();
+
+    for integration in integrations {
+        match integration.name.as_str() {
+            "tplink" => {
+                tplink_discovery_job(shared_pool.clone());
+            }
+            "roku" => {
+                roku_discovery_job(shared_pool.clone());
+            }
+            // "ring" => {
+            //     ring_auth_job(ring_rest_client.clone());
+            //     ring_discovery_job(shared_pool.clone(), ring_rest_client.clone());
+            // }
+            "tuya" => {
+                tuya_auth_job(shared_pool.clone());
+                tuya_discovery_job(shared_pool.clone());
+            }
+            // "eufy" => {
+            //     eufy_auth_job(shared_pool.clone());
+            //     eufy_discovery_job(shared_pool.clone());
+            // }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+// integrations register their own supported common capabilities
+// 'color', 'brightness', 'on_off'

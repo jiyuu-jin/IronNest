@@ -11,18 +11,17 @@ async fn main() {
             integrations::{
                 iron_nest::{
                     client::{leptos_routes_handler, server_fn_handler, AppState},
-                    insert_initial_devices_into_db, ring_discovery_job, roku_discovery_job,
-                    tplink_discovery_job,
+                    run_devices_tasks,
                 },
                 ring::RingRestClient,
             },
         },
         leptos::get_configuration,
         leptos_axum::{generate_route_list, LeptosRoutes},
-        log::{error, info, LevelFilter},
+        log::{error, LevelFilter},
         simple_logger::SimpleLogger,
         sqlx::postgres::PgPoolOptions,
-        std::{sync::Arc, time::Duration},
+        std::sync::Arc,
     };
 
     dotenv().ok();
@@ -69,25 +68,9 @@ async fn main() {
         .fallback(file_and_error_handler)
         .with_state(app_state);
 
-    let auth_ring_rest_client = ring_rest_client.clone();
-    let _ring_auth_refresh_job = tokio::task::spawn(async move {
-        let six_hours = chrono::Duration::hours(6).to_std().unwrap();
-        let mut interval = tokio::time::interval(six_hours);
-        loop {
-            interval.tick().await;
-
-            info!("Refreshing Ring auth token");
-            auth_ring_rest_client.refresh_auth_token().await;
-        }
-    });
-    // insert initial devices
-    insert_initial_devices_into_db(shared_pool.clone())
+    run_devices_tasks(ring_rest_client, shared_pool)
         .await
         .unwrap();
-
-    ring_discovery_job(shared_pool.clone(), ring_rest_client.clone());
-    tplink_discovery_job(shared_pool.clone());
-    roku_discovery_job(shared_pool.clone());
 
     let http_server = {
         log::info!("listening on http://{}", &addr);
