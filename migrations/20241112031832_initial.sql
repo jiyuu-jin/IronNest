@@ -65,3 +65,9 @@ CREATE TABLE amounts (
     ingredient_id INTEGER NOT NULL,
     FOREIGN KEY(ingredient_id) REFERENCES ingredient(id)
 );
+
+create TABLE integrations (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    enabled BOOLEAN DEFAULT FALSE
+);
