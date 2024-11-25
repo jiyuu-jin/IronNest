@@ -57,6 +57,7 @@ pub struct TPLinkDiscoveryData {
 pub enum DeviceData {
     SmartPlug(Box<TPLinkDiscoveryData>),
     SmartLight(TPLinkSmartLightData),
+    SmartDimmer(Box<TPLinkDiscoveryData>),
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

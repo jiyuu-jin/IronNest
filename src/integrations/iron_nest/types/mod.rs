@@ -15,6 +15,7 @@ use {
 pub enum DeviceType {
     SmartPlug,
     SmartLight,
+    SmartDimmer,
     RingDoorbell,
     RokuTv,
     Stoplight,
@@ -25,6 +26,7 @@ impl fmt::Display for DeviceType {
         match self {
             Self::SmartPlug => write!(f, "Smart Plug"),
             Self::SmartLight => write!(f, "Smart Light"),
+            Self::SmartDimmer => write!(f, "Smart Dimmer"),
             Self::RingDoorbell => write!(f, "Ring Doorbell"),
             Self::RokuTv => write!(f, "Roku TV"),
             Self::Stoplight => write!(f, "Stoplight"),

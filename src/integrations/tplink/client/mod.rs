@@ -48,9 +48,17 @@ pub async fn discover_devices() -> Result<Vec<DeviceData>, Box<dyn Error + Send>
                 match incoming_msg_result {
                     Ok(msg) => match msg.system.get_sysinfo {
                         GetSysInfo::TPLinkDiscoveryData(mut get_sysinfo) => {
-                            info!("Smart Plug from {}: {}", src_addr, get_sysinfo.alias);
+                            info!(
+                                "Smart Plug or Dimmer from {}: {}",
+                                src_addr, get_sysinfo.alias
+                            );
                             get_sysinfo.ip = Some(src_addr.ip());
-                            devices.push(DeviceData::SmartPlug(get_sysinfo));
+
+                            if get_sysinfo.model == "ES20M(US)" {
+                                devices.push(DeviceData::SmartDimmer(get_sysinfo));
+                            } else {
+                                devices.push(DeviceData::SmartPlug(get_sysinfo));
+                            }
                         }
                         GetSysInfo::TPLinkSmartLightData(mut get_sysinfo) => {
                             info!("Smart Light from {}: {}", src_addr, get_sysinfo.alias);
@@ -125,6 +133,15 @@ pub async fn tplink_turn_plug_off(ip: &str) {
     send(ip, json!({"system":{"set_relay_state":{"state": 0}}}))
         .await
         .unwrap();
+}
+
+pub async fn tplink_set_dimmer_brightness(ip: &str, brightness: &u8) {
+    send(
+        ip,
+        json!({"smartlife.iot.dimmer":{"set_dimmer_transition":{"brightness": brightness, "duration": 1}}}),
+    )
+    .await
+    .unwrap();
 }
 
 pub async fn tplink_turn_light_on_off(ip: &str, state: u8) {

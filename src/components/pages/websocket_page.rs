@@ -88,11 +88,5 @@ fn WebSocketComponent(_ring_values: DashboardValues) -> impl IntoView {
     //     close();
     // };
 
-    view! {
-        // <pre style="text-wrap: wrap; word-break: break-all;">
-        <div>// {move || format!("{:?}", message.get())}
-        // </pre>
-        // <p>"Receive byte message: " {move || format!("{:?}", message_bytes.get())}</p>
-        </div>
-    }
+    view! { <div></div> }
 }

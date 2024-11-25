@@ -4,8 +4,8 @@ use {
         components::{color_picker::Color_Picker, slider::Slider},
         integrations::iron_nest::types::{Device, DeviceType},
         server::tplink::{
-            handle_smart_light_brightness, handle_smart_light_saturation,
-            handle_smart_light_toggle, handle_smart_plug_toggle,
+            handle_smart_dimmer_brightness, handle_smart_light_brightness,
+            handle_smart_light_saturation, handle_smart_light_toggle, handle_smart_plug_toggle,
         },
     },
     leptos::*,
@@ -17,6 +17,7 @@ pub fn DeviceView(device: Device) -> impl IntoView {
     match device.device_type {
         DeviceType::SmartPlug => view! { <SmartPlugView device=device/> },
         DeviceType::SmartLight => view! { <SmartLightView device=device/> },
+        DeviceType::SmartDimmer => view! { <SmartDimmerView device=device/> },
         DeviceType::RingDoorbell => view! { <RingDoorbellView device=device/> },
         DeviceType::RokuTv => view! { <RokuTvView device=device/> },
         DeviceType::Stoplight => view! { <StoplightView device=device/> },
@@ -91,16 +92,6 @@ pub fn SmartLightView(device: Device) -> impl IntoView {
     view! {
         <div class="flex flex-col">
             <Checkbox value=device.power_state == 1 on_click=toggle_action/>
-            // on_click=Box::new({
-            // let ip = device.ip.clone();
-            // move |value| {
-            // let ip = ip.clone();
-            // spawn_local(async move {
-            // handle_smart_light_toggle(value, ip).await.unwrap();
-            // });
-            // }
-            // })
-
             <Slider on_change=Box::new({
                 let ip = device.ip.clone();
                 move |value| {
@@ -143,6 +134,35 @@ pub fn SmartPlugView(device: Device) -> impl IntoView {
     });
 
     view! { <Checkbox value=device.power_state == 1 on_click=toggle_action/> }
+}
+
+#[component]
+pub fn SmartDimmerView(device: Device) -> impl IntoView {
+    let toggle_action = create_action({
+        let ip = device.ip.clone();
+        move |value| {
+            let ip = ip.clone();
+            let value = *value;
+            async move {
+                handle_smart_plug_toggle(value, ip).await.unwrap();
+            }
+        }
+    });
+
+    view! {
+        <div class="flex flex-col">
+            <Checkbox value=device.power_state == 1 on_click=toggle_action/>
+            <Slider on_change=Box::new({
+                let ip = device.ip.clone();
+                move |value| {
+                    let ip = ip.clone();
+                    spawn_local(async move {
+                        handle_smart_dimmer_brightness(value, ip).await.unwrap();
+                    });
+                }
+            })/>
+        </div>
+    }
 }
 
 #[component]

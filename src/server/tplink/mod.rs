@@ -59,6 +59,16 @@ pub async fn handle_smart_light_brightness(
     Ok(())
 }
 
+#[server(HandleSmartDimmerBrightness)]
+pub async fn handle_smart_dimmer_brightness(
+    brightness: u8,
+    ip: String,
+) -> Result<(), ServerFnError> {
+    use crate::integrations::tplink::tplink_set_dimmer_brightness;
+    tplink_set_dimmer_brightness(&ip, &brightness).await;
+    Ok(())
+}
+
 #[server(HandleSmartLightSaturation)]
 pub async fn handle_smart_light_saturation(
     saturation: u8,

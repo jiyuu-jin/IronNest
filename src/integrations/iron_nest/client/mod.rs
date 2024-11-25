@@ -571,6 +571,19 @@ pub fn tplink_discovery_job(shared_pool: Pool<Postgres>, mut control_rx: Receive
                                             });
                                         }
                                     }
+                                    DeviceData::SmartDimmer(data) => {
+                                        if let Some(ip) = data.ip {
+                                            devices.push(Device {
+                                                id: 0,
+                                                name: data.alias,
+                                                device_type: DeviceType::SmartDimmer,
+                                                ip: ip.to_string(),
+                                                power_state: data.relay_state,
+                                                battery_percentage: 0,
+                                                last_seen: Utc::now(),
+                                            });
+                                        }
+                                    }
                                 }
                             }
                             insert_devices_into_db(shared_pool.clone(), &devices)

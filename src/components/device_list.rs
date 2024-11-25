@@ -89,6 +89,11 @@ pub fn DeviceListItem(device: Device) -> impl IntoView {
                 <SmartLightItem device=device/>
             </div>
         },
+        DeviceType::SmartDimmer => view! {
+            <div>
+                <SmartDimmerItem device=device/>
+            </div>
+        },
         DeviceType::RingDoorbell => view! {
             <div>
                 <RingDoorbellItem device=device/>
@@ -124,6 +129,26 @@ pub fn SmartPlugItem(device: Device) -> impl IntoView {
         <DeviceListCard device=device.clone()>
             <Checkbox value=device.power_state == 1 on_click=toggle_action/>
 
+        </DeviceListCard>
+    }
+}
+
+#[component]
+pub fn SmartDimmerItem(device: Device) -> impl IntoView {
+    let toggle_action = create_action({
+        let ip = device.ip.clone();
+        move |value| {
+            let ip = ip.clone();
+            let value = *value;
+            async move {
+                handle_smart_plug_toggle(value, ip).await.unwrap();
+            }
+        }
+    });
+
+    view! {
+        <DeviceListCard device=device.clone()>
+            <Checkbox value=device.power_state == 1 on_click=toggle_action/>
         </DeviceListCard>
     }
 }
