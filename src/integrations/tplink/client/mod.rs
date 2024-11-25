@@ -156,6 +156,15 @@ pub async fn tplink_set_dimmer_brightness(ip: &str, brightness: &u8) {
     .unwrap();
 }
 
+pub async fn tplink_set_dimmer_inactivity_timeout(ip: &str, timeout: &u8) {
+    send(
+        ip,
+        json!({"smartlife.iot.dimmer":{"set_cold_time": {"cold_time": timeout}}}),
+    )
+    .await
+    .unwrap();
+}
+
 pub async fn tplink_turn_light_on_off(ip: &str, state: u8) {
     send(ip, json!({"smartlife.iot.smartbulb.lightingservice":{"transition_light_state":{"on_off":state,"transition_period":0}}}))
         .await
