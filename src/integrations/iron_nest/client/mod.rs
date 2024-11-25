@@ -18,8 +18,9 @@ use {
             },
             stoplight::toggle_stoplight,
             tplink::{
-                discover_devices, tplink_set_light_brightness, tplink_turn_light_on_off,
-                tplink_turn_plug_off, tplink_turn_plug_on, types::DeviceData,
+                discover_devices, tplink_set_dimmer_brightness, tplink_set_light_brightness,
+                tplink_turn_light_on_off, tplink_turn_plug_off, tplink_turn_plug_on,
+                types::DeviceData,
             },
             tuya::{get_devices, get_refresh_token},
         },
@@ -217,6 +218,18 @@ pub async fn execute_function(function_name: String, function_args: serde_json::
                 .try_into()
                 .unwrap();
             tplink_set_light_brightness(ip, brightness).await;
+            json!({
+                "message": "success"
+            })
+        }
+        "tplink_set_dimmer_brightness" => {
+            let ip = function_args["ip"].as_str().unwrap();
+            let brightness: u8 = function_args["brightness"]
+                .as_u64()
+                .unwrap()
+                .try_into()
+                .unwrap();
+            tplink_set_dimmer_brightness(ip, &brightness).await;
             json!({
                 "message": "success"
             })
