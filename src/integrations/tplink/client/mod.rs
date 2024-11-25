@@ -123,6 +123,18 @@ pub async fn send(ip: &str, json: serde_json::Value) -> io::Result<()> {
     Ok(())
 }
 
+pub async fn tplink_set_alias(ip: &str, alias: &str) {
+    send(ip, json!({"system":{"set_dev_alias":{"alias": alias}}}))
+        .await
+        .unwrap();
+}
+
+pub async fn tplink_reboot(ip: &str) {
+    send(ip, json!({"system":{"reboot":{"delay": 1}}}))
+        .await
+        .unwrap();
+}
+
 pub async fn tplink_turn_plug_on(ip: &str) {
     send(ip, json!({"system":{"set_relay_state":{"state": 1}}}))
         .await
