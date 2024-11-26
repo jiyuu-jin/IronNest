@@ -175,7 +175,9 @@ fn calculate_position(
     timeline_width: i32,
 ) -> i32 {
     let start_of_day = DateTime::from_naive_utc_and_offset(
-        chrono::NaiveDateTime::from_timestamp_opt(start_of_day_timestamp, 0).unwrap(),
+        DateTime::from_timestamp(start_of_day_timestamp, 0)
+            .unwrap()
+            .naive_local(),
         Utc,
     );
     let position = (timestamp - start_of_day).num_seconds() as f64;
