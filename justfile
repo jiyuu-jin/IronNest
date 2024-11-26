@@ -19,3 +19,12 @@ wipe:
 
 infra:
   docker compose up postgres
+
+docker-build-push:
+  docker compose build iron_nest
+  docker compose push iron_nest
+
+deploy:
+  ssh turingpi-1 "cd ~/ironnest && docker compose pull iron_nest && docker compose up -d iron_nest"
+
+build-deploy: docker-build-push deploy

@@ -1,4 +1,4 @@
-use {crate::integrations::iron_nest::types::FullAction, leptos::*, serde_json::Value};
+use {crate::integrations::iron_nest::types::FullAction, leptos::*};
 
 #[server(GetActions)]
 pub async fn get_actions() -> Result<Vec<FullAction>, ServerFnError> {
@@ -23,7 +23,7 @@ pub async fn add_action(
     function_name: String,
     function_args: String,
 ) -> Result<(), ServerFnError> {
-    let function_args = serde_json::from_str::<Value>(&function_args).unwrap();
+    let function_args = serde_json::from_str::<serde_json::Value>(&function_args).unwrap();
     let pool = use_context::<sqlx::PgPool>().unwrap();
     let cron_client = use_context::<crate::integrations::iron_nest::cron::CronClient>().unwrap();
     let query = "
