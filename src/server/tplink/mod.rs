@@ -9,7 +9,7 @@ pub async fn handle_smart_plug_toggle(state: bool, ip: String) -> Result<(), Ser
 
     let pool = use_context::<PgPool>().unwrap();
     let query = "
-        UPDATE devices
+        UPDATE device
         SET power_state = $1
         WHERE ip = $2
     ";

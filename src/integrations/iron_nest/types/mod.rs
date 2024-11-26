@@ -78,6 +78,7 @@ pub struct Integration {
     pub id: i64,
     pub name: String,
     pub enabled: bool,
+    pub image: String,
 }
 
 pub enum ControlMessage {

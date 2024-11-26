@@ -22,7 +22,8 @@ async fn main() {
         log::{error, LevelFilter},
         simple_logger::SimpleLogger,
         sqlx::postgres::PgPoolOptions,
-        std::sync::Arc,
+        std::{collections::HashMap, sync::Arc},
+        tokio::sync::RwLock,
     };
 
     dotenv().ok();
@@ -47,12 +48,13 @@ async fn main() {
     let addr = leptos_options.site_addr;
     let routes = generate_route_list(App);
     let ring_rest_client = Arc::new(RingRestClient::new(shared_pool.clone()).await);
-
+    let control_senders = Arc::new(RwLock::new(HashMap::new()));
     let app_state = AppState {
         leptos_options,
         ring_rest_client: ring_rest_client.clone(),
         pool: shared_pool.clone(),
         cron_client: CronClient::new().await,
+        control_senders: control_senders.clone(),
     };
 
     app_state
@@ -75,7 +77,7 @@ async fn main() {
         .fallback(file_and_error_handler)
         .with_state(app_state);
 
-    run_devices_tasks(ring_rest_client, shared_pool)
+    run_devices_tasks(ring_rest_client, shared_pool, control_senders)
         .await
         .unwrap();
 

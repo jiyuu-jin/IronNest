@@ -28,7 +28,7 @@ pub fn ActionsPage() -> impl IntoView {
             <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
                 <h1 class="text-lg">"Actions"</h1>
                 <hr class="mb-2"/>
-                <Suspense fallback=|| {
+                <Suspense fallback=move || {
                     view! { <p>"Loading actions..."</p> }
                 }>
                     {move || {

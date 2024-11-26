@@ -4,8 +4,8 @@ use {
             navbar::Navbar,
             pages::{
                 actions_page::ActionsPage, dashboard_page::DashboardPage,
-                devices_page::DevicesPage, integrations_page::AccountsPage, login_page::LoginPage,
-                settings_page::SettingsPage, websocket_page::WebSocketPage,
+                devices_page::DevicesPage, integrations_page::IntegrationsPage,
+                login_page::LoginPage, settings_page::SettingsPage, websocket_page::WebSocketPage,
             },
         },
         error_template::{AppError, ErrorTemplate},
@@ -182,7 +182,7 @@ pub fn App() -> impl IntoView {
                 <main>
                     <Routes>
                         <Route path="/" view=DashboardPage/>
-                        <Route path="/integrations" view=AccountsPage/>
+                        <Route path="/integrations" view=IntegrationsPage/>
                         <Route path="/integrations/:integration" view=LoginPage/>
                         <Route path="/actions" view=ActionsPage/>
                         <Route path="/settings" view=SettingsPage/>

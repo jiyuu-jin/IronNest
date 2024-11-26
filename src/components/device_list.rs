@@ -127,7 +127,7 @@ pub fn SmartPlugItem(device: Device) -> impl IntoView {
 
     view! {
         <DeviceListCard device=device.clone()>
-            <Checkbox value=device.power_state == 1 on_click=toggle_action/>
+            <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None/>
 
         </DeviceListCard>
     }
@@ -148,7 +148,7 @@ pub fn SmartDimmerItem(device: Device) -> impl IntoView {
 
     view! {
         <DeviceListCard device=device.clone()>
-            <Checkbox value=device.power_state == 1 on_click=toggle_action/>
+            <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None/>
         </DeviceListCard>
     }
 }
@@ -186,7 +186,7 @@ pub fn SmartLightItem(device: Device) -> impl IntoView {
 
     view! {
         <DeviceListCard device=device.clone()>
-            <Checkbox value=device.power_state == 1 on_click=toggle_action/>
+            <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None/>
 
         </DeviceListCard>
     }
@@ -207,7 +207,7 @@ pub fn RokuTvItem(device: Device) -> impl IntoView {
 
     view! {
         <DeviceListCard device=device.clone()>
-            <Checkbox value=device.power_state == 1 on_click=toggle_action/>
+            <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None/>
 
         </DeviceListCard>
     }

@@ -91,7 +91,7 @@ pub fn SmartLightView(device: Device) -> impl IntoView {
 
     view! {
         <div class="flex flex-col">
-            <Checkbox value=device.power_state == 1 on_click=toggle_action/>
+            <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None/>
             <Slider on_change=Box::new({
                 let ip = device.ip.clone();
                 move |value| {
@@ -133,7 +133,7 @@ pub fn SmartPlugView(device: Device) -> impl IntoView {
         }
     });
 
-    view! { <Checkbox value=device.power_state == 1 on_click=toggle_action/> }
+    view! { <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None/> }
 }
 
 #[component]
@@ -151,7 +151,7 @@ pub fn SmartDimmerView(device: Device) -> impl IntoView {
 
     view! {
         <div class="flex flex-col">
-            <Checkbox value=device.power_state == 1 on_click=toggle_action/>
+            <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None/>
             <Slider on_change=Box::new({
                 let ip = device.ip.clone();
                 move |value| {
@@ -183,7 +183,7 @@ pub fn RokuTvView(device: Device) -> impl IntoView {
         }
     });
 
-    view! { <Checkbox value=device.power_state == 1 on_click=toggle_action/> }
+    view! { <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None/> }
 }
 
 #[component]

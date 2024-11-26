@@ -1,6 +1,7 @@
 use {
     super::{
         cron::CronClient,
+        shared::get_default_integrations,
         types::{AuthState, ControlMessage, Device, DeviceType, Integration},
     },
     crate::{
@@ -22,7 +23,7 @@ use {
                 tplink_turn_light_on_off, tplink_turn_plug_off, tplink_turn_plug_on,
                 types::DeviceData,
             },
-            tuya::{get_devices, get_refresh_token},
+            tuya::{get_devices, get_refresh_token, types::TuyaDeviceResResult},
         },
     },
     axum::{
@@ -38,7 +39,10 @@ use {
     serde_json::{json, Value},
     sqlx::{PgPool, Pool, Postgres},
     std::{collections::HashMap, net::Ipv4Addr, sync::Arc},
-    tokio::sync::mpsc::{self, Receiver},
+    tokio::sync::{
+        mpsc::{self, Receiver, Sender},
+        RwLock,
+    },
     tokio_cron_scheduler::{Job, JobScheduler},
     url::Url,
 };
@@ -49,7 +53,7 @@ pub async fn insert_devices_into_db(
 ) -> Result<(), sqlx::Error> {
     for device in devices {
         let query = "
-            INSERT INTO devices (
+            INSERT INTO device (
                 name,
                 device_type,
                 battery_percentage,
@@ -99,45 +103,19 @@ pub async fn insert_initial_devices_into_db(pool: PgPool) -> Result<(), sqlx::Er
 }
 
 pub async fn insert_integrations_into_db(pool: PgPool) -> Result<(), sqlx::Error> {
-    let default_integrations = vec![
-        Integration {
-            id: 0,
-            name: "tplink".to_string(),
-            enabled: false,
-        },
-        Integration {
-            id: 1,
-            name: "roku".to_string(),
-            enabled: false,
-        },
-        Integration {
-            id: 2,
-            name: "ring".to_string(),
-            enabled: false,
-        },
-        Integration {
-            id: 3,
-            name: "tuya".to_string(),
-            enabled: false,
-        },
-        Integration {
-            id: 4,
-            name: "eufy".to_string(),
-            enabled: false,
-        },
-    ];
-
-    for integration in default_integrations {
+    for integration in get_default_integrations() {
         let query = "
-            INSERT INTO integrations (
+            INSERT INTO integration (
                 name,
-                enabled
-            ) VALUES ($1, $2)
+                enabled,
+                image
+            ) VALUES ($1, $2, $3)
             ON CONFLICT (name) DO NOTHING;
         ";
         sqlx::query(query)
             .bind(&integration.name)
             .bind(integration.enabled)
+            .bind(integration.image)
             .execute(&pool)
             .await?;
     }
@@ -251,6 +229,26 @@ pub async fn execute_function(function_name: String, function_args: serde_json::
         }
         &_ => todo!(),
     }
+}
+
+pub async fn insert_tuya_device_keys(
+    pool: PgPool,
+    device: TuyaDeviceResResult,
+) -> Result<(), sqlx::Error> {
+    let query = "
+        INSERT INTO tuya_device_data (id, local_key) 
+        VALUES ($1, $2)
+        ON CONFLICT(id) DO UPDATE SET
+            local_key = EXCLUDED.local_key,
+    ";
+
+    sqlx::query(query)
+        .bind(device.uid)
+        .bind(device.local_key)
+        .execute(&pool)
+        .await?;
+
+    Ok(())
 }
 
 pub async fn insert_cameras_into_db(
@@ -381,6 +379,7 @@ pub async fn server_fn_handler(
             provide_context(app_state.ring_rest_client.clone());
             provide_context(app_state.pool.clone());
             provide_context(app_state.cron_client.clone());
+            provide_context(app_state.control_senders.clone());
         },
         request,
     )
@@ -393,6 +392,7 @@ pub struct AppState {
     pub ring_rest_client: Arc<RingRestClient>,
     pub pool: PgPool,
     pub cron_client: CronClient,
+    pub control_senders: Arc<RwLock<HashMap<String, Sender<ControlMessage>>>>,
 }
 
 pub fn tuya_auth_job(shared_pool: Pool<Postgres>) {
@@ -546,6 +546,7 @@ pub fn roku_discovery_job(shared_pool: Pool<Postgres>) {
 
 pub fn tplink_discovery_job(shared_pool: Pool<Postgres>, mut control_rx: Receiver<ControlMessage>) {
     tokio::task::spawn(async move {
+        println!("running tplink discovery job");
         let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(60));
         let mut running = true;
 
@@ -693,8 +694,8 @@ pub fn ring_discovery_job(shared_pool: Pool<Postgres>, ring_rest_client: Arc<Rin
 
 pub async fn get_integrations(pool: Pool<Postgres>) -> Result<Vec<Integration>, sqlx::Error> {
     let query = "
-    SELECT id, name, enabled 
-    FROM integrations
+    SELECT id, name, enabled, image 
+    FROM integration
     WHERE enabled=true
 ";
     sqlx::query_as(query).fetch_all(&pool).await
@@ -703,18 +704,17 @@ pub async fn get_integrations(pool: Pool<Postgres>) -> Result<Vec<Integration>, 
 pub async fn run_devices_tasks(
     ring_rest_client: Arc<RingRestClient>,
     shared_pool: Pool<Postgres>,
+    control_senders: Arc<RwLock<HashMap<String, Sender<ControlMessage>>>>,
 ) -> Result<(), sqlx::Error> {
     insert_integrations_into_db(shared_pool.clone()).await?;
     insert_initial_devices_into_db(shared_pool.clone()).await?;
     let integrations = get_integrations(shared_pool.clone()).await.unwrap();
-    let mut control_senders = HashMap::new();
 
     for integration in integrations {
         match integration.name.as_str() {
             "tplink" => {
                 let (tx, rx) = mpsc::channel(10);
                 tplink_discovery_job(shared_pool.clone(), rx);
-                control_senders.insert("tplink".to_string(), tx);
             }
             "roku" => {
                 roku_discovery_job(shared_pool.clone());

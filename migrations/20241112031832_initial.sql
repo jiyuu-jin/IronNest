@@ -1,7 +1,7 @@
 -- SQLBook: Code
 CREATE TYPE device_type AS ENUM ('smart-plug', 'smart-light', 'smart-dimmer', 'ring-doorbell', 'roku-tv', 'stoplight');
 
-CREATE TABLE devices (
+CREATE TABLE device (
     id BIGSERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     device_type device_type NOT NULL,
@@ -69,8 +69,14 @@ CREATE TABLE amounts (
     FOREIGN KEY(ingredient_id) REFERENCES ingredient(id)
 );
 
-create TABLE integrations (
+create TABLE integration (
     id BIGSERIAL PRIMARY KEY,
     name TEXT NOT NULL UNIQUE,
-    enabled BOOLEAN DEFAULT FALSE
+    enabled BOOLEAN DEFAULT FALSE,
+    image TEXT NOT NULL
 );
+
+create TABLE tuya_device_data (
+    id INTEGER PRIMARY KEY REFERENCES device(id),
+    local_key TEXT 
+)
