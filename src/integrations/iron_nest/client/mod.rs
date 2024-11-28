@@ -544,11 +544,15 @@ pub fn roku_discovery_job(shared_pool: Pool<Postgres>) {
     });
 }
 
-pub fn tplink_discovery_job(shared_pool: Pool<Postgres>, mut control_rx: Receiver<ControlMessage>) {
+pub fn tplink_discovery_job(
+    shared_pool: Pool<Postgres>,
+    mut control_rx: Receiver<ControlMessage>,
+    initial_enabled: bool,
+) {
     tokio::task::spawn(async move {
         println!("running tplink discovery job");
         let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(60));
-        let mut running = true;
+        let mut running = initial_enabled;
 
         loop {
             tokio::select! {
@@ -610,14 +614,18 @@ pub fn tplink_discovery_job(shared_pool: Pool<Postgres>, mut control_rx: Receive
                     }
                 },
                 Some(msg) = control_rx.recv() => {
+                    println!("Received control message: {:?}", msg);
                     match msg {
                         ControlMessage::Start => {
+                            println!("Starting discovery job");
                             running = true;
                         }
                         ControlMessage::Stop => {
+                            println!("Stopping discovery job");
                             running = false;
                         }
                         ControlMessage::Shutdown => {
+                            println!("Shutting down discovery job");
                             break;
                         }
                     }
@@ -696,7 +704,6 @@ pub async fn get_integrations(pool: Pool<Postgres>) -> Result<Vec<Integration>, 
     let query = "
     SELECT id, name, enabled, image 
     FROM integration
-    WHERE enabled=true
 ";
     sqlx::query_as(query).fetch_all(&pool).await
 }
@@ -714,7 +721,9 @@ pub async fn run_devices_tasks(
         match integration.name.as_str() {
             "tplink" => {
                 let (tx, rx) = mpsc::channel(10);
-                tplink_discovery_job(shared_pool.clone(), rx);
+                tplink_discovery_job(shared_pool.clone(), rx, integration.enabled);
+                let mut senders = control_senders.write().await;
+                senders.insert("tplink".to_string(), tx);
             }
             "roku" => {
                 roku_discovery_job(shared_pool.clone());

@@ -1,7 +1,4 @@
-use {
-    crate::integrations::iron_nest::types::{ControlMessage, Integration},
-    leptos::*,
-};
+use {crate::integrations::iron_nest::types::Integration, leptos::*};
 
 #[server(GetIntegrations)]
 pub async fn get_integrations() -> Result<Vec<Integration>, ServerFnError> {
@@ -25,11 +22,16 @@ pub async fn get_integrations() -> Result<Vec<Integration>, ServerFnError> {
 
 #[server(ToggleIntegration)]
 pub async fn toggle_integration(id: i64, enabled: bool) -> Result<(), ServerFnError> {
-    use sqlx::PgPool;
+    use {
+        crate::integrations::iron_nest::types::ControlMessage,
+        sqlx::PgPool,
+        std::{collections::HashMap, sync::Arc},
+        tokio::sync::{mpsc::Sender, RwLock},
+    };
 
     let pool = use_context::<PgPool>().unwrap();
-    // let control_senders =
-    //     use_context::<Arc<RwLock<HashMap<String, Sender<ControlMessage>>>>>().unwrap();
+    let control_senders =
+        use_context::<Arc<RwLock<HashMap<String, Sender<ControlMessage>>>>>().unwrap();
 
     // Update the integration status in the database
     let query = "
@@ -43,15 +45,24 @@ pub async fn toggle_integration(id: i64, enabled: bool) -> Result<(), ServerFnEr
         .execute(&pool)
         .await?;
 
-    // let senders = control_senders.read().unwrap();
-    // if let Some(sender) = senders.get("tplink") {
-    //     let message = if enabled {
-    //         ControlMessage::Start
-    //     } else {
-    //         ControlMessage::Stop
-    //     };
-    //     sender.send(message).await.unwrap();
-    // }
+    // Add logging
+    let senders = control_senders.read().await;
+    println!(
+        "Available senders: {:?}",
+        senders.keys().collect::<Vec<&String>>()
+    );
+
+    if let Some(sender) = senders.get("tplink") {
+        let message = if enabled {
+            ControlMessage::Start
+        } else {
+            ControlMessage::Stop
+        };
+        println!("Sending message: {:?}", message);
+        sender.send(message).await.unwrap();
+    } else {
+        println!("No sender found for 'tplink'");
+    }
 
     Ok(())
 }

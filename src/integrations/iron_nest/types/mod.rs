@@ -81,6 +81,7 @@ pub struct Integration {
     pub image: String,
 }
 
+#[derive(Debug)]
 pub enum ControlMessage {
     Start,
     Stop,
