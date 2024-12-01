@@ -1,0 +1,4 @@
+CREATE TABLE config (
+    id BIGSERIAL PRIMARY KEY,
+    data JSONB NOT NULL
+);

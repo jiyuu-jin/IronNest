@@ -68,6 +68,7 @@ aes = "0.8.3"
 cbc = "0.1.2"
 async-nats = { version = "0.33.0", optional = true }
 hmac = "0.12.1"
+serde_yaml = "0.9.34"
 
 [features]
 hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]

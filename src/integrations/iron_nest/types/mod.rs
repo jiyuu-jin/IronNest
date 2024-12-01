@@ -5,6 +5,8 @@ use {
     std::fmt,
 };
 
+pub mod config;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "ssr", derive(sqlx::prelude::Type))]
 #[serde(rename_all = "kebab-case")]

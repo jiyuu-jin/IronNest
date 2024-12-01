@@ -1,4 +1,5 @@
 pub mod actions_page;
+pub mod configs_page;
 pub mod dashboard_page;
 pub mod devices_page;
 pub mod integrations_page;
