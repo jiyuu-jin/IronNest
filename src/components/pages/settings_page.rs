@@ -118,6 +118,12 @@ pub fn SettingsPage() -> impl IntoView {
                         </div>
                     </dl>
                 </div>
+
+                <div>
+                    <h2 class="text-base font-semibold leading-7 text-gray-900">"Advanced"</h2>
+                    <p class="mt-1 text-sm leading-6 text-gray-500">"Advanced settings."</p>
+                    <a href="/settings/configs">"Config Import/Export"</a>
+                </div>
             </div>
         </main>
     }
