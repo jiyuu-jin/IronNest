@@ -11,15 +11,31 @@ use {
         },
         error_template::{AppError, ErrorTemplate},
     },
+    gloo_timers::future::TimeoutFuture,
     leptos::*,
     leptos_meta::*,
     leptos_router::*,
 };
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct Toast(pub String);
+
 #[component]
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
+
+    let toast = create_rw_signal::<Option<Toast>>(None);
+    create_resource(
+        move || toast.get(),
+        move |source| async move {
+            if source.is_some() {
+                TimeoutFuture::new(5000).await;
+                toast.set(None);
+            }
+        },
+    );
+    provide_context(toast);
 
     view! {
         <Stylesheet id="leptos" href="/pkg/iron_nest.css"/>
@@ -42,6 +58,20 @@ pub fn App() -> impl IntoView {
         <Meta name="apple-mobile-web-app-capable" content="yes"/>
         <Meta name="mobile-web-app-capable" content="yes"/>
         <Title text="IronNest"/>
+
+        {move || {
+            toast
+                .get()
+                .map(|Toast(message)| {
+                    view! {
+                        <div class="fixed bottom-4 right-4 z-50">
+                            <div class="bg-gray-900 text-white p-4 rounded-md shadow-md">
+                                {message}
+                            </div>
+                        </div>
+                    }
+                })
+        }}
 
         <div>
             <div class="relative z-50 hidden sidebar" role="dialog" aria-modal="true">

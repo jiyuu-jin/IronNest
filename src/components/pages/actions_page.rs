@@ -1,6 +1,6 @@
 use {
     crate::{
-        components::{select::Select, text_input::TextInput},
+        components::{layout::Toast, select::Select, text_input::TextInput},
         integrations::iron_nest::types::RequiredAction,
         server::actions::{get_actions, AddAction, DeleteAction},
     },
@@ -23,6 +23,34 @@ pub fn ActionsPage() -> impl IntoView {
     );
 
     let (show_create_action, set_show_create_action) = create_signal(false);
+
+    let toast = use_context::<RwSignal<Option<Toast>>>().unwrap();
+    create_resource(
+        move || {
+            (
+                create_action_action.value().get(),
+                create_action_action.version().get(),
+            )
+        },
+        move |value| async move {
+            if matches!(value.0, Some(Ok(_))) {
+                toast.set(Some(Toast("Action created".to_owned())));
+            }
+        },
+    );
+    create_resource(
+        move || {
+            (
+                delete_action_action.value().get(),
+                delete_action_action.version().get(),
+            )
+        },
+        move |value| async move {
+            if matches!(value.0, Some(Ok(_))) {
+                toast.set(Some(Toast("Action deleted".to_owned())));
+            }
+        },
+    );
 
     view! {
         <main class="lg:p-40 lg:pt-20 cursor-pointer">
@@ -301,6 +329,7 @@ pub fn ActionsPage() -> impl IntoView {
                                                                         .err()
                                                                 })
                                                         }}
+
                                                     </ActionForm>
                                                 </div>
                                             </div>

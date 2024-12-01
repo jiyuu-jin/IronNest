@@ -1,4 +1,4 @@
-use {leptos::*, leptos_router::ActionForm};
+use {crate::components::layout::Toast, leptos::*, leptos_router::ActionForm};
 
 #[cfg(feature = "ssr")]
 use crate::integrations::iron_nest::types::config::Config;
@@ -61,6 +61,21 @@ pub async fn set_config_query(pool: &sqlx::PgPool, config: Config) -> Result<(),
 pub fn ConfigsPage() -> impl IntoView {
     let set_config_server_action = create_server_action::<SetConfig>();
     let config = create_resource(move || set_config_server_action.version(), |_| get_config());
+
+    let toast = use_context::<RwSignal<Option<Toast>>>().unwrap();
+    create_resource(
+        move || {
+            (
+                set_config_server_action.value().get(),
+                set_config_server_action.version().get(),
+            )
+        },
+        move |value| async move {
+            if matches!(value.0, Some(Ok(_))) {
+                toast.set(Some(Toast("Config saved".to_owned())));
+            }
+        },
+    );
 
     view! {
         <main class="lg:p-40 lg:pt-20 cursor-pointer">
