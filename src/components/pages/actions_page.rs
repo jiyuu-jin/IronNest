@@ -10,16 +10,17 @@ use {
 
 #[component]
 pub fn ActionsPage() -> impl IntoView {
-    let actions = create_resource(|| (), |_| get_actions());
     let create_action_action = create_server_action::<AddAction>();
     let delete_action_action = create_server_action::<DeleteAction>();
-
-    // TODO we're not supposed to use effects for this use case
-    create_effect(move |_| {
-        create_action_action.version().track();
-        delete_action_action.version().track();
-        actions.refetch();
-    });
+    let actions = create_resource(
+        move || {
+            (
+                create_action_action.version().get(),
+                delete_action_action.version().get(),
+            )
+        },
+        |_| get_actions(),
+    );
 
     let (show_create_action, set_show_create_action) = create_signal(false);
 
@@ -66,6 +67,23 @@ pub fn ActionsPage() -> impl IntoView {
                                                         .collect::<Vec<_>>()}
 
                                                 </ul>
+                                                {move || {
+                                                    delete_action_action
+                                                        .value()
+                                                        .get()
+                                                        .and_then(|value| {
+                                                            value
+                                                                .map_err(|value| {
+                                                                    view! {
+                                                                        <div>
+                                                                            <p>"Delete action error: " {value.to_string()}</p>
+                                                                        </div>
+                                                                    }
+                                                                        .into_view()
+                                                                })
+                                                                .err()
+                                                        })
+                                                }}
                                             }
                                                 .into_view()
                                         }
