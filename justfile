@@ -28,3 +28,6 @@ deploy:
   ssh turingpi-1 "cd ~/ironnest && docker compose pull iron_nest && docker compose up -d iron_nest"
 
 build-deploy: docker-build-push deploy
+
+forward-postgres:
+  ssh turingpi-1 -N -L 127.0.0.1:5433:127.0.0.1:5433
