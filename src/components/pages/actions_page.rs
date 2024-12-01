@@ -284,6 +284,23 @@ pub fn ActionsPage() -> impl IntoView {
                                                                 Create
                                                             </button>
                                                         </div>
+                                                        {move || {
+                                                            create_action_action
+                                                                .value()
+                                                                .get()
+                                                                .and_then(|value| {
+                                                                    value
+                                                                        .map_err(|value| {
+                                                                            view! {
+                                                                                <div>
+                                                                                    <p>"Create action error: " {value.to_string()}</p>
+                                                                                </div>
+                                                                            }
+                                                                                .into_view()
+                                                                        })
+                                                                        .err()
+                                                                })
+                                                        }}
                                                     </ActionForm>
                                                 </div>
                                             </div>

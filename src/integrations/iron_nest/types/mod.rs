@@ -3,6 +3,7 @@ use {
     serde::{Deserialize, Serialize},
     serde_json::Value,
     std::fmt,
+    uuid::Uuid,
 };
 
 pub mod config;
@@ -63,7 +64,7 @@ pub struct AuthState {
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 pub struct FullAction {
-    pub id: i64,
+    pub id: Uuid,
     #[serde(flatten)]
     #[cfg_attr(feature = "ssr", sqlx(flatten))]
     pub fields: RequiredAction,

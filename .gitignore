@@ -5,3 +5,4 @@ state.json
 default.creds
 database.sqlite
 docker-data
+.config.yaml
