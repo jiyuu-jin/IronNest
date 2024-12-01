@@ -6,7 +6,7 @@ FROM rust:1.82-bookworm as builder
 # RUN cp cargo-binstall /usr/local/cargo/bin
 
 # Install cargo-leptos
-RUN cargo install cargo-leptos
+RUN cargo install cargo-leptos@0.2.21
 
 RUN apt update && apt install -y npm
 RUN npm install -g sass
