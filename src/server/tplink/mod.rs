@@ -26,6 +26,38 @@ pub async fn handle_smart_plug_toggle(state: bool, ip: String) -> Result<(), Ser
     Ok(())
 }
 
+#[server(HandleSmartPowerStripToggle)]
+pub async fn handle_smart_power_strip_toggle(
+    state: bool,
+    ip: String,
+    child_id: String,
+) -> Result<(), ServerFnError> {
+    use {
+        crate::integrations::tplink::{
+            tplink_turn_smart_strip_socket_off, tplink_turn_smart_strip_socket_on,
+        },
+        sqlx::PgPool,
+    };
+
+    let pool = use_context::<PgPool>().unwrap();
+    let query = "
+        UPDATE device
+        SET power_state = $1
+        WHERE ip = $2
+    ";
+    sqlx::query(query)
+        .bind(if state { 1 } else { 0 })
+        .bind(&ip)
+        .execute(&pool)
+        .await?;
+    if state {
+        tplink_turn_smart_strip_socket_on(&ip, &child_id).await;
+    } else {
+        tplink_turn_smart_strip_socket_off(&ip, &child_id).await;
+    }
+    Ok(())
+}
+
 #[server(HandleSmartLightToggle)]
 pub async fn handle_smart_light_toggle(state: bool, ip: String) -> Result<(), ServerFnError> {
     use {crate::integrations::tplink::tplink_turn_light_on_off, sqlx::PgPool};

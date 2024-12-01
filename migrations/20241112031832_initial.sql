@@ -1,14 +1,19 @@
 -- SQLBook: Code
-CREATE TYPE device_type AS ENUM ('smart-plug', 'smart-light', 'smart-dimmer', 'ring-doorbell', 'roku-tv', 'stoplight');
+CREATE TYPE device_type AS ENUM ('smart-plug', 'smart-light', 'smart-dimmer', 'smart-power-strip', 'ring-doorbell', 'roku-tv', 'stoplight');
 
 CREATE TABLE device (
     id BIGSERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     device_type device_type NOT NULL,
-    ip TEXT NOT NULL UNIQUE,
+    ip TEXT NOT NULL,
     battery_percentage INT8,
     power_state INT4 NOT NULL,
-    last_seen TIMESTAMPTZ NOT NULL
+    last_seen TIMESTAMPTZ NOT NULL,
+    mac_address TEXT,
+    child_id TEXT,
+    coalesced_child_id TEXT GENERATED ALWAYS AS (COALESCE(child_id, '')) STORED,
+    CONSTRAINT unique_ip_child_id UNIQUE (ip, coalesced_child_id),
+    CONSTRAINT unique_mac_child_id UNIQUE (mac_address, coalesced_child_id)
 );
 
 CREATE TABLE actions (

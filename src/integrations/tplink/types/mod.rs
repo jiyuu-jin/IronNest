@@ -18,8 +18,54 @@ pub struct TPLinkDiscoverySysInfo {
 pub enum GetSysInfo {
     TPLinkDiscoveryData(Box<TPLinkDiscoveryData>),
     TPLinkSmartLightData(TPLinkSmartLightData),
+    TPLinkSmartPowerStripData(Box<TPLinkSmartPowerStripRes>),
     Empty(()),
     CatchAll(serde_json::Value), // Catch-all variant
+}
+
+// @TPLink Smart Power Strip
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TPLinkSmartPowerStripRes {
+    pub alias: String,
+    pub child_num: i32,
+    pub children: Vec<Child>,
+    #[serde(rename = "deviceId")]
+    pub device_id: String,
+    pub err_code: i32,
+    pub feature: String,
+    #[serde(rename = "hwId")]
+    pub hw_id: String,
+    pub hw_ver: String,
+    pub latitude_i: i32,
+    pub led_off: i32,
+    pub longitude_i: i32,
+    pub mac: String,
+    pub mic_type: String,
+    pub model: String,
+    pub ntc_state: i32,
+    pub obd_src: String,
+    #[serde(rename = "oemId")]
+    pub oem_id: String,
+    pub rssi: i32,
+    pub status: String,
+    pub sw_ver: String,
+    pub updating: i32,
+    pub ip: Option<IpAddr>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Child {
+    pub alias: String,
+    pub id: String,
+    pub next_action: NextAction,
+    pub on_time: i32,
+    pub state: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NextAction {
+    #[serde(rename = "type")]
+    pub action_type: i32,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -58,6 +104,7 @@ pub enum DeviceData {
     SmartPlug(Box<TPLinkDiscoveryData>),
     SmartLight(TPLinkSmartLightData),
     SmartDimmer(Box<TPLinkDiscoveryData>),
+    SmartPowerStrip(Box<TPLinkSmartPowerStripRes>),
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

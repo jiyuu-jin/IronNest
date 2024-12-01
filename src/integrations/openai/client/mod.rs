@@ -69,6 +69,8 @@ pub async fn open_api_command(text: String, pool: &PgPool) -> Result<String, Ser
             power_state: state,
             battery_percentage: 0,
             last_seen: Utc::now(),
+            mac_address: None,
+            child_id: None,
         });
 
         let device_type: String = row.get("device_type");

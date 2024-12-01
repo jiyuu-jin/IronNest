@@ -65,6 +65,11 @@ pub async fn discover_devices() -> Result<Vec<DeviceData>, Box<dyn Error + Send>
                             get_sysinfo.ip = Some(src_addr.ip());
                             devices.push(DeviceData::SmartLight(get_sysinfo));
                         }
+                        GetSysInfo::TPLinkSmartPowerStripData(mut get_sysinfo) => {
+                            info!("Smart Power Strip from {}: {}", src_addr, get_sysinfo.alias);
+                            get_sysinfo.ip = Some(src_addr.ip());
+                            devices.push(DeviceData::SmartPowerStrip(get_sysinfo));
+                        }
                         GetSysInfo::Empty(()) => trace!("ignoring GetSysInfo::Empty(())"),
                         GetSysInfo::CatchAll(raw_json) => {
                             warn!("Catch-all variant triggered, raw JSON: {:?}", raw_json);
@@ -145,6 +150,36 @@ pub async fn tplink_turn_plug_off(ip: &str) {
     send(ip, json!({"system":{"set_relay_state":{"state": 0}}}))
         .await
         .unwrap();
+}
+
+pub async fn tplink_turn_smart_strip_socket_off(ip: &str, id: &str) {
+    send(
+        ip,
+        json!(
+        {
+            "context": {
+                "child_ids": [id]
+            },
+            "system":{"set_relay_state":{"state": 0}}
+        }),
+    )
+    .await
+    .unwrap();
+}
+
+pub async fn tplink_turn_smart_strip_socket_on(ip: &str, id: &str) {
+    send(
+        ip,
+        json!(
+        {
+            "context": {
+                "child_ids": [id]
+            },
+            "system":{"set_relay_state":{"state": 1}}
+        }),
+    )
+    .await
+    .unwrap();
 }
 
 pub async fn tplink_set_dimmer_brightness(ip: &str, brightness: &u8) {

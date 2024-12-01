@@ -4,7 +4,10 @@ use {
         integrations::iron_nest::types::{Device, DeviceType},
         server::{
             roku::handle_roku_tv_toggle,
-            tplink::{handle_smart_light_toggle, handle_smart_plug_toggle},
+            tplink::{
+                handle_smart_light_toggle, handle_smart_plug_toggle,
+                handle_smart_power_strip_toggle,
+            },
         },
     },
     leptos::{html::Div, *},
@@ -94,6 +97,11 @@ pub fn DeviceListItem(device: Device) -> impl IntoView {
                 <SmartDimmerItem device=device/>
             </div>
         },
+        DeviceType::SmartPowerStrip => view! {
+            <div>
+                <SmartPowerStripItem device=device/>
+            </div>
+        },
         DeviceType::RingDoorbell => view! {
             <div>
                 <RingDoorbellItem device=device/>
@@ -149,6 +157,31 @@ pub fn SmartDimmerItem(device: Device) -> impl IntoView {
     view! {
         <DeviceListCard device=device.clone()>
             <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None/>
+        </DeviceListCard>
+    }
+}
+
+#[component]
+pub fn SmartPowerStripItem(device: Device) -> impl IntoView {
+    let toggle_action = create_action({
+        let ip = device.ip.clone();
+        let child_id = device.child_id.clone().unwrap();
+        move |value| {
+            let ip = ip.clone();
+            let child_id = child_id.clone();
+            let value = *value;
+            async move {
+                handle_smart_power_strip_toggle(value, ip, child_id)
+                    .await
+                    .unwrap();
+            }
+        }
+    });
+
+    view! {
+        <DeviceListCard device=device.clone()>
+            <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None/>
+
         </DeviceListCard>
     }
 }

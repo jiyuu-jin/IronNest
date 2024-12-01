@@ -18,6 +18,7 @@ pub enum DeviceType {
     SmartPlug,
     SmartLight,
     SmartDimmer,
+    SmartPowerStrip,
     RingDoorbell,
     RokuTv,
     Stoplight,
@@ -29,6 +30,7 @@ impl fmt::Display for DeviceType {
             Self::SmartPlug => write!(f, "Smart Plug"),
             Self::SmartLight => write!(f, "Smart Light"),
             Self::SmartDimmer => write!(f, "Smart Dimmer"),
+            Self::SmartPowerStrip => write!(f, "Smart Power Strip"),
             Self::RingDoorbell => write!(f, "Ring Doorbell"),
             Self::RokuTv => write!(f, "Roku TV"),
             Self::Stoplight => write!(f, "Stoplight"),
@@ -46,6 +48,8 @@ pub struct Device {
     pub power_state: i32,
     pub battery_percentage: i64,
     pub last_seen: DateTime<Utc>,
+    pub mac_address: Option<String>,
+    pub child_id: Option<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

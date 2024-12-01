@@ -59,15 +59,17 @@ pub async fn insert_devices_into_db(
                 battery_percentage,
                 ip,
                 power_state,
-                last_seen
-            ) VALUES ($1, $2, $3, $4, $5, $6)
-            ON CONFLICT (ip) DO UPDATE
+                last_seen,
+                child_id
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+            ON CONFLICT ON CONSTRAINT unique_ip_child_id DO UPDATE
             SET name=$1,
                 device_type=$2,
                 battery_percentage=$3,
                 ip=$4,
                 power_state=$5,
-                last_seen=$6
+                last_seen=$6,
+                child_id=$7
         ";
         sqlx::query(query)
             .bind(&device.name)
@@ -76,6 +78,7 @@ pub async fn insert_devices_into_db(
             .bind(&device.ip)
             .bind(device.power_state)
             .bind(device.last_seen)
+            .bind(&device.child_id)
             .execute(&pool)
             .await?;
     }
@@ -94,6 +97,8 @@ pub async fn insert_initial_devices_into_db(pool: PgPool) -> Result<(), sqlx::Er
             battery_percentage: 0,
             power_state: 0,
             last_seen: Utc::now(),
+            mac_address: None,
+            child_id: None,
         }],
     )
     .await
@@ -445,13 +450,7 @@ pub fn tuya_discovery_job(shared_pool: Pool<Postgres>) {
                 .result
                 .iter()
                 .map(|device| {
-                    let ip = Ipv4Addr::new(
-                        rand::random::<u8>(),
-                        rand::random::<u8>(),
-                        rand::random::<u8>(),
-                        rand::random::<u8>(),
-                    )
-                    .to_string();
+                    let ip = Ipv4Addr::new(0, 0, 0, 0).to_string();
                     Device {
                         id: 0,
                         name: device.name.clone(),
@@ -460,6 +459,8 @@ pub fn tuya_discovery_job(shared_pool: Pool<Postgres>) {
                         power_state: 0,
                         battery_percentage: 0,
                         last_seen: Utc::now(),
+                        mac_address: None,
+                        child_id: None,
                     }
                 })
                 .collect();
@@ -530,6 +531,8 @@ pub fn roku_discovery_job(shared_pool: Pool<Postgres>) {
                     power_state,
                     battery_percentage: 0,
                     last_seen: Utc::now(),
+                    mac_address: None,
+                    child_id: None,
                 });
             }
 
@@ -573,6 +576,8 @@ pub fn tplink_discovery_job(
                                                 power_state: data.relay_state,
                                                 battery_percentage: 0,
                                                 last_seen: Utc::now(),
+                                                mac_address: None,
+                                                child_id: None,
                                             });
                                         }
                                     }
@@ -586,6 +591,8 @@ pub fn tplink_discovery_job(
                                                 power_state: data.light_state.on_off,
                                                 battery_percentage: 0,
                                                 last_seen: Utc::now(),
+                                                mac_address: None,
+                                                child_id: None,
                                             });
                                         }
                                     }
@@ -599,7 +606,27 @@ pub fn tplink_discovery_job(
                                                 power_state: data.relay_state,
                                                 battery_percentage: 0,
                                                 last_seen: Utc::now(),
+                                                mac_address: None,
+                                                child_id: None,
                                             });
+                                        }
+                                    }
+                                    DeviceData::SmartPowerStrip(data) => {
+                                        if let Some(ip) = data.ip {
+                                            for outlet in data.children {
+                                                devices.push(Device {
+                                                        id: 0,
+                                                        name: outlet.alias,
+                                                        device_type: DeviceType::SmartPowerStrip,
+                                                        ip: ip.to_string(),
+                                                        power_state: outlet.state,
+                                                        battery_percentage: 0,
+                                                        last_seen: Utc::now(),
+                                                        mac_address: None,
+                                                        child_id: Some(format!("{}{}", data.device_id, outlet.id)),
+                                                    },
+                                                );
+                                            }
                                         }
                                     }
                                 }
@@ -686,6 +713,8 @@ pub fn ring_discovery_job(shared_pool: Pool<Postgres>, ring_rest_client: Arc<Rin
                     power_state: 1,
                     battery_percentage: camera.health,
                     last_seen: Utc::now(),
+                    mac_address: None,
+                    child_id: None,
                 });
             }
             match insert_cameras_into_db(shared_pool.clone(), &cameras).await {

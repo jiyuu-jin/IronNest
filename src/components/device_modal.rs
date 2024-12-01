@@ -18,6 +18,7 @@ pub fn DeviceView(device: Device) -> impl IntoView {
         DeviceType::SmartPlug => view! { <SmartPlugView device=device/> },
         DeviceType::SmartLight => view! { <SmartLightView device=device/> },
         DeviceType::SmartDimmer => view! { <SmartDimmerView device=device/> },
+        DeviceType::SmartPowerStrip => view! { <SmartPowerStripView device=device/> },
         DeviceType::RingDoorbell => view! { <RingDoorbellView device=device/> },
         DeviceType::RokuTv => view! { <RokuTvView device=device/> },
         DeviceType::Stoplight => view! { <StoplightView device=device/> },
@@ -163,6 +164,22 @@ pub fn SmartDimmerView(device: Device) -> impl IntoView {
             })/>
         </div>
     }
+}
+
+#[component]
+pub fn SmartPowerStripView(device: Device) -> impl IntoView {
+    let toggle_action = create_action({
+        let ip = device.ip.clone();
+        move |value| {
+            let ip = ip.clone();
+            let value = *value;
+            async move {
+                handle_smart_plug_toggle(value, ip).await.unwrap();
+            }
+        }
+    });
+
+    view! { <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None/> }
 }
 
 #[component]
