@@ -46,7 +46,6 @@ async fn main() {
     let conf = get_configuration(None).await.unwrap();
     let leptos_options = conf.leptos_options;
     let addr = leptos_options.site_addr;
-    let routes = generate_route_list(App);
     let ring_rest_client = Arc::new(RingRestClient::new(shared_pool.clone()).await);
     let control_senders = Arc::new(RwLock::new(HashMap::new()));
     let app_state = AppState {
@@ -67,6 +66,7 @@ async fn main() {
         .route("/roku/:device_id/keypress/:key", get(roku_keypress_handler))
         .with_state(ring_rest_client.clone());
 
+    let routes = generate_route_list(App);
     let app = Router::new()
         .route(
             "/api/*fn_name",
