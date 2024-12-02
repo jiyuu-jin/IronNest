@@ -10,10 +10,11 @@ use {
 pub fn IntegrationsPage() -> impl IntoView {
     let integrations = create_resource(|| (), |_| get_integrations());
 
-    let toggle_action = create_action(|(id, enabled)| {
+    let toggle_action = create_action(|(id, enabled, name): &(i64, bool, String)| {
         let id = *id;
         let enabled = *enabled;
-        async move { toggle_integration(id, enabled).await }
+        let name = name.clone();
+        async move { toggle_integration(id, enabled, name).await }
     });
 
     view! {
@@ -39,7 +40,7 @@ pub fn IntegrationsPage() -> impl IntoView {
                                                             class="h-12 w-12 flex-none rounded-lg bg-white object-cover ring-1 ring-gray-900/10"
                                                         />
                                                         <div class="text-sm font-medium leading-6 text-gray-900">
-                                                            {data.name}
+                                                            {data.name.clone()}
                                                         </div>
                                                         <div class="relative ml-auto">
                                                             <Checkbox
@@ -47,7 +48,8 @@ pub fn IntegrationsPage() -> impl IntoView {
                                                                 on_click=None
                                                                 on_click_fn=Some(
                                                                     Box::new(move || {
-                                                                        toggle_action.dispatch((data.id, !data.enabled))
+                                                                        toggle_action
+                                                                            .dispatch((data.id, !data.enabled, data.name.clone()))
                                                                     }),
                                                                 )
                                                             />

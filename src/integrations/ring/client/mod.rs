@@ -74,7 +74,7 @@ impl RingRestClient {
         let auth_db_pool = pool.clone();
         Self {
             pool,
-            state: get_auth_from_db(auth_db_pool, "ring").await,
+            state: get_auth_from_db(&auth_db_pool, "ring").await,
             client: reqwest::Client::new(),
         }
     }
@@ -112,7 +112,7 @@ impl RingRestClient {
                 .unwrap_or_else(|_| panic!("error requesting: {text}"));
 
             insert_auth(
-                self.pool.clone(),
+                &self.pool,
                 "ring",
                 AuthState {
                     auth_token: auth_res.access_token,

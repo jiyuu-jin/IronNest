@@ -21,7 +21,7 @@ pub async fn get_integrations() -> Result<Vec<Integration>, ServerFnError> {
 }
 
 #[server(ToggleIntegration)]
-pub async fn toggle_integration(id: i64, enabled: bool) -> Result<(), ServerFnError> {
+pub async fn toggle_integration(id: i64, enabled: bool, name: String) -> Result<(), ServerFnError> {
     use {
         crate::integrations::iron_nest::types::ControlMessage,
         sqlx::PgPool,
@@ -45,14 +45,13 @@ pub async fn toggle_integration(id: i64, enabled: bool) -> Result<(), ServerFnEr
         .execute(&pool)
         .await?;
 
-    // Add logging
     let senders = control_senders.read().await;
     println!(
         "Available senders: {:?}",
         senders.keys().collect::<Vec<&String>>()
     );
 
-    if let Some(sender) = senders.get("tplink") {
+    if let Some(sender) = senders.get(&name.clone()) {
         let message = if enabled {
             ControlMessage::Start
         } else {
@@ -61,7 +60,7 @@ pub async fn toggle_integration(id: i64, enabled: bool) -> Result<(), ServerFnEr
         println!("Sending message: {:?}", message);
         sender.send(message).await.unwrap();
     } else {
-        println!("No sender found for 'tplink'");
+        println!("No sender found for {}", &name.clone());
     }
 
     Ok(())

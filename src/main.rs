@@ -77,7 +77,7 @@ async fn main() {
         .fallback(file_and_error_handler)
         .with_state(app_state);
 
-    run_devices_tasks(ring_rest_client, shared_pool, control_senders)
+    run_devices_tasks(ring_rest_client, &shared_pool, control_senders)
         .await
         .unwrap();
 
