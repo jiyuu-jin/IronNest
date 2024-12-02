@@ -1,5 +1,5 @@
 -- SQLBook: Code
-CREATE TYPE device_type AS ENUM ('smart-plug', 'smart-light', 'smart-dimmer', 'smart-power-strip', 'ring-doorbell', 'roku-tv', 'stoplight');
+CREATE TYPE device_type AS ENUM ('kasa-plug', 'kasa-light', 'kasa-dimmer', 'kasa-power-strip', 'ring-doorbell', 'roku-tv', 'stoplight');
 
 CREATE TABLE device (
     id BIGSERIAL PRIMARY KEY,

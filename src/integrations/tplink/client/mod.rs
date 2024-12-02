@@ -54,7 +54,8 @@ pub async fn discover_devices() -> Result<Vec<DeviceData>, Box<dyn Error + Send>
                             );
                             get_sysinfo.ip = Some(src_addr.ip());
 
-                            if get_sysinfo.model == "ES20M(US)" {
+                            if get_sysinfo.model == "ES20M(US)" || get_sysinfo.model == "KS230(US)"
+                            {
                                 devices.push(DeviceData::SmartDimmer(get_sysinfo));
                             } else {
                                 devices.push(DeviceData::SmartPlug(get_sysinfo));
