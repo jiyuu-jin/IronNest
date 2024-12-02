@@ -478,7 +478,7 @@ pub fn tuya_job(
                                 Device {
                                     id: 0,
                                     name: device.name.clone(),
-                                    device_type: DeviceType::SmartLight,
+                                    device_type: DeviceType::KasaLight,
                                     ip,
                                     power_state: 0,
                                     battery_percentage: 0,
@@ -509,7 +509,6 @@ pub fn tuya_job(
     });
 }
 
-// Combined Eufy job (Auth and Discovery)
 pub fn eufy_job(
     shared_pool: PgPool,
     mut control_rx: Receiver<ControlMessage>,
@@ -565,7 +564,6 @@ pub fn eufy_job(
     });
 }
 
-// Combined Ring job (Auth and Discovery)
 pub fn ring_job(
     shared_pool: PgPool,
     ring_rest_client: Arc<RingRestClient>,
@@ -708,7 +706,7 @@ pub fn tplink_discovery_job(
     let shared_pool = shared_pool.clone();
     tokio::task::spawn(async move {
         println!("Running TPlink discovery job");
-        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(60));
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(300));
         let mut running = initial_enabled;
 
         loop {
@@ -725,7 +723,7 @@ pub fn tplink_discovery_job(
                                             devices.push(Device {
                                                 id: 0,
                                                 name: data.alias,
-                                                device_type: DeviceType::SmartPlug,
+                                                device_type: DeviceType::KasaPlug,
                                                 ip: ip.to_string(),
                                                 power_state: data.relay_state,
                                                 battery_percentage: 0,
@@ -740,7 +738,7 @@ pub fn tplink_discovery_job(
                                             devices.push(Device {
                                                 id: 0,
                                                 name: data.alias,
-                                                device_type: DeviceType::SmartLight,
+                                                device_type: DeviceType::KasaLight,
                                                 ip: ip.to_string(),
                                                 power_state: data.light_state.on_off,
                                                 battery_percentage: 0,
@@ -755,7 +753,7 @@ pub fn tplink_discovery_job(
                                             devices.push(Device {
                                                 id: 0,
                                                 name: data.alias,
-                                                device_type: DeviceType::SmartDimmer,
+                                                device_type: DeviceType::KasaDimmer,
                                                 ip: ip.to_string(),
                                                 power_state: data.relay_state,
                                                 battery_percentage: 0,
@@ -771,7 +769,7 @@ pub fn tplink_discovery_job(
                                                 devices.push(Device {
                                                         id: 0,
                                                         name: outlet.alias,
-                                                        device_type: DeviceType::SmartPowerStrip,
+                                                        device_type: DeviceType::KasaPowerStrip,
                                                         ip: ip.to_string(),
                                                         power_state: outlet.state,
                                                         battery_percentage: 0,

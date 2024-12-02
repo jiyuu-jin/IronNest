@@ -82,22 +82,22 @@ pub fn DeviceListItem(device: Device) -> impl IntoView {
     // );
 
     match device.device_type {
-        DeviceType::SmartPlug => view! {
+        DeviceType::KasaPlug => view! {
             <div>
                 <SmartPlugItem device=device/>
             </div>
         },
-        DeviceType::SmartLight => view! {
+        DeviceType::KasaLight => view! {
             <div>
                 <SmartLightItem device=device/>
             </div>
         },
-        DeviceType::SmartDimmer => view! {
+        DeviceType::KasaDimmer => view! {
             <div>
                 <SmartDimmerItem device=device/>
             </div>
         },
-        DeviceType::SmartPowerStrip => view! {
+        DeviceType::KasaPowerStrip => view! {
             <div>
                 <SmartPowerStripItem device=device/>
             </div>

@@ -15,10 +15,10 @@ use {
 #[component]
 pub fn DeviceView(device: Device) -> impl IntoView {
     match device.device_type {
-        DeviceType::SmartPlug => view! { <SmartPlugView device=device/> },
-        DeviceType::SmartLight => view! { <SmartLightView device=device/> },
-        DeviceType::SmartDimmer => view! { <SmartDimmerView device=device/> },
-        DeviceType::SmartPowerStrip => view! { <SmartPowerStripView device=device/> },
+        DeviceType::KasaPlug => view! { <SmartPlugView device=device/> },
+        DeviceType::KasaLight => view! { <SmartLightView device=device/> },
+        DeviceType::KasaDimmer => view! { <SmartDimmerView device=device/> },
+        DeviceType::KasaPowerStrip => view! { <SmartPowerStripView device=device/> },
         DeviceType::RingDoorbell => view! { <RingDoorbellView device=device/> },
         DeviceType::RokuTv => view! { <RokuTvView device=device/> },
         DeviceType::Stoplight => view! { <StoplightView device=device/> },

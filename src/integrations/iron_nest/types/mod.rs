@@ -16,10 +16,10 @@ pub mod config;
     sqlx(type_name = "device_type", rename_all = "kebab-case")
 )]
 pub enum DeviceType {
-    SmartPlug,
-    SmartLight,
-    SmartDimmer,
-    SmartPowerStrip,
+    KasaPlug,
+    KasaLight,
+    KasaDimmer,
+    KasaPowerStrip,
     RingDoorbell,
     RokuTv,
     Stoplight,
@@ -28,10 +28,10 @@ pub enum DeviceType {
 impl fmt::Display for DeviceType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::SmartPlug => write!(f, "Smart Plug"),
-            Self::SmartLight => write!(f, "Smart Light"),
-            Self::SmartDimmer => write!(f, "Smart Dimmer"),
-            Self::SmartPowerStrip => write!(f, "Smart Power Strip"),
+            Self::KasaPlug => write!(f, "Kasa Plug"),
+            Self::KasaLight => write!(f, "Kasa Light"),
+            Self::KasaDimmer => write!(f, "Kasa Dimmer"),
+            Self::KasaPowerStrip => write!(f, "Kasa Power Strip"),
             Self::RingDoorbell => write!(f, "Ring Doorbell"),
             Self::RokuTv => write!(f, "Roku TV"),
             Self::Stoplight => write!(f, "Stoplight"),
