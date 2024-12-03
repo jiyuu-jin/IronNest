@@ -42,8 +42,8 @@ pub struct TPLinkSmartPowerStripRes {
     pub mac: String,
     pub mic_type: String,
     pub model: String,
-    pub ntc_state: i32,
-    pub obd_src: String,
+    pub ntc_state: Option<i32>,
+    pub obd_src: Option<String>,
     #[serde(rename = "oemId")]
     pub oem_id: String,
     pub rssi: i32,
