@@ -19,3 +19,12 @@ pub async fn get_devices() -> Result<Vec<Device>, ServerFnError> {
         .await
         .map_err(Into::into)
 }
+
+#[server(RefreshDevices)]
+pub async fn refresh_devices() -> Result<(), ServerFnError> {
+    use {crate::integrations::iron_nest::refresh_tplink_devices, sqlx::PgPool};
+
+    let pool = use_context::<PgPool>().unwrap();
+    refresh_tplink_devices(pool).await;
+    Ok(())
+}

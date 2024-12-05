@@ -1,8 +1,12 @@
 use {
     crate::{
-        components::{checkbox::Checkbox, device_list_card::DeviceListCard, device_modal::Modal},
+        components::{
+            checkbox::Checkbox, device_list_card::DeviceListCard, device_modal::Modal,
+            refresh_button::Refresh_Button,
+        },
         integrations::iron_nest::types::{Device, DeviceType},
         server::{
+            dashboard_page::refresh_devices,
             roku::handle_roku_tv_toggle,
             tplink::{
                 handle_smart_light_toggle, handle_smart_plug_toggle,
@@ -21,7 +25,16 @@ pub fn DeviceList(devices: Resource<(), Result<Vec<Device>, ServerFnError>>) -> 
 
     view! {
         <div>
-            <h2 class="text-lg">"Devices"</h2>
+            <div class="flex space-between justify-between">
+                <h2 class="text-lg">"Devices"</h2>
+                <Refresh_Button on_change=Box::new({
+                    move || {
+                        spawn_local(async move {
+                            refresh_devices().await.unwrap();
+                        });
+                    }
+                }) />
+            </div>
             <hr class="mb-2"/>
             <Suspense fallback=|| {
                 view! { <p>"Loading devices..."</p> }
