@@ -23,7 +23,9 @@ use {
                 tplink_turn_light_on_off, tplink_turn_plug_off, tplink_turn_plug_on,
                 types::DeviceData,
             },
-            tuya::{get_devices, get_refresh_token, types::TuyaDeviceResResult},
+            tuya::{
+                discover_tuya_devices, get_devices, get_refresh_token, types::TuyaDeviceResResult,
+            },
         },
     },
     axum::{
@@ -492,6 +494,18 @@ pub fn tuya_job(
                         insert_devices_into_db(&shared_pool, &devices)
                             .await
                             .unwrap();
+
+                        // task for local network discovery
+                        tokio::task::spawn(async {
+                            match tokio::time::timeout(
+                                std::time::Duration::from_secs(10),
+                                discover_tuya_devices(),
+                            ).await {
+                                Ok(Ok(_)) => println!("Local Tuya discovery completed."),
+                                Ok(Err(e)) => println!("Error during local Tuya discovery: {}", e),
+                                Err(_) => println!("Local Tuya discovery timed out."),
+                            }
+                        });
                     }
                 },
                 Some(msg) = control_rx.recv() => {
@@ -698,6 +712,87 @@ pub fn roku_discovery_job(
     });
 }
 
+pub async fn refresh_tplink_devices(shared_pool: PgPool) {
+    match discover_devices().await {
+        Ok(tp_link_devices) => {
+            let mut devices: Vec<Device> = Vec::new();
+
+            for device_data in tp_link_devices {
+                match device_data {
+                    DeviceData::SmartPlug(data) => {
+                        if let Some(ip) = data.ip {
+                            devices.push(Device {
+                                id: 0,
+                                name: data.alias,
+                                device_type: DeviceType::KasaPlug,
+                                ip: ip.to_string(),
+                                power_state: data.relay_state,
+                                battery_percentage: 0,
+                                last_seen: Utc::now(),
+                                mac_address: None,
+                                child_id: None,
+                            });
+                        }
+                    }
+                    DeviceData::SmartLight(data) => {
+                        if let Some(ip) = data.ip {
+                            devices.push(Device {
+                                id: 0,
+                                name: data.alias,
+                                device_type: DeviceType::KasaLight,
+                                ip: ip.to_string(),
+                                power_state: data.light_state.on_off,
+                                battery_percentage: 0,
+                                last_seen: Utc::now(),
+                                mac_address: None,
+                                child_id: None,
+                            });
+                        }
+                    }
+                    DeviceData::SmartDimmer(data) => {
+                        if let Some(ip) = data.ip {
+                            devices.push(Device {
+                                id: 0,
+                                name: data.alias,
+                                device_type: DeviceType::KasaDimmer,
+                                ip: ip.to_string(),
+                                power_state: data.relay_state,
+                                battery_percentage: 0,
+                                last_seen: Utc::now(),
+                                mac_address: None,
+                                child_id: None,
+                            });
+                        }
+                    }
+                    DeviceData::SmartPowerStrip(data) => {
+                        if let Some(ip) = data.ip {
+                            for outlet in data.children {
+                                devices.push(Device {
+                                    id: 0,
+                                    name: outlet.alias,
+                                    device_type: DeviceType::KasaPowerStrip,
+                                    ip: ip.to_string(),
+                                    power_state: outlet.state,
+                                    battery_percentage: 0,
+                                    last_seen: Utc::now(),
+                                    mac_address: None,
+                                    child_id: Some(format!("{}{}", data.device_id, outlet.id)),
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            insert_devices_into_db(&shared_pool, &devices)
+                .await
+                .unwrap();
+        }
+        Err(e) => {
+            eprintln!("Error discovering devices: {}", e);
+        }
+    }
+}
+
 pub fn tplink_discovery_job(
     shared_pool: PgPool,
     mut control_rx: Receiver<ControlMessage>,
@@ -712,85 +807,7 @@ pub fn tplink_discovery_job(
         loop {
             tokio::select! {
                 _ = interval.tick(), if running => {
-                    match discover_devices().await {
-                        Ok(tp_link_devices) => {
-                            let mut devices: Vec<Device> = Vec::new();
-
-                            for device_data in tp_link_devices {
-                                match device_data {
-                                    DeviceData::SmartPlug(data) => {
-                                        if let Some(ip) = data.ip {
-                                            devices.push(Device {
-                                                id: 0,
-                                                name: data.alias,
-                                                device_type: DeviceType::KasaPlug,
-                                                ip: ip.to_string(),
-                                                power_state: data.relay_state,
-                                                battery_percentage: 0,
-                                                last_seen: Utc::now(),
-                                                mac_address: None,
-                                                child_id: None,
-                                            });
-                                        }
-                                    }
-                                    DeviceData::SmartLight(data) => {
-                                        if let Some(ip) = data.ip {
-                                            devices.push(Device {
-                                                id: 0,
-                                                name: data.alias,
-                                                device_type: DeviceType::KasaLight,
-                                                ip: ip.to_string(),
-                                                power_state: data.light_state.on_off,
-                                                battery_percentage: 0,
-                                                last_seen: Utc::now(),
-                                                mac_address: None,
-                                                child_id: None,
-                                            });
-                                        }
-                                    }
-                                    DeviceData::SmartDimmer(data) => {
-                                        if let Some(ip) = data.ip {
-                                            devices.push(Device {
-                                                id: 0,
-                                                name: data.alias,
-                                                device_type: DeviceType::KasaDimmer,
-                                                ip: ip.to_string(),
-                                                power_state: data.relay_state,
-                                                battery_percentage: 0,
-                                                last_seen: Utc::now(),
-                                                mac_address: None,
-                                                child_id: None,
-                                            });
-                                        }
-                                    }
-                                    DeviceData::SmartPowerStrip(data) => {
-                                        if let Some(ip) = data.ip {
-                                            for outlet in data.children {
-                                                devices.push(Device {
-                                                        id: 0,
-                                                        name: outlet.alias,
-                                                        device_type: DeviceType::KasaPowerStrip,
-                                                        ip: ip.to_string(),
-                                                        power_state: outlet.state,
-                                                        battery_percentage: 0,
-                                                        last_seen: Utc::now(),
-                                                        mac_address: None,
-                                                        child_id: Some(format!("{}{}", data.device_id, outlet.id)),
-                                                    },
-                                                );
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            insert_devices_into_db(&shared_pool, &devices)
-                                .await
-                                .unwrap();
-                        },
-                        Err(e) => {
-                            eprintln!("Error discovering devices: {}", e);
-                        }
-                    }
+                    refresh_tplink_devices(shared_pool.clone()).await;
                 },
                 Some(msg) = control_rx.recv() => {
                     println!("Received control message: {:?}", msg);
