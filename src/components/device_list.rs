@@ -33,7 +33,7 @@ pub fn DeviceList(devices: Resource<(), Result<Vec<Device>, ServerFnError>>) -> 
                             refresh_devices().await.unwrap();
                         });
                     }
-                }) />
+                })/>
             </div>
             <hr class="mb-2"/>
             <Suspense fallback=|| {
