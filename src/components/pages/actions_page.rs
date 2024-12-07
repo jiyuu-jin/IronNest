@@ -23,7 +23,7 @@ pub fn ActionsPage() -> impl IntoView {
 
     let (show_create_action, set_show_create_action) = signal(false);
 
-    let toast = use_context::<RwSignal<Option<Toast>>>().unwrap();
+    let toast = use_context::<WriteSignal<Option<Toast>>>().unwrap();
     Resource::new(
         move || {
             (

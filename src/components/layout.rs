@@ -38,7 +38,7 @@ pub fn App() -> impl IntoView {
             Timeout::new(0, move || {})
         }
     });
-    provide_context(toast);
+    provide_context(set_toast);
 
     view! {
         <Stylesheet id="leptos" href="/pkg/iron_nest.css"/>
