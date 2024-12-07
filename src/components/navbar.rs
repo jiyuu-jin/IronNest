@@ -109,7 +109,7 @@ pub fn Navbar() -> impl IntoView {
             <li>
                 <A
                     href=navbar_item.path
-                    prop:class="nav-link text-slate-600 group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold"
+                    attr:class="nav-link text-slate-600 group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold"
                 >
                     {navbar_item.image}
                     <span class="sr-only">{navbar_item.text}</span>
