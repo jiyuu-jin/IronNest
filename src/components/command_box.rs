@@ -19,12 +19,12 @@ pub fn CommandBox() -> impl IntoView {
     let value = handle_assistant.value();
 
     view! {
-        <div>
-            <ActionForm action=handle_assistant class="space-y-6">
+        <div class="lg:col-span-4">
+            <ActionForm action=handle_assistant>
                 <textarea
                     name="text"
                     type="text"
-                    class="resize rounded-md border-2 p-2 h-32 w-full border-blue-500"
+                    class="resize rounded-md border-2 p-2 h-80 w-full border-blue-500"
                     placeholder="Enter text and hit enter"
                 ></textarea>
                 <div class="flex-shrink-0">

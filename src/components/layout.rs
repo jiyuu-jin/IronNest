@@ -212,7 +212,7 @@ pub fn App() -> impl IntoView {
                         <img class="h-8 w-8 rounded-full bg-gray-800" src="/icon.png" alt=""/>
                     </a>
                 </div>
-                <main>
+                <main class="lg:pl-20 bg-blue-100 h-screen">
                     <Routes>
                         <Route path="/" view=DashboardPage/>
                         <Route path="/integrations" view=IntegrationsPage/>

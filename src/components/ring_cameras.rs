@@ -12,58 +12,52 @@ pub fn RingCameras(
     let start_of_day_timestamp = get_start_of_day_timestamp();
 
     view! {
-        <div
-            class="mb-2"
-            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;"
-        >
-            <Suspense fallback=|| {
-                view! {
-                    <button
-                        style="min-height:360px;"
-                        type="button"
-                        class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-12 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 content-center"
-                    >
-                        <span class="mt-2 block text-xl font-semibold text-gray-900">
-                            "Camera Loading..."
-                        </span>
-                    </button>
-                    <button
-                        style="max-height:360px;"
-                        type="button"
-                        class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-12 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                    >
-                        <span class="mt-2 block text-xl font-semibold text-gray-900">
-                            "Camera Loading..."
-                        </span>
-                    </button>
-                }
-            }>
-                {move || {
-                    ring_values
-                        .get()
-                        .map(|data| {
-                            match data {
-                                Ok(data) => {
-                                    view! {
-                                        {data
-                                            .cameras
-                                            .iter()
-                                            .map(|camera| {
-                                                camera_component(start_of_day_timestamp, camera.clone())
-                                            })
-                                            .collect::<Vec<_>>()}
-                                    }
-                                        .into_view()
+        <Suspense fallback=|| {
+            view! {
+                <button
+                    type="button"
+                    class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-12 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 content-center"
+                >
+                    <span class="mt-2 block text-xl font-semibold text-gray-900">
+                        "Camera Loading..."
+                    </span>
+                </button>
+                <button
+                    style="max-height:360px;"
+                    type="button"
+                    class="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-12 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                >
+                    <span class="mt-2 block text-xl font-semibold text-gray-900">
+                        "Camera Loading..."
+                    </span>
+                </button>
+            }
+        }>
+            {move || {
+                ring_values
+                    .get()
+                    .map(|data| {
+                        match data {
+                            Ok(data) => {
+                                view! {
+                                    {data
+                                        .cameras
+                                        .iter()
+                                        .map(|camera| {
+                                            camera_component(start_of_day_timestamp, camera.clone())
+                                        })
+                                        .collect::<Vec<_>>()}
                                 }
-                                Err(e) => {
-                                    view! { <p>{format!("RingCameras error: {e}")}</p> }.into_view()
-                                }
+                                    .into_view()
                             }
-                        })
-                }}
+                            Err(e) => {
+                                view! { <p>{format!("RingCameras error: {e}")}</p> }.into_view()
+                            }
+                        }
+                    })
+            }}
 
-            </Suspense>
-        </div>
+        </Suspense>
     }
 }
 
@@ -76,9 +70,9 @@ fn camera_component(start_of_day_timestamp: i64, camera: RingCamera) -> impl Int
         set_selected_video_url,
     );
     view! {
-        <div class="rounded-xl shadow-md border border-gray-200">
-            <h2 class="p-2">{format!("{} - Battery: {}", camera.description, camera.health)}</h2>
-
+        <div class="lg:col-span-4 rounded-xl shadow-md border border-gray-200 bg-white">
+            <h2 class="p-2">{camera.description}</h2>
+            <h3 class="p-3">{format!("Battery: {}", camera.health)}</h3>
             {move || match selected_video_url.get() {
                 Some(selected_video_url) => {
                     view! {

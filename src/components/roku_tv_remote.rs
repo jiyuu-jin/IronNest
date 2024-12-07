@@ -24,16 +24,16 @@ pub fn RokuTvRemote(
                                 Ok(data) => {
                                     view! {
                                         <div>
-                                            <div class="rounded-lg shadow-md col-span-6 h-full resize">
-                                                <div class="border-slate-100 h-full rounded-lg transition-all duration-500 dark:bg-slate-800 transition-all duration-500 dark:border-slate-500 p-6 xl:p-10">
-                                                    <div class="grid grid-cols-4 gap-2 rounded-lg">
+                                            <div class="rounded-lg shadow-md col-span-4 resize">
+                                                <div class="bg-white h-full rounded-lg transition-all duration-500 transition-all duration-500 dark:border-slate-500 p-2 xl:p-6">
+                                                    <div class="grid grid-cols-5 gap-1 rounded-lg">
                                                         {data
                                                             .roku_apps
                                                             .into_iter()
                                                             .map(|app| {
                                                                 view! {
                                                                     <div
-                                                                        class="w-20 bg-white rounded-lg align-middle text-center cursor-pointer shadow-sm"
+                                                                        class="w-20 bg-white border-slate-500 border rounded-lg align-middle text-center cursor-pointer shadow-sm"
                                                                         on:click=move |_| {
                                                                             let id = app.id.to_string();
                                                                             spawn_local(async move {

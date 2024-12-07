@@ -142,20 +142,18 @@ pub fn DashboardPage() -> impl IntoView {
     let devices = create_resource(|| (), |_| get_devices());
 
     view! {
-        <main class="lg:pl-20">
-            <div class="xl:pl-96">
-                <div class="px-4 py-10 sm:px-6 lg:px-8 lg:py-6">
+        <div class="xl:pl-96">
+            <div class="px-4 py-10 sm:px-6 lg:px-8 lg:py-6 h-screen">
+                <div class="grid lg:grid-cols-12 grid-cols-1 my-4 gap-2 overflow-auto">
+                    <RokuTvRemote dashboard_values=dashboard_values/>
+                    <PlannedMeals dashboard_values=dashboard_values/>
                     <RingCameras ring_values=dashboard_values/>
-                    <div class="grid lg:grid-cols-12 grid-col-1 my-4 gap-2 max-h-60 overflow-auto">
-                        <RokuTvRemote dashboard_values=dashboard_values/>
-                        <PlannedMeals dashboard_values=dashboard_values/>
-                    </div>
                     <CommandBox/>
                 </div>
             </div>
-        </main>
+        </div>
 
-        <aside class="bg-gray-100 fixed inset-y-0 left-20 hidden w-96 overflow-y-auto border-r border-gray-200 px-4 py-6 sm:px-6 lg:px- xl:block space-y-0.5">
+        <aside class="bg-blue-100 fixed inset-y-0 left-20 hidden w-96 overflow-y-auto border-r border-gray-200 px-4 py-6 sm:px-6 lg:px- xl:block space-y-0.5">
             <DeviceList devices=devices/>
         </aside>
     }
