@@ -1,4 +1,4 @@
-use leptos::{logging::log, *};
+use leptos::{logging::log, prelude::*};
 
 #[component]
 pub fn Checkbox(
@@ -6,11 +6,11 @@ pub fn Checkbox(
     on_click: Option<Action<bool, ()>>,
     on_click_fn: Option<Box<dyn Fn()>>,
 ) -> impl IntoView {
-    let (signal, set_signal) = create_signal(value);
+    let (signal, set_signal) = signal(value);
     view! {
         <label
             class="relative inline-flex items-center cursor-pointer ml-2 mt-2"
-            on:click:undelegated=move |e| {
+            on:click=move |e| {
                 log!("clicked propagated!");
                 e.stop_propagation();
             }
@@ -19,7 +19,7 @@ pub fn Checkbox(
             <input
                 type="checkbox"
                 checked=move || signal.get()
-                on:click:undelegated=move |ev| {
+                on:input:target=move |ev| {
                     log!("clicked!");
                     set_signal.set(!signal.get());
                     if let Some(a) = &on_click {

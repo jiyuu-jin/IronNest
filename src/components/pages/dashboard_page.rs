@@ -7,7 +7,7 @@ use {
         integrations::{ring::types::RingCamera, roku::types::AppsAppWithIcon},
         server::dashboard_page::get_devices,
     },
-    leptos::*,
+    leptos::prelude::*,
     serde::{Deserialize, Serialize},
 };
 
@@ -138,8 +138,8 @@ pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
 
 #[component]
 pub fn DashboardPage() -> impl IntoView {
-    let dashboard_values = create_resource(|| (), |_| get_dashboard_values());
-    let devices = create_resource(|| (), |_| get_devices());
+    let dashboard_values = Resource::new(|| (), |_| get_dashboard_values());
+    let devices = Resource::new(|| (), |_| get_devices());
 
     view! {
         <div class="xl:pl-96">

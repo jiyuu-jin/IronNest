@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn Select(label: String, name: String, data: Vec<String>) -> impl IntoView {

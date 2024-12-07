@@ -17,7 +17,7 @@ FROM chef AS builder
 # RUN tar -xvf cargo-binstall-armv7-unknown-linux-musleabihf.full.tgz
 # RUN cp cargo-binstall /usr/local/cargo/bin
 
-RUN cargo install cargo-leptos@0.2.21 --locked
+RUN cargo install cargo-leptos@0.2.22 --locked
 
 RUN apt update && apt install -y npm
 RUN npm install -g sass

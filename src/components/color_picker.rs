@@ -1,40 +1,18 @@
-use leptos::*;
+use {leptos::prelude::*, leptos_use::signal_throttled};
 
 #[component]
-pub fn Color_Picker(
+pub fn ColorPicker(
     label: String,
     default_value: String,
-    on_change: Box<dyn Fn(u8)>,
+    on_change: Box<dyn Fn(String)>,
 ) -> impl IntoView {
-    // Helper function to convert hex to saturation in HSL
-    fn hex_to_saturation(hex: &str) -> Option<u8> {
-        if hex.len() != 7 || !hex.starts_with('#') {
-            return None;
+    let (value, set_value) = signal(None);
+    let value_throttled: Signal<Option<String>> = signal_throttled(value, 500.);
+    Effect::new(move |_| {
+        if let Some(value) = value_throttled.get() {
+            on_change(value);
         }
-
-        let r = u8::from_str_radix(&hex[1..3], 16).ok()?;
-        let g = u8::from_str_radix(&hex[3..5], 16).ok()?;
-        let b = u8::from_str_radix(&hex[5..7], 16).ok()?;
-
-        let r = r as f32 / 255.0;
-        let g = g as f32 / 255.0;
-        let b = b as f32 / 255.0;
-
-        let max = r.max(g).max(b);
-        let min = r.min(g).min(b);
-
-        let l = (max + min) / 2.0;
-
-        let s = if max == min {
-            0.0
-        } else if l < 0.5 {
-            (max - min) / (max + min)
-        } else {
-            (max - min) / (2.0 - max - min)
-        };
-
-        Some((s * 100.0).round() as u8)
-    }
+    });
 
     view! {
         <div>
@@ -43,17 +21,17 @@ pub fn Color_Picker(
                 id="colorPicker"
                 name="colorPicker"
                 value=default_value
-                on:change:undelegated=move |ev| {
+                on:input=move |ev| {
+                    leptos::logging::log!("changed color");
                     let hex_value = event_target_value(&ev);
-                    if let Some(saturation) = hex_to_saturation(&hex_value) {
-                        on_change(saturation);
-                    } else {
-                        on_change(0);
-                    }
+                    leptos::logging::log!("hex_value: {hex_value}");
+                    set_value.set(Some(hex_value));
                 }
             />
 
             <label for="colorPicker">{label}</label>
+
+        // {move || error.get().map(|error| view! { <p class="text-red-500">{error}</p> })}
         </div>
     }
 }

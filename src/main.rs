@@ -1,4 +1,7 @@
 #[cfg(feature = "ssr")]
+mod shell;
+
+#[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
     use {
@@ -6,18 +9,13 @@ async fn main() {
         dotenv::dotenv,
         iron_nest::{
             components::layout::App,
-            fileserv::file_and_error_handler,
             handlers::roku_keypress_handler,
             integrations::{
-                iron_nest::{
-                    client::{leptos_routes_handler, server_fn_handler, AppState},
-                    cron::CronClient,
-                    run_devices_tasks,
-                },
+                iron_nest::{client::AppState, cron::CronClient, run_devices_tasks},
                 ring::RingRestClient,
             },
         },
-        leptos::get_configuration,
+        leptos::prelude::*,
         leptos_axum::{generate_route_list, LeptosRoutes},
         log::{error, LevelFilter},
         simple_logger::SimpleLogger,
@@ -43,13 +41,13 @@ async fn main() {
         .init()
         .expect("couldn't initialize logging");
 
-    let conf = get_configuration(None).await.unwrap();
+    let conf = get_configuration(None).unwrap();
     let leptos_options = conf.leptos_options;
     let addr = leptos_options.site_addr;
     let ring_rest_client = Arc::new(RingRestClient::new(shared_pool.clone()).await);
     let control_senders = Arc::new(RwLock::new(HashMap::new()));
     let app_state = AppState {
-        leptos_options,
+        leptos_options: leptos_options.clone(),
         ring_rest_client: ring_rest_client.clone(),
         pool: shared_pool.clone(),
         cron_client: CronClient::new().await,
@@ -68,22 +66,31 @@ async fn main() {
 
     let routes = generate_route_list(App);
     let app = Router::new()
-        .route(
-            "/api/*fn_name",
-            get(server_fn_handler).post(server_fn_handler),
+        .leptos_routes_with_context(
+            &leptos_options,
+            routes,
+            move || {
+                provide_context(app_state.ring_rest_client.clone());
+                provide_context(app_state.pool.clone());
+                provide_context(app_state.cron_client.clone());
+            },
+            {
+                let leptos_options = leptos_options.clone();
+                move || shell::shell(leptos_options.clone())
+            },
         )
-        .leptos_routes_with_handler(routes, get(leptos_routes_handler))
         .nest("/api", iron_nest_router)
-        .fallback(file_and_error_handler)
-        .with_state(app_state);
+        .fallback(leptos_axum::file_and_error_handler(shell::shell))
+        .with_state(leptos_options);
 
     run_devices_tasks(ring_rest_client, &shared_pool, control_senders)
         .await
         .unwrap();
 
     let http_server = {
+        let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
         log::info!("listening on http://{}", &addr);
-        axum::Server::bind(&addr).serve(app.into_make_service())
+        axum::serve(listener, app.into_make_service())
     };
 
     tokio::select! {

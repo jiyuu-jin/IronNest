@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 #[server(HandleAssistantCommand)]
 pub async fn handle_assistant_command(text: String) -> Result<String, ServerFnError> {

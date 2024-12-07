@@ -1,6 +1,6 @@
 use {
     crate::integrations::iron_nest::types::{Device, DeviceType},
-    leptos::*,
+    leptos::prelude::*,
 };
 
 #[component]
@@ -21,7 +21,7 @@ pub fn DeviceListCard(device: Device, children: Children) -> impl IntoView {
                     d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"
                 ></path>
             </svg>
-        },
+        }.into_any(),
         DeviceType::KasaLight => view! {
             <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -37,7 +37,7 @@ pub fn DeviceListCard(device: Device, children: Children) -> impl IntoView {
                     d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"
                 ></path>
             </svg>
-        },
+        }.into_any(),
         DeviceType::KasaDimmer => view! {
             <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -47,7 +47,7 @@ pub fn DeviceListCard(device: Device, children: Children) -> impl IntoView {
             >
                 <path d="M64 80c-8.8 0-16 7.2-16 16l0 320c0 8.8 7.2 16 16 16l320 0c8.8 0 16-7.2 16-16l0-320c0-8.8-7.2-16-16-16L64 80zM0 96C0 60.7 28.7 32 64 32l320 0c35.3 0 64 28.7 64 64l0 320c0 35.3-28.7 64-64 64L64 480c-35.3 0-64-28.7-64-64L0 96zM152 232l144 0c13.3 0 24 10.7 24 24s-10.7 24-24 24l-144 0c-13.3 0-24-10.7-24-24s10.7-24 24-24z"></path>
             </svg>
-        },
+        }.into_any(),
         DeviceType::KasaPowerStrip => view! {
             <svg
                 fill="#000000"
@@ -94,7 +94,7 @@ pub fn DeviceListCard(device: Device, children: Children) -> impl IntoView {
                     <circle cx="227.917" cy="149.705" r="3.25"></circle>
                 </g>
             </svg>
-        },
+        }.into_any(),
         DeviceType::RingDoorbell => view! {
             <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -110,7 +110,7 @@ pub fn DeviceListCard(device: Device, children: Children) -> impl IntoView {
                     d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"
                 ></path>
             </svg>
-        },
+        }.into_any(),
         DeviceType::RokuTv => view! {
             <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -126,7 +126,7 @@ pub fn DeviceListCard(device: Device, children: Children) -> impl IntoView {
                     d="M6 20.25h12m-7.5-3v3m3-3v3m-10.125-3h17.25c.621 0 1.125-.504 1.125-1.125V4.875c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125Z"
                 ></path>
             </svg>
-        },
+        }.into_any(),
         DeviceType::Stoplight => view! {
             <svg
                 width="24"
@@ -143,7 +143,7 @@ pub fn DeviceListCard(device: Device, children: Children) -> impl IntoView {
                     fill="currentColor"
                 ></path>
             </svg>
-        },
+        }.into_any(),
     };
 
     view! {
@@ -155,13 +155,13 @@ pub fn DeviceListCard(device: Device, children: Children) -> impl IntoView {
                             class="truncate text-sm font-medium text-gray-900"
                             title=format!("{:?}", device.last_seen)
                         >
-                            {&device.name}
+                            {device.name}
                         </h3>
                         <span class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
                             {icon}
                         </span>
                     </div>
-                    <p class="mt-1 truncate text-sm text-gray-500">{&device.ip}</p>
+                    <p class="mt-1 truncate text-sm text-gray-500">{device.ip}</p>
                 </div>
                 {children()}
             </div>

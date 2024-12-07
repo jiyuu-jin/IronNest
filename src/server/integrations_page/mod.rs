@@ -1,4 +1,4 @@
-use {crate::integrations::iron_nest::types::Integration, leptos::*};
+use {crate::integrations::iron_nest::types::Integration, leptos::prelude::*};
 
 #[server(GetIntegrations)]
 pub async fn get_integrations() -> Result<Vec<Integration>, ServerFnError> {

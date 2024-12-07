@@ -1,4 +1,4 @@
-use {leptos::*, leptos_router::ActionForm};
+use leptos::prelude::*;
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     use crate::integrations::{
@@ -15,7 +15,7 @@ pub async fn handle_assistant_command(text: String) -> Result<String, ServerFnEr
 
 #[component]
 pub fn CommandBox() -> impl IntoView {
-    let handle_assistant = create_server_action::<HandleAssistantCommand>();
+    let handle_assistant = ServerAction::<HandleAssistantCommand>::new();
     let value = handle_assistant.value();
 
     view! {
@@ -23,7 +23,6 @@ pub fn CommandBox() -> impl IntoView {
             <ActionForm action=handle_assistant>
                 <textarea
                     name="text"
-                    type="text"
                     class="resize rounded-md border-2 p-2 h-80 w-full border-blue-500"
                     placeholder="Enter text and hit enter"
                 ></textarea>

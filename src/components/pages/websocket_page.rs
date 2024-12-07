@@ -1,11 +1,11 @@
 use {
     super::dashboard_page::DashboardValues,
-    crate::components::pages::dashboard_page::get_dashboard_values, leptos::*,
+    crate::components::pages::dashboard_page::get_dashboard_values, leptos::prelude::*,
 };
 
 #[component]
 pub fn WebSocketPage() -> impl IntoView {
-    let ring_values = create_resource(|| (), |_| get_dashboard_values());
+    let ring_values = Resource::new(|| (), |_| get_dashboard_values());
 
     view! {
         <h1>"WebSocket"</h1>
@@ -17,9 +17,9 @@ pub fn WebSocketPage() -> impl IntoView {
                     .get()
                     .map(|ring_values| {
                         match ring_values {
-                            Ok(_ring_values) => view! { <div></div> }.into_view(),
+                            Ok(_ring_values) => view! { <div></div> }.into_any(),
                             Err(e) => {
-                                view! { <p>{format!("WebSocketPage error: {e}")}</p> }.into_view()
+                                view! { <p>{format!("WebSocketPage error: {e}")}</p> }.into_any()
                             }
                         }
                     })

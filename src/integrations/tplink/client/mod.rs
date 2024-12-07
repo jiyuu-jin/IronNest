@@ -201,22 +201,54 @@ pub async fn tplink_set_dimmer_inactivity_timeout(ip: &str, timeout: &u8) {
     .unwrap();
 }
 
+// https://github.com/python-kasa/python-kasa/blob/123ea107b1e7536bc5dfc8b93111cc5c7e8d066b/tests/fakeprotocol_iot.py#L445
+const LIGHT_SERVICE: &str = "smartlife.iot.smartbulb.lightingservice";
+
 pub async fn tplink_turn_light_on_off(ip: &str, state: u8) {
-    send(ip, json!({"smartlife.iot.smartbulb.lightingservice":{"transition_light_state":{"on_off":state,"transition_period":0}}}))
-        .await
-        .unwrap();
+    send(
+        ip,
+        json!({LIGHT_SERVICE:{"transition_light_state":{"on_off":state,"transition_period":0}}}),
+    )
+    .await
+    .unwrap();
 }
 
 pub async fn tplink_set_light_brightness(ip: &str, brightness: u8) {
-    send(ip, json!({"smartlife.iot.smartbulb.lightingservice":{"transition_light_state":{"brightness":brightness,"transition_period":0}}}))
+    send(ip, json!({LIGHT_SERVICE:{"transition_light_state":{"brightness":brightness,"transition_period":0}}}))
         .await
         .unwrap();
 }
 
-pub async fn tplink_set_light_saturation(ip: &str, saturation: u8) {
-    send(ip, json!({"smartlife.iot.smartbulb.lightingservice":{"transition_light_state":{"saturation":saturation,"transition_period":0}}}))
-        .await
-        .unwrap();
+pub async fn tplink_set_light_hsl(ip: &str, color: String) {
+    match csscolorparser::parse(&color) {
+        Ok(color) => {
+            let [h, s, v, _a] = color.to_hsva();
+            let hue = h as u8;
+            let saturation = (s * 100.) as u8;
+            let value = (v * 100.) as u8;
+            let color_temp = 0u8;
+            // https://github.com/python-kasa/python-kasa/blob/123ea107b1e7536bc5dfc8b93111cc5c7e8d066b/kasa/iot/iotbulb.py#L407
+            send(
+                ip,
+                json!({
+                        LIGHT_SERVICE:{
+                        "transition_light_state":{
+                            "hue": hue,
+                            "saturation": saturation,
+                            "brightness": value,
+                            "color_temp": color_temp,
+                            "transition_period": 0
+                        }
+                    }
+                }),
+            )
+            .await
+            .unwrap();
+        }
+        Err(e) => {
+            leptos::logging::log!("Failed to parse color '{}': {}", color, e);
+        }
+    }
 }
 
 fn encrypt_with_header(input: &[u8], first_key: u8) -> Vec<u8> {

@@ -11,13 +11,16 @@ use {
         },
         error_template::{AppError, ErrorTemplate},
     },
-    gloo_timers::future::TimeoutFuture,
-    leptos::*,
-    leptos_meta::*,
-    leptos_router::*,
+    gloo_timers::callback::Timeout,
+    leptos::prelude::*,
+    leptos_meta::{provide_meta_context, Meta, Script, Stylesheet, Title},
+    leptos_router::{
+        components::{Route, Router, Routes},
+        path,
+    },
 };
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Toast(pub String);
 
 #[component]
@@ -25,16 +28,16 @@ pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
 
-    let toast = create_rw_signal::<Option<Toast>>(None);
-    create_resource(
-        move || toast.get(),
-        move |source| async move {
-            if source.is_some() {
-                TimeoutFuture::new(5000).await;
-                toast.set(None);
-            }
-        },
-    );
+    let (toast, set_toast) = signal(None as Option<Toast>);
+    Effect::new(move |_| {
+        if toast.get().is_some() {
+            Timeout::new(500, move || {
+                set_toast.set(None);
+            })
+        } else {
+            Timeout::new(0, move || {})
+        }
+    });
     provide_context(toast);
 
     view! {
@@ -124,7 +127,7 @@ pub fn App() -> impl IntoView {
                                                     d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
                                                 ></path>
                                             </svg>
-                                            Dashboard
+                                            "Dashboard"
                                         </a>
                                     </li>
                                     <li>
@@ -146,7 +149,7 @@ pub fn App() -> impl IntoView {
                                                     d="M21.75 17.25v-.228a4.5 4.5 0 00-.12-1.03l-2.268-9.64a3.375 3.375 0 00-3.285-2.602H7.923a3.375 3.375 0 00-3.285 2.602l-2.268 9.64a4.5 4.5 0 00-.12 1.03v.228m19.5 0a3 3 0 01-3 3H5.25a3 3 0 01-3-3m19.5 0a3 3 0 00-3-3H5.25a3 3 0 00-3 3m16.5 0h.008v.008h-.008v-.008zm-3 0h.008v.008h-.008v-.008z"
                                                 ></path>
                                             </svg>
-                                            Devices
+                                            "Devices"
                                         </a>
                                     </li>
                                     <li>
@@ -168,7 +171,7 @@ pub fn App() -> impl IntoView {
                                                     d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
                                                 ></path>
                                             </svg>
-                                            Accounts
+                                            "Accounts"
                                         </a>
                                     </li>
                                 </ul>
@@ -178,11 +181,7 @@ pub fn App() -> impl IntoView {
                 </div>
             </div>
 
-            <Router fallback=|| {
-                let mut outside_errors = Errors::default();
-                outside_errors.insert_with_default_key(AppError::NotFound);
-                view! { <ErrorTemplate outside_errors/> }.into_view()
-            }>
+            <Router>
                 <Navbar/>
 
                 <div class="sticky top-0 z-40 flex items-center gap-x-6 bg-gray-900 px-4 py-4 shadow-sm sm:px-6 lg:hidden">
@@ -206,22 +205,26 @@ pub fn App() -> impl IntoView {
                             ></path>
                         </svg>
                     </button>
-                    <div class="flex-1 text-sm font-semibold leading-6 text-white">Dashboard</div>
+                    <div class="flex-1 text-sm font-semibold leading-6 text-white">"Dashboard"</div>
                     <a href="#">
                         <span class="sr-only">"Icon"</span>
                         <img class="h-8 w-8 rounded-full bg-gray-800" src="/icon.png" alt=""/>
                     </a>
                 </div>
                 <main class="lg:pl-20 bg-blue-100 h-screen">
-                    <Routes>
-                        <Route path="/" view=DashboardPage/>
-                        <Route path="/integrations" view=IntegrationsPage/>
-                        <Route path="/integrations/:integration" view=LoginPage/>
-                        <Route path="/actions" view=ActionsPage/>
-                        <Route path="/settings" view=SettingsPage/>
-                        <Route path="/settings/configs" view=ConfigsPage/>
-                        <Route path="/devices" view=DevicesPage/>
-                        <Route path="/websocket" view=WebSocketPage/>
+                    <Routes fallback=|| {
+                        let mut errors = Errors::default();
+                        errors.insert_with_default_key(AppError::NotFound);
+                        view! { <ErrorTemplate errors/> }.into_view()
+                    }>
+                        <Route path=path!("/") view=DashboardPage/>
+                        <Route path=path!("/integrations") view=IntegrationsPage/>
+                        <Route path=path!("/integrations/:integration") view=LoginPage/>
+                        <Route path=path!("/actions") view=ActionsPage/>
+                        <Route path=path!("/settings") view=SettingsPage/>
+                        <Route path=path!("/settings/configs") view=ConfigsPage/>
+                        <Route path=path!("/devices") view=DevicesPage/>
+                        <Route path=path!("/websocket") view=WebSocketPage/>
                     </Routes>
                 </main>
             </Router>

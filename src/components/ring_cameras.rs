@@ -2,13 +2,11 @@ use {
     super::pages::dashboard_page::DashboardValues,
     crate::integrations::ring::types::{RingCamera, VideoItem},
     chrono::{DateTime, Utc},
-    leptos::*,
+    leptos::prelude::*,
 };
 
 #[component]
-pub fn RingCameras(
-    ring_values: Resource<(), Result<DashboardValues, ServerFnError>>,
-) -> impl IntoView {
+pub fn RingCameras(ring_values: Resource<Result<DashboardValues, ServerFnError>>) -> impl IntoView {
     let start_of_day_timestamp = get_start_of_day_timestamp();
 
     view! {
@@ -48,10 +46,10 @@ pub fn RingCameras(
                                         })
                                         .collect::<Vec<_>>()}
                                 }
-                                    .into_view()
+                                    .into_any()
                             }
                             Err(e) => {
-                                view! { <p>{format!("RingCameras error: {e}")}</p> }.into_view()
+                                view! { <p>{format!("RingCameras error: {e}")}</p> }.into_any()
                             }
                         }
                     })
@@ -62,7 +60,7 @@ pub fn RingCameras(
 }
 
 fn camera_component(start_of_day_timestamp: i64, camera: RingCamera) -> impl IntoView {
-    let (selected_video_url, set_selected_video_url) = create_signal(None);
+    let (selected_video_url, set_selected_video_url) = signal(None);
 
     let video_timeline = create_video_timeline(
         camera.videos.video_search,
@@ -85,6 +83,7 @@ fn camera_component(start_of_day_timestamp: i64, camera: RingCamera) -> impl Int
                             ></video>
                         </div>
                     }
+                        .into_any()
                 }
                 None => {
                     view! {
@@ -96,6 +95,7 @@ fn camera_component(start_of_day_timestamp: i64, camera: RingCamera) -> impl Int
 
                         </div>
                     }
+                        .into_any()
                 }
             }}
 

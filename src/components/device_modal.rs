@@ -1,27 +1,26 @@
 use {
     super::checkbox::Checkbox,
     crate::{
-        components::{color_picker::Color_Picker, slider::Slider},
+        components::{color_picker::ColorPicker, slider::Slider},
         integrations::iron_nest::types::{Device, DeviceType},
         server::tplink::{
-            handle_smart_dimmer_brightness, handle_smart_light_brightness,
-            handle_smart_light_saturation, handle_smart_light_toggle, handle_smart_plug_toggle,
+            handle_smart_dimmer_brightness, handle_smart_light_brightness, handle_smart_light_hsl,
+            handle_smart_light_toggle, handle_smart_plug_toggle,
         },
     },
-    leptos::*,
-    log::debug,
+    leptos::{prelude::*, task::spawn_local},
 };
 
 #[component]
 pub fn DeviceView(device: Device) -> impl IntoView {
     match device.device_type {
-        DeviceType::KasaPlug => view! { <SmartPlugView device=device/> },
-        DeviceType::KasaLight => view! { <SmartLightView device=device/> },
-        DeviceType::KasaDimmer => view! { <SmartDimmerView device=device/> },
-        DeviceType::KasaPowerStrip => view! { <SmartPowerStripView device=device/> },
-        DeviceType::RingDoorbell => view! { <RingDoorbellView device=device/> },
-        DeviceType::RokuTv => view! { <RokuTvView device=device/> },
-        DeviceType::Stoplight => view! { <StoplightView device=device/> },
+        DeviceType::KasaPlug => view! { <SmartPlugView device=device/> }.into_any(),
+        DeviceType::KasaLight => view! { <SmartLightView device=device/> }.into_any(),
+        DeviceType::KasaDimmer => view! { <SmartDimmerView device=device/> }.into_any(),
+        DeviceType::KasaPowerStrip => view! { <SmartPowerStripView device=device/> }.into_any(),
+        DeviceType::RingDoorbell => view! { <RingDoorbellView device=device/> }.into_any(),
+        DeviceType::RokuTv => view! { <RokuTvView device=device/> }.into_any(),
+        DeviceType::Stoplight => view! { <StoplightView device=device/> }.into_any(),
     }
 }
 
@@ -33,7 +32,7 @@ pub fn Modal(toggle_modal: WriteSignal<bool>, device: ReadSignal<Option<Device>>
             <div
                 class="fixed inset-0 z-10 w-screen overflow-y-auto"
                 on:click=move |_| {
-                    debug!("clicked!");
+                    leptos::logging::log!("clicked!");
                     toggle_modal.set(false);
                 }
             >
@@ -41,7 +40,7 @@ pub fn Modal(toggle_modal: WriteSignal<bool>, device: ReadSignal<Option<Device>>
                 <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
                     <div
                         class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-sm sm:p-6"
-                        on:click:undelegated=|e| e.stop_propagation()
+                        on:click=|e| e.stop_propagation()
                     >
                         <div>
                             <div class="mt-3 text-center sm:mt-5">
@@ -61,10 +60,9 @@ pub fn Modal(toggle_modal: WriteSignal<bool>, device: ReadSignal<Option<Device>>
                                                     </div>
                                                 </div>
                                             }
+                                                .into_any()
                                         }
-                                        None => {
-                                            view! { <div></div> }
-                                        }
+                                        None => view! { <div></div> }.into_any(),
                                     }
                                 }}
 
@@ -79,7 +77,7 @@ pub fn Modal(toggle_modal: WriteSignal<bool>, device: ReadSignal<Option<Device>>
 
 #[component]
 pub fn SmartLightView(device: Device) -> impl IntoView {
-    let toggle_action = create_action({
+    let toggle_action = Action::new({
         let ip = device.ip.clone();
         move |value| {
             let ip = ip.clone();
@@ -103,15 +101,17 @@ pub fn SmartLightView(device: Device) -> impl IntoView {
                 }
             })/>
 
-            <Color_Picker
+            <ColorPicker
                 label="Color".to_string()
                 default_value="#e66465".to_string()
                 on_change=Box::new({
                     let ip = device.ip.clone();
                     move |value| {
+                        leptos::logging::log!("color_picker on change outer: {value}");
                         let ip = ip.clone();
                         spawn_local(async move {
-                            handle_smart_light_saturation(value, ip).await.unwrap();
+                            leptos::logging::log!("parsing: {value}");
+                            handle_smart_light_hsl(ip, value).await.unwrap();
                         });
                     }
                 })
@@ -123,7 +123,7 @@ pub fn SmartLightView(device: Device) -> impl IntoView {
 
 #[component]
 pub fn SmartPlugView(device: Device) -> impl IntoView {
-    let toggle_action = create_action({
+    let toggle_action = Action::new({
         let ip = device.ip.clone();
         move |value| {
             let ip = ip.clone();
@@ -139,7 +139,7 @@ pub fn SmartPlugView(device: Device) -> impl IntoView {
 
 #[component]
 pub fn SmartDimmerView(device: Device) -> impl IntoView {
-    let toggle_action = create_action({
+    let toggle_action = Action::new({
         let ip = device.ip.clone();
         move |value| {
             let ip = ip.clone();
@@ -168,7 +168,7 @@ pub fn SmartDimmerView(device: Device) -> impl IntoView {
 
 #[component]
 pub fn SmartPowerStripView(device: Device) -> impl IntoView {
-    let toggle_action = create_action({
+    let toggle_action = Action::new({
         let ip = device.ip.clone();
         move |value| {
             let ip = ip.clone();
@@ -189,7 +189,7 @@ pub fn RingDoorbellView(device: Device) -> impl IntoView {
 
 #[component]
 pub fn RokuTvView(device: Device) -> impl IntoView {
-    let toggle_action = create_action({
+    let toggle_action = Action::new({
         let ip = device.ip.clone();
         move |value| {
             let ip = ip.clone();

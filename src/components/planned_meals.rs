@@ -1,8 +1,8 @@
-use {super::pages::dashboard_page::DashboardValues, leptos::*};
+use {super::pages::dashboard_page::DashboardValues, leptos::prelude::*};
 
 #[component]
 pub fn PlannedMeals(
-    dashboard_values: Resource<(), Result<DashboardValues, ServerFnError>>,
+    dashboard_values: Resource<Result<DashboardValues, ServerFnError>>,
 ) -> impl IntoView {
     view! {
         <div class="col-span-6 rounded-lg bg-white text-black">
@@ -26,11 +26,11 @@ pub fn PlannedMeals(
                                                 .collect::<Vec<_>>()}
                                         </ul>
                                     }
-                                        .into_view()
+                                        .into_any()
                                 }
                                 Err(e) => {
                                     view! { <div>{format!("PlannedMeals error: {e}")}</div> }
-                                        .into_view()
+                                        .into_any()
                                 }
                             }
                         })

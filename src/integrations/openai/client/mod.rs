@@ -2,7 +2,7 @@ use {
     crate::integrations::iron_nest::{execute_function, types::Device},
     chrono::Utc,
     futures::future::join_all,
-    leptos::ServerFnError,
+    leptos::prelude::*,
     log::info,
     serde_json::json,
     sqlx::{PgPool, Row},

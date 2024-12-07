@@ -4,39 +4,25 @@ use {
         shared::get_default_integrations,
         types::{AuthState, ControlMessage, Device, DeviceType, Integration},
     },
-    crate::{
-        components::layout::App,
-        integrations::{
-            efuy,
-            ring::{
-                client::RingRestClient,
-                get_ring_camera,
-                types::{DevicesRes, RingCamera},
-            },
-            roku::{
-                roku_discover, roku_get_device_info, roku_launch_app, roku_search,
-                roku_send_keypress,
-            },
-            stoplight::toggle_stoplight,
-            tplink::{
-                discover_devices, tplink_set_dimmer_brightness, tplink_set_light_brightness,
-                tplink_turn_light_on_off, tplink_turn_plug_off, tplink_turn_plug_on,
-                types::DeviceData,
-            },
-            tuya::{
-                discover_tuya_devices, get_devices, get_refresh_token, types::TuyaDeviceResResult,
-            },
+    crate::integrations::{
+        efuy,
+        ring::{
+            client::RingRestClient,
+            get_ring_camera,
+            types::{DevicesRes, RingCamera},
         },
-    },
-    axum::{
-        body::Body as AxumBody,
-        extract::{FromRef, Path, RawQuery, State},
-        response::{IntoResponse, Response},
+        roku::{
+            roku_discover, roku_get_device_info, roku_launch_app, roku_search, roku_send_keypress,
+        },
+        stoplight::toggle_stoplight,
+        tplink::{
+            discover_devices, tplink_set_dimmer_brightness, tplink_set_light_brightness,
+            tplink_turn_light_on_off, tplink_turn_plug_off, tplink_turn_plug_on, types::DeviceData,
+        },
+        tuya::{discover_tuya_devices, get_devices, get_refresh_token, types::TuyaDeviceResResult},
     },
     chrono::Utc,
-    http::{HeaderMap, Request},
-    leptos::{logging::log, provide_context, LeptosOptions},
-    leptos_axum::handle_server_fns_with_context,
+    leptos::prelude::*,
     log::{error, info},
     serde_json::{json, Value},
     sqlx::PgPool,
@@ -353,47 +339,7 @@ pub async fn get_auth_from_db(pool: &PgPool, name: &str) -> AuthState {
     }
 }
 
-pub async fn leptos_routes_handler(
-    State(app_state): State<AppState>,
-    req: Request<AxumBody>,
-) -> Response {
-    let handler = leptos_axum::render_app_to_stream_with_context(
-        app_state.leptos_options.clone(),
-        move || {
-            provide_context(app_state.ring_rest_client.clone());
-            provide_context(app_state.pool.clone());
-            provide_context(app_state.cron_client.clone());
-        },
-        App,
-    );
-    handler(req).await.into_response()
-}
-
-pub async fn server_fn_handler(
-    State(app_state): State<AppState>,
-    path: Path<String>,
-    headers: HeaderMap,
-    raw_query: RawQuery,
-    request: Request<AxumBody>,
-) -> impl IntoResponse {
-    log!("{:?}", path);
-
-    handle_server_fns_with_context(
-        path,
-        headers,
-        raw_query,
-        move || {
-            provide_context(app_state.ring_rest_client.clone());
-            provide_context(app_state.pool.clone());
-            provide_context(app_state.cron_client.clone());
-            provide_context(app_state.control_senders.clone());
-        },
-        request,
-    )
-    .await
-}
-
-#[derive(FromRef, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct AppState {
     pub leptos_options: LeptosOptions,
     pub ring_rest_client: Arc<RingRestClient>,

@@ -14,14 +14,14 @@ use {
             },
         },
     },
-    leptos::{html::Div, *},
+    leptos::{html::Div, prelude::*, task::spawn_local},
     log::debug,
 };
 
 #[component]
-pub fn DeviceList(devices: Resource<(), Result<Vec<Device>, ServerFnError>>) -> impl IntoView {
-    let (modal, toggle_modal) = create_signal(false);
-    let (current_device, set_current_device) = create_signal(None);
+pub fn DeviceList(devices: Resource<Result<Vec<Device>, ServerFnError>>) -> impl IntoView {
+    let (modal, toggle_modal) = signal(false);
+    let (current_device, set_current_device) = signal(None);
 
     view! {
         <div>
@@ -51,24 +51,23 @@ pub fn DeviceList(devices: Resource<(), Result<Vec<Device>, ServerFnError>>) -> 
                                                 .into_iter()
                                                 .map(|device| {
                                                     view! {
-                                                        <DeviceListItem
-                                                            device=device.clone()
-                                                            on:click=move |_| {
-                                                                let state = modal.get();
-                                                                debug!("clicked device list item! {state}");
-                                                                toggle_modal.set(true);
-                                                                set_current_device.set(Some(device.clone()))
-                                                            }
-                                                        />
+                                                        <div on:click=move |_| {
+                                                            let state = modal.get();
+                                                            debug!("clicked device list item! {state}");
+                                                            toggle_modal.set(true);
+                                                            set_current_device.set(Some(device.clone()))
+                                                        }>
+                                                            <DeviceListItem device=device.clone()/>
+                                                        </div>
                                                     }
                                                 })
                                                 .collect::<Vec<_>>()}
                                         </ul>
                                     }
-                                        .into_view()
+                                        .into_any()
                                 }
                                 Err(e) => {
-                                    view! { <p>{format!("DeviceList error: {e}")}</p> }.into_view()
+                                    view! { <p>{format!("DeviceList error: {e}")}</p> }.into_any()
                                 }
                             }
                         })
@@ -87,7 +86,7 @@ pub fn DeviceList(devices: Resource<(), Result<Vec<Device>, ServerFnError>>) -> 
 
 #[component]
 pub fn DeviceListItem(device: Device) -> impl IntoView {
-    let _el = create_node_ref::<Div>();
+    let _el = NodeRef::<Div>::new();
 
     // let UseDraggableReturn { x, y, style, .. } = use_draggable_with_options(
     //     el,
@@ -99,43 +98,50 @@ pub fn DeviceListItem(device: Device) -> impl IntoView {
             <div>
                 <SmartPlugItem device=device/>
             </div>
-        },
+        }
+        .into_any(),
         DeviceType::KasaLight => view! {
             <div>
                 <SmartLightItem device=device/>
             </div>
-        },
+        }
+        .into_any(),
         DeviceType::KasaDimmer => view! {
             <div>
                 <SmartDimmerItem device=device/>
             </div>
-        },
+        }
+        .into_any(),
         DeviceType::KasaPowerStrip => view! {
             <div>
                 <SmartPowerStripItem device=device/>
             </div>
-        },
+        }
+        .into_any(),
         DeviceType::RingDoorbell => view! {
             <div>
                 <RingDoorbellItem device=device/>
             </div>
-        },
+        }
+        .into_any(),
         DeviceType::Stoplight => view! {
             <div>
                 <StoplightItem device=device/>
             </div>
-        },
+        }
+        .into_any(),
         DeviceType::RokuTv => view! {
             <div>
                 <RokuTvItem device=device/>
             </div>
-        },
+        }
+        .into_any(),
     }
 }
 
 #[component]
 pub fn SmartPlugItem(device: Device) -> impl IntoView {
-    let toggle_action = create_action({
+    let toggle_action = Action::new({
         let ip = device.ip.clone();
         move |value| {
             let ip = ip.clone();
@@ -156,7 +162,7 @@ pub fn SmartPlugItem(device: Device) -> impl IntoView {
 
 #[component]
 pub fn SmartDimmerItem(device: Device) -> impl IntoView {
-    let toggle_action = create_action({
+    let toggle_action = Action::new({
         let ip = device.ip.clone();
         move |value| {
             let ip = ip.clone();
@@ -176,7 +182,7 @@ pub fn SmartDimmerItem(device: Device) -> impl IntoView {
 
 #[component]
 pub fn SmartPowerStripItem(device: Device) -> impl IntoView {
-    let toggle_action = create_action({
+    let toggle_action = Action::new({
         let ip = device.ip.clone();
         let child_id = device.child_id.clone().unwrap();
         move |value| {
@@ -219,7 +225,7 @@ pub fn StoplightItem(device: Device) -> impl IntoView {
 
 #[component]
 pub fn SmartLightItem(device: Device) -> impl IntoView {
-    let toggle_action = create_action({
+    let toggle_action = Action::new({
         let ip = device.ip.clone();
         move |value| {
             let ip = ip.clone();
@@ -240,7 +246,7 @@ pub fn SmartLightItem(device: Device) -> impl IntoView {
 
 #[component]
 pub fn RokuTvItem(device: Device) -> impl IntoView {
-    let toggle_action = create_action({
+    let toggle_action = Action::new({
         let ip = device.ip.clone();
         move |value| {
             let ip = ip.clone();

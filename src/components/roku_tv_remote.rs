@@ -1,4 +1,7 @@
-use {super::pages::dashboard_page::DashboardValues, leptos::*};
+use {
+    super::pages::dashboard_page::DashboardValues,
+    leptos::{prelude::*, task::spawn_local},
+};
 
 #[server(LaunchRokuApp)]
 pub async fn launch_roku_app(app_id: String) -> Result<(), ServerFnError> {
@@ -9,7 +12,7 @@ pub async fn launch_roku_app(app_id: String) -> Result<(), ServerFnError> {
 
 #[component]
 pub fn RokuTvRemote(
-    dashboard_values: Resource<(), Result<DashboardValues, ServerFnError>>,
+    dashboard_values: Resource<Result<DashboardValues, ServerFnError>>,
 ) -> impl IntoView {
     view! {
         <div class="col-span-6 rounded-lg bg-slate-900">
@@ -55,9 +58,11 @@ pub fn RokuTvRemote(
                                             </div>
                                         </div>
                                     }
+                                        .into_any()
                                 }
                                 Err(e) => {
                                     view! { <div>{format!("RokuTvRemote error: {e}")}</div> }
+                                        .into_any()
                                 }
                             }
                         })

@@ -1,4 +1,4 @@
-use {crate::integrations::iron_nest::types::Device, leptos::*};
+use {crate::integrations::iron_nest::types::Device, leptos::prelude::*};
 
 #[server(GetDevices)]
 pub async fn get_devices() -> Result<Vec<Device>, ServerFnError> {

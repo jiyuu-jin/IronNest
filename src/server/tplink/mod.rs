@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 #[server(HandleSmartPlugToggle)]
 pub async fn handle_smart_plug_toggle(state: bool, ip: String) -> Result<(), ServerFnError> {
@@ -102,11 +102,8 @@ pub async fn handle_smart_dimmer_brightness(
 }
 
 #[server(HandleSmartLightSaturation)]
-pub async fn handle_smart_light_saturation(
-    saturation: u8,
-    ip: String,
-) -> Result<(), ServerFnError> {
-    use crate::integrations::tplink::tplink_set_light_saturation;
-    tplink_set_light_saturation(&ip, saturation).await;
+pub async fn handle_smart_light_hsl(ip: String, color: String) -> Result<(), ServerFnError> {
+    use crate::integrations::tplink::tplink_set_light_hsl;
+    tplink_set_light_hsl(&ip, color).await;
     Ok(())
 }

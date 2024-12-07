@@ -1,6 +1,6 @@
 use {
     crate::{components::device_list::DeviceList, integrations::iron_nest::types::Device},
-    leptos::*,
+    leptos::prelude::*,
 };
 
 #[server(GetDevices)]
@@ -24,7 +24,7 @@ pub async fn get_devices() -> Result<Vec<Device>, ServerFnError> {
 
 #[component]
 pub fn DevicesPage() -> impl IntoView {
-    let devices = create_resource(|| (), |_| get_devices());
+    let devices = Resource::new(|| (), |_| get_devices());
     view! {
         <main class="lg:pl-20">
             <div class="lg:pl-4 -mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8 hidden md:block">
@@ -75,12 +75,12 @@ pub fn DevicesPage() -> impl IntoView {
                                         .map(|data| {
                                             match data {
                                                 Ok(data) => {
-                                                    data.iter()
+                                                    data.into_iter()
                                                         .map(|device| {
                                                             view! {
                                                                 <tr>
                                                                     <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-0">
-                                                                        {&device.name}
+                                                                        {device.name}
                                                                     </td>
                                                                     <th
                                                                         scope="col"
@@ -92,7 +92,7 @@ pub fn DevicesPage() -> impl IntoView {
                                                                         scope="col"
                                                                         class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
                                                                     >
-                                                                        {&device.ip}
+                                                                        {device.ip}
                                                                     </th>
                                                                     <th
                                                                         scope="col"
@@ -104,7 +104,7 @@ pub fn DevicesPage() -> impl IntoView {
                                                             }
                                                         })
                                                         .collect::<Vec<_>>()
-                                                        .into_view()
+                                                        .into_any()
                                                 }
                                                 Err(e) => {
                                                     view! {
@@ -112,7 +112,7 @@ pub fn DevicesPage() -> impl IntoView {
                                                             <td>{format!("Devices error: {e}")}</td>
                                                         </tr>
                                                     }
-                                                        .into_view()
+                                                        .into_any()
                                                 }
                                             }
                                         })

@@ -3,14 +3,14 @@ use {
         components::checkbox::Checkbox,
         server::integrations_page::{get_integrations, toggle_integration},
     },
-    leptos::*,
+    leptos::prelude::*,
 };
 
 #[component]
 pub fn IntegrationsPage() -> impl IntoView {
-    let integrations = create_resource(|| (), |_| get_integrations());
+    let integrations = Resource::new(|| (), |_| get_integrations());
 
-    let toggle_action = create_action(|(id, enabled, name): &(i64, bool, String)| {
+    let toggle_action = Action::new(|(id, enabled, name): &(i64, bool, String)| {
         let id = *id;
         let enabled = *enabled;
         let name = name.clone();
@@ -47,9 +47,12 @@ pub fn IntegrationsPage() -> impl IntoView {
                                                                 value=data.enabled
                                                                 on_click=None
                                                                 on_click_fn=Some(
-                                                                    Box::new(move || {
-                                                                        toggle_action
-                                                                            .dispatch((data.id, !data.enabled, data.name.clone()))
+                                                                    Box::new({
+                                                                        let name = data.name.clone();
+                                                                        move || {
+                                                                            toggle_action
+                                                                                .dispatch((data.id, !data.enabled, name.clone()));
+                                                                        }
                                                                     }),
                                                                 )
                                                             />
@@ -79,10 +82,10 @@ pub fn IntegrationsPage() -> impl IntoView {
                                         </ul>
                                     </main>
                                 }
-                                    .into_view()
+                                    .into_any()
                             })
                             .unwrap_or_else(|e| {
-                                view! { <p>"Error:" {e.to_string()}</p> }.into_view()
+                                view! { <p>"Error:" {e.to_string()}</p> }.into_any()
                             })
                     })
             }}

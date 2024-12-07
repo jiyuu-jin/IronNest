@@ -1,4 +1,4 @@
-use {crate::components::layout::Toast, leptos::*, leptos_router::ActionForm};
+use {crate::components::layout::Toast, leptos::prelude::*};
 
 #[cfg(feature = "ssr")]
 use crate::integrations::iron_nest::types::config::Config;
@@ -59,11 +59,11 @@ pub async fn set_config_query(pool: &sqlx::PgPool, config: Config) -> Result<(),
 
 #[component]
 pub fn ConfigsPage() -> impl IntoView {
-    let set_config_server_action = create_server_action::<SetConfig>();
-    let config = create_resource(move || set_config_server_action.version(), |_| get_config());
+    let set_config_server_action = ServerAction::<SetConfig>::new();
+    let config = Resource::new(move || set_config_server_action.version(), |_| get_config());
 
     let toast = use_context::<RwSignal<Option<Toast>>>().unwrap();
-    create_resource(
+    Resource::new(
         move || {
             (
                 set_config_server_action.value().get(),
@@ -95,7 +95,7 @@ pub fn ConfigsPage() -> impl IntoView {
                                     match config {
                                         Err(e) => {
                                             view! { <p>"Error loading config: " {e.to_string()}</p> }
-                                                .into_view()
+                                                .into_any()
                                         }
                                         Ok(config) => {
                                             view! {
@@ -128,7 +128,6 @@ pub fn ConfigsPage() -> impl IntoView {
                                                                                 <p>"Error: " {value.to_string()}</p>
                                                                             </div>
                                                                         }
-                                                                            .into_view()
                                                                     })
                                                                     .err()
                                                             })
@@ -136,7 +135,7 @@ pub fn ConfigsPage() -> impl IntoView {
 
                                                 </ActionForm>
                                             }
-                                                .into_view()
+                                                .into_any()
                                         }
                                     }
                                 })

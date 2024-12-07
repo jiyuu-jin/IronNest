@@ -1,4 +1,4 @@
-use {crate::integrations::iron_nest::types::FullAction, leptos::*, uuid::Uuid};
+use {crate::integrations::iron_nest::types::FullAction, leptos::prelude::*, uuid::Uuid};
 
 #[server(GetActions)]
 pub async fn get_actions() -> Result<Vec<FullAction>, ServerFnError> {
@@ -55,10 +55,9 @@ pub async fn add_action(
         .bind(function_args)
         .execute(&pool)
         .await?;
-    cron_client
-        .schedule_tasks(&pool)
-        .await
-        .map_err(|e| ServerFnError::ServerError(e.to_string()))?;
+    cron_client.schedule_tasks(&pool).await.map_err(|e| {
+        ServerFnError::ServerError::<server_fn::error::NoCustomError>(e.to_string())
+    })?;
     Ok(())
 }
 
