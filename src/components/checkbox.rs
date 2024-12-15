@@ -9,7 +9,7 @@ pub fn Checkbox(
     let (signal, set_signal) = signal(value);
     view! {
         <label
-            class="relative inline-flex items-center cursor-pointer ml-2 mt-2"
+            class="relative inline-flex items-center cursor-pointer ml-2"
             on:click=move |e| {
                 log!("clicked propagated!");
                 e.stop_propagation();

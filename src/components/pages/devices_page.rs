@@ -28,7 +28,7 @@ pub fn DevicesPage() -> impl IntoView {
     view! {
         <main class="lg:pl-20">
             <div class="lg:pl-4 -mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8 hidden md:block">
-                <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+                <div class="bg-white inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
                     <table class="w-full divide-y divide-gray-300">
                         <thead>
                             <tr>
@@ -122,9 +122,6 @@ pub fn DevicesPage() -> impl IntoView {
                         </tbody>
                     </table>
                 </div>
-            </div>
-            <div class="md:hidden">
-                <DeviceList devices=devices/>
             </div>
         </main>
     }

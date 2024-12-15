@@ -19,14 +19,17 @@ use {
 };
 
 #[component]
-pub fn DeviceList(devices: Resource<Result<Vec<Device>, ServerFnError>>) -> impl IntoView {
+pub fn DeviceList(
+    devices: Resource<Result<Vec<Device>, ServerFnError>>,
+    on_device_click: Callback<i64>,
+) -> impl IntoView {
     let (modal, toggle_modal) = signal(false);
     let (current_device, set_current_device) = signal(None);
 
     view! {
         <div>
             <div class="flex space-between justify-between">
-                <h2 class="text-lg">"Devices"</h2>
+                <h2 class="text-lg text-black">"Devices"</h2>
                 <Refresh_Button on_change=Box::new({
                     move || {
                         spawn_local(async move {
@@ -55,9 +58,22 @@ pub fn DeviceList(devices: Resource<Result<Vec<Device>, ServerFnError>>) -> impl
                                                             let state = modal.get();
                                                             debug!("clicked device list item! {state}");
                                                             toggle_modal.set(true);
-                                                            set_current_device.set(Some(device.clone()))
+                                                            set_current_device.set(Some(device.clone()));
+                                                            on_device_click.run(device.id);
                                                         }>
-                                                            <DeviceListItem device=device.clone()/>
+                                                            <div>
+                                                                <DeviceListItem device=device.clone()/>
+                                                                <button
+                                                                    class="bg-indigo-600"
+                                                                    on:click=move |e| {
+                                                                        e.stop_propagation();
+                                                                        leptos::logging::log!("clicked device list item!");
+                                                                        on_device_click.run(device.id);
+                                                                    }
+                                                                >
+                                                                    Add
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     }
                                                 })
@@ -67,7 +83,10 @@ pub fn DeviceList(devices: Resource<Result<Vec<Device>, ServerFnError>>) -> impl
                                         .into_any()
                                 }
                                 Err(e) => {
-                                    view! { <p>{format!("DeviceList error: {e}")}</p> }.into_any()
+                                    view! {
+                                        <p>{format!("DeviceList error: {e}")}</p>
+                                    }
+                                        .into_any()
                                 }
                             }
                         })
@@ -87,11 +106,6 @@ pub fn DeviceList(devices: Resource<Result<Vec<Device>, ServerFnError>>) -> impl
 #[component]
 pub fn DeviceListItem(device: Device) -> impl IntoView {
     let _el = NodeRef::<Div>::new();
-
-    // let UseDraggableReturn { x, y, style, .. } = use_draggable_with_options(
-    //     el,
-    //     UseDraggableOptions::default().initial_value(Position { x: 40.0, y: 40.0 }),
-    // );
 
     match device.device_type {
         DeviceType::KasaPlug => view! {

@@ -31,7 +31,7 @@ pub fn IntegrationsPage() -> impl IntoView {
                                     .into_iter()
                                     .map(|data| {
                                         view! {
-                                            <li class="overflow-hidden rounded-xl border border-gray-200">
+                                            <li class="bg-gray-100 overflow-hidden rounded-xl border border-gray-200">
                                                 <a href=format!("/integrations/{}", data.name.clone())>
                                                     <div class="flex items-center gap-x-4 border-b border-gray-900/5 bg-gray-50 p-6">
                                                         <img

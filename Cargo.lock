@@ -1967,6 +1967,7 @@ dependencies = [
  "leptos",
  "leptos-use",
  "leptos_axum",
+ "leptos_drag_reorder",
  "leptos_meta",
  "leptos_reactive",
  "leptos_router",
@@ -2140,6 +2141,19 @@ dependencies = [
  "reactive_graph",
  "send_wrapper",
  "tachys",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
+name = "leptos_drag_reorder"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7927fc736f97de1550dedafc6f1b85e4b8a1a15c9464fce2d95a7bb6d3eda685"
+dependencies = [
+ "js-sys",
+ "leptos",
+ "send_wrapper",
  "wasm-bindgen",
  "web-sys",
 ]

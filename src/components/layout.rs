@@ -211,7 +211,7 @@ pub fn App() -> impl IntoView {
                         <img class="h-8 w-8 rounded-full bg-gray-800" src="/icon.png" alt=""/>
                     </a>
                 </div>
-                <main class="lg:pl-20 bg-blue-100 h-screen">
+                <main class="lg:pl-20 bg-blue-100 min-h-screen">
                     <Routes fallback=|| {
                         let mut errors = Errors::default();
                         errors.insert_with_default_key(AppError::NotFound);

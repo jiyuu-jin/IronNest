@@ -1,9 +1,11 @@
 pub mod checkbox;
 pub mod color_picker;
 pub mod command_box;
+pub mod dashboard_panel;
 pub mod device_list;
 pub mod device_list_card;
 pub mod device_modal;
+pub mod device_panel;
 pub mod layout;
 pub mod login_form;
 pub mod navbar;

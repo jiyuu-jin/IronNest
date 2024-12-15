@@ -3,7 +3,7 @@ use leptos::prelude::*;
 #[component]
 pub fn SettingsPage() -> impl IntoView {
     view! {
-        <main class="lg:p-40 lg:pt-20 cursor-pointer">
+        <main class="bg-white lg:p-40 lg:pt-20 cursor-pointer">
             <div class="mx-auto max-w-2xl space-y-16 sm:space-y-20 lg:mx-0 lg:max-w-none">
                 <div>
                     <h2 class="text-base font-semibold leading-7 text-gray-900">"User Profile"</h2>
@@ -122,7 +122,9 @@ pub fn SettingsPage() -> impl IntoView {
                 <div>
                     <h2 class="text-base font-semibold leading-7 text-gray-900">"Advanced"</h2>
                     <p class="mt-1 text-sm leading-6 text-gray-500">"Advanced settings."</p>
-                    <a href="/settings/configs">"Config Import/Export"</a>
+                    <a class="text-black" href="/settings/configs">
+                        "Config Import/Export"
+                    </a>
                 </div>
             </div>
         </main>

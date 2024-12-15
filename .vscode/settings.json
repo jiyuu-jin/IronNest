@@ -8,5 +8,17 @@
   "cSpell.words": [
     "eufy",
     "SIMPLI"
+  ],
+  "sqltools.connections": [
+    {
+      "previewLimit": 50,
+      "server": "localhost",
+      "port": 5433,
+      "askForPassword": true,
+      "driver": "PostgreSQL",
+      "name": "IronNest",
+      "database": "postgres",
+      "username": "postgres"
+    }
   ]
 }

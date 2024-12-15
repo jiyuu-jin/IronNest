@@ -11,7 +11,7 @@ clippy:
 lint: fmt clippy
 
 dev: lint
-  RUST_BACKTRACE=1 cargo leptos watch
+  RUST_BACKTRACE=full cargo leptos watch
 
 wipe:
   docker compose down postgres

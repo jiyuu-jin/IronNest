@@ -73,6 +73,7 @@ async fn main() {
                 provide_context(app_state.ring_rest_client.clone());
                 provide_context(app_state.pool.clone());
                 provide_context(app_state.cron_client.clone());
+                provide_context(app_state.control_senders.clone());
             },
             {
                 let leptos_options = leptos_options.clone();
