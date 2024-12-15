@@ -81,6 +81,12 @@ pub fn DeviceCard(device: Device) -> impl IntoView {
                     DeviceType::KasaPowerStrip => {
                         view! { <SmartPowerStripItem device=device.clone()/> }.into_any()
                     }
+                    DeviceType::TuyaLight => {
+                        view! { <SmartLightItem device=device.clone()/> }.into_any()
+                    }
+                    DeviceType::TuyaGrowLight => {
+                        view! { <SmartLightItem device=device.clone()/> }.into_any()
+                    }
                     DeviceType::RingDoorbell => view! { <RingDoorbellItem/> }.into_any(),
                     DeviceType::Stoplight => view! { <StoplightItem/> }.into_any(),
                     DeviceType::RokuTv => view! { <RokuTvItem device=device.clone()/> }.into_any(),

@@ -136,18 +136,14 @@ pub async fn request(path: &str, token: &str) -> String {
 
 pub async fn discover_tuya_devices() -> Result<(), Box<dyn std::error::Error>> {
     let port = 6666;
-
-    // Bind UDP socket to listen for unencrypted Tuya device broadcasts
     let socket = tokio::net::UdpSocket::bind(("0.0.0.0", port)).await?;
     println!("Listening for Tuya devices on port {}", port);
 
     let mut buf = [0u8; 2048];
 
     loop {
-        // Receive incoming UDP messages
         match socket.recv_from(&mut buf).await {
             Ok((num_bytes, src_addr)) => {
-                // Exclude loopback messages
                 if !is_loopback(&src_addr) {
                     println!(
                         "Received {} bytes from {}: {:?}",
@@ -163,11 +159,9 @@ pub async fn discover_tuya_devices() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
-
     Ok(())
 }
 
-/// Check if a given address is a loopback address.
 fn is_loopback(addr: &std::net::SocketAddr) -> bool {
     match addr.ip() {
         std::net::IpAddr::V4(ip) => ip.is_loopback(),

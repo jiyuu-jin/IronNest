@@ -414,6 +414,7 @@ pub fn tuya_job(
                 _ = discovery_interval.tick(), if running => {
                     let tuya_auth = get_auth_from_db(&shared_pool, "tuya").await;
                     if !tuya_auth.auth_token.is_empty() {
+                        // @TODO refactor user_id to come from db
                         let res = get_devices("az17063780590351Cr1b", &tuya_auth.auth_token)
                             .await
                             .unwrap();
@@ -426,7 +427,7 @@ pub fn tuya_job(
                                 Device {
                                     id: 0,
                                     name: device.name.clone(),
-                                    device_type: DeviceType::KasaLight,
+                                    device_type: DeviceType::TuyaLight,
                                     ip,
                                     power_state: 0,
                                     battery_percentage: 0,

@@ -18,6 +18,8 @@ pub fn DeviceView(device: Device) -> impl IntoView {
         DeviceType::KasaLight => view! { <SmartLightView device=device/> }.into_any(),
         DeviceType::KasaDimmer => view! { <SmartDimmerView device=device/> }.into_any(),
         DeviceType::KasaPowerStrip => view! { <SmartPowerStripView device=device/> }.into_any(),
+        DeviceType::TuyaLight => view! { <SmartLightView device=device/> }.into_any(),
+        DeviceType::TuyaGrowLight => view! { <SmartLightView device=device/> }.into_any(),
         DeviceType::RingDoorbell => view! { <RingDoorbellView device=device/> }.into_any(),
         DeviceType::RokuTv => view! { <RokuTvView device=device/> }.into_any(),
         DeviceType::Stoplight => view! { <StoplightView device=device/> }.into_any(),

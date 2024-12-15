@@ -1,5 +1,5 @@
 -- SQLBook: Code
-CREATE TYPE device_type AS ENUM ('kasa-plug', 'kasa-light', 'kasa-dimmer', 'kasa-power-strip', 'ring-doorbell', 'roku-tv', 'stoplight');
+CREATE TYPE device_type AS ENUM ('kasa-plug', 'kasa-light', 'kasa-dimmer', 'kasa-power-strip', 'tuya-light', 'tuya-grow-light', 'ring-doorbell', 'roku-tv', 'stoplight');
 
 CREATE TABLE device (
     id BIGSERIAL PRIMARY KEY,
@@ -83,5 +83,6 @@ create TABLE integration (
 
 create TABLE tuya_device_data (
     id INTEGER PRIMARY KEY REFERENCES device(id),
+    device_id TEXT,
     local_key TEXT 
 )

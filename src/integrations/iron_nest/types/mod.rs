@@ -20,6 +20,8 @@ pub enum DeviceType {
     KasaLight,
     KasaDimmer,
     KasaPowerStrip,
+    TuyaLight,
+    TuyaGrowLight,
     RingDoorbell,
     RokuTv,
     Stoplight,
@@ -35,6 +37,8 @@ impl fmt::Display for DeviceType {
             Self::RingDoorbell => write!(f, "Ring Doorbell"),
             Self::RokuTv => write!(f, "Roku TV"),
             Self::Stoplight => write!(f, "Stoplight"),
+            Self::TuyaLight => write!(f, "Tuya Light"),
+            Self::TuyaGrowLight => write!(f, "Tuya Grow Light"),
         }
     }
 }

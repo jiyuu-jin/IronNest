@@ -71,6 +71,7 @@ pub fn DeviceList(
                                                                         on_device_click.run(device.id);
                                                                     }
                                                                 >
+
                                                                     Add
                                                                 </button>
                                                             </div>
@@ -83,10 +84,7 @@ pub fn DeviceList(
                                         .into_any()
                                 }
                                 Err(e) => {
-                                    view! {
-                                        <p>{format!("DeviceList error: {e}")}</p>
-                                    }
-                                        .into_any()
+                                    view! { <p>{format!("DeviceList error: {e}")}</p> }.into_any()
                                 }
                             }
                         })
@@ -129,6 +127,18 @@ pub fn DeviceListItem(device: Device) -> impl IntoView {
         DeviceType::KasaPowerStrip => view! {
             <div>
                 <SmartPowerStripItem device=device/>
+            </div>
+        }
+        .into_any(),
+        DeviceType::TuyaLight => view! {
+            <div>
+                <SmartLightItem device=device/>
+            </div>
+        }
+        .into_any(),
+        DeviceType::TuyaGrowLight => view! {
+            <div>
+                <SmartLightItem device=device/>
             </div>
         }
         .into_any(),

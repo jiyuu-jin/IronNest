@@ -155,7 +155,6 @@ pub fn DashboardPage() -> impl IntoView {
         device_ids: Option<Vec<i64>>,
     }
 
-    // Ensure all keys are unique
     let panel_map = RwSignal::new({
         let map = [
             (
@@ -238,13 +237,6 @@ pub fn DashboardPage() -> impl IntoView {
         "toggles".to_string(),
         "toggles2".to_string(),
     ]);
-
-    // println!("Initial component_order: {:?}", component_order.get());
-
-    // let components = move || {
-    //     // panel_map.track();
-    //     component_order.get().clone()
-    // };
 
     let add_panel = {
         move |panel_type: String, assigned_device_ids: Option<Vec<i64>>| {
@@ -396,95 +388,83 @@ pub fn DashboardPage() -> impl IntoView {
                                         }>
                                             <div class="grid lg:grid-cols-12 grid-cols-1 my-4 gap-x-4 gap-y-4 overflow-hidden">
                                                 <For
-                                                    // each=components
-                                                    // key=|id| id.clone()
-                                                    // children=move |id| {
-                                                    // let data = data.clone();
                                                     each=sorted_panels
                                                     key=|panel| panel.0.clone()
                                                     children=move |(id, panel_data)| {
                                                         let data = data.clone();
                                                         view! {
                                                             {move || {
-                                                        leptos::logging::log!("for: id: {id}");
-                                                        match panel_data.inner.get().component_type.as_str() {
-                                                            "roku" => {
-                                                                view! {
-                                                                    // let data = data.clone();
-                                                                    // view! {
-                                                                    // {move || {
-                                                                    // let panel_data = panel_map.get().get(&id).cloned();
-                                                                    // let comp_view = match panel_data {
-                                                                    // Some(panel_data) => {
-                                                                    <RokuTvRemote dashboard_values=dashboard_values/>
-                                                                }
-                                                                    .into_any()
-                                                            }
-                                                            "meals" => {
-                                                                view! {
-                                                                    <PlannedMeals dashboard_values=dashboard_values/>
-                                                                } 
-                                                                    .into_any()
-                                                            }
-                                                            "command" => {
-                                                                view! {
-                                                                    <CommandBox/>
-                                                                }
-                                                                    .into_any()
-                                                            }
-                                                            "ring" => {
-                                                                let camera_id = panel_data.inner.get().camera_id.unwrap_or_default();
-                                                                println!("{:?}", data.cameras.get(0).map(|c| c.id));
-                                                                println!("Looking for camera with ID: {}", camera_id);
-                                                                let camera = data
-                                                                    .cameras
-                                                                    .iter()
-                                                                    .find(|c| c.id.to_string() == camera_id);
-                                                                match camera {
-                                                                    Some(camera) => {
-                                                                        println!("Found camera: {:?}", camera.id);
-                                                                        view! {
-                                                                            <RingCameraPanel camera=camera.clone()/>
-                                                                        }
+                                                                leptos::logging::log!("for: id: {id}");
+                                                                match panel_data.inner.get().component_type.as_str() {
+                                                                    "roku" => {
+                                                                        view! { <RokuTvRemote dashboard_values=dashboard_values/> }
                                                                             .into_any()
                                                                     }
-                                                                    None => {
-                                                                        println!("Camera with ID {} not found", camera_id);
+                                                                    "meals" => {
+                                                                        view! { <PlannedMeals dashboard_values=dashboard_values/> }
+                                                                            .into_any()
+                                                                    }
+                                                                    "command" => view! { <CommandBox/> }.into_any(),
+                                                                    "ring" => {
+                                                                        let camera_id = panel_data
+                                                                            .inner
+                                                                            .get()
+                                                                            .camera_id
+                                                                            .unwrap_or_default();
+                                                                        println!("{:?}", data.cameras.get(0).map(|c| c.id));
+                                                                        println!("Looking for camera with ID: {}", camera_id);
+                                                                        let camera = data
+                                                                            .cameras
+                                                                            .iter()
+                                                                            .find(|c| c.id.to_string() == camera_id);
+                                                                        match camera {
+                                                                            Some(camera) => {
+                                                                                println!("Found camera: {:?}", camera.id);
+                                                                                view! { <RingCameraPanel camera=camera.clone()/> }
+                                                                                    .into_any()
+                                                                            }
+                                                                            None => {
+                                                                                println!("Camera with ID {} not found", camera_id);
+                                                                                view! {
+                                                                                    <div class="bg-gray-200 h-full flex items-center justify-center text-gray-600">
+                                                                                        "Camera Not Found"
+                                                                                    </div>
+                                                                                }
+                                                                                    .into_any()
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    "toggles" => {
+                                                                        if let Some(device_ids) = panel_data
+                                                                            .inner
+                                                                            .get()
+                                                                            .device_ids
+                                                                            .clone()
+                                                                        {
+                                                                            view! {
+                                                                                <DeviceListPanel devices=devices device_ids=device_ids/>
+                                                                            }
+                                                                                .into_any()
+                                                                        } else {
+                                                                            view! {
+                                                                                <div class="bg-gray-200 h-full flex items-center justify-center text-gray-600">
+                                                                                    "No Devices Assigned"
+                                                                                </div>
+                                                                            }
+                                                                                .into_any()
+                                                                        }
+                                                                    }
+                                                                    _ => {
                                                                         view! {
                                                                             <div class="bg-gray-200 h-full flex items-center justify-center text-gray-600">
-                                                                                "Camera Not Found"
+                                                                                "New Blank Panel"
                                                                             </div>
                                                                         }
                                                                             .into_any()
                                                                     }
                                                                 }
-                                                            }
-                                                            "toggles" => {
-                                                                if let Some(device_ids) = panel_data.inner.get().device_ids.clone() {
-                                                                    view! {
-                                                                        <DeviceListPanel devices=devices device_ids=device_ids/>
-                                                                    }
-                                                                        .into_any()
-                                                                } else {
-                                                                    view! {
-                                                                        <div class="bg-gray-200 h-full flex items-center justify-center text-gray-600">
-                                                                            "No Devices Assigned"
-                                                                        </div>
-                                                                    }
-                                                                        .into_any()
-                                                                }
-                                                            }
-                                                            _ => {
-                                                                view! {
-                                                                    <div class="bg-gray-200 h-full flex items-center justify-center text-gray-600">
-                                                                        "New Blank Panel"
-                                                                    </div>
-                                                                }
-                                                                    .into_any()
-                                                            }
+                                                            }}
                                                         }
-                                                    }}
-                                                }
                                                     }
                                                 />
 
