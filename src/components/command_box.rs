@@ -19,7 +19,7 @@ pub fn CommandBox() -> impl IntoView {
     let value = handle_assistant.value();
 
     view! {
-        <div class="col-span-3 h-[264px] h-full flex flex-col panel-form bg-white p-2">
+        <div class="col-span-3 h-[264px] h-full flex flex-col panel-form bg-white p-2 rounded-md shadow-lg">
             <ActionForm action=handle_assistant>
                 <div class="flex flex-col h-full">
                     <textarea

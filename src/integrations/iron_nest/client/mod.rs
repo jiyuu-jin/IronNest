@@ -40,6 +40,7 @@ pub async fn insert_devices_into_db(
     devices: &Vec<Device>,
 ) -> Result<(), sqlx::Error> {
     for device in devices {
+        println!("insert_devices_into_db device {:?}", device);
         let query = "
             INSERT INTO device (
                 name,
@@ -421,8 +422,8 @@ pub fn tuya_job(
                         println!("{:?}", res);
                         let devices: Vec<Device> = res
                             .result
-                            .iter()
-                            .map(|device| {
+                            .iter().enumerate()
+                            .map(|(index, device)| {
                                 let ip = Ipv4Addr::new(0, 0, 0, 0).to_string();
                                 Device {
                                     id: 0,
@@ -433,11 +434,12 @@ pub fn tuya_job(
                                     battery_percentage: 0,
                                     last_seen: Utc::now(),
                                     mac_address: None,
-                                    child_id: None,
+                                    child_id: Some(index.to_string()),
                                 }
                             })
                             .collect();
 
+                        println!("bhap: {:?}", devices);
                         insert_devices_into_db(&shared_pool, &devices)
                             .await
                             .unwrap();
