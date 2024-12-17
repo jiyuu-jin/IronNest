@@ -8,6 +8,7 @@ pub struct TuyaDeviceRes {
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct TuyaDeviceResResult {
     pub ip: String,
+    pub id: String,
     pub local_key: String,
     pub uid: String,
     pub name: String,
