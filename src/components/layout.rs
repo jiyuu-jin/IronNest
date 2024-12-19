@@ -23,22 +23,24 @@ use {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Toast(pub String);
 
+pub type ToastContext = RwSignal<Option<Toast>>;
+
 #[component]
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
 
-    let (toast, set_toast) = signal(None as Option<Toast>);
+    let toast = ToastContext::new(None);
     Effect::new(move |_| {
         if toast.get().is_some() {
             Timeout::new(500, move || {
-                set_toast.set(None);
+                toast.set(None);
             })
         } else {
             Timeout::new(0, move || {})
         }
     });
-    provide_context(set_toast);
+    provide_context(toast);
 
     view! {
         <Stylesheet id="leptos" href="/pkg/iron_nest.css"/>

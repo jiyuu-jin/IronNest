@@ -1,8 +1,12 @@
 use {
     crate::{
-        components::{layout::Toast, select::Select, text_input::TextInput},
+        components::{
+            layout::{Toast, ToastContext},
+            select::Select,
+            text_input::TextInput,
+        },
         integrations::iron_nest::types::RequiredAction,
-        server::actions::{get_actions, AddAction, DeleteAction},
+        server::actions::{get_actions, AddAction, DeleteAction, RunAction},
     },
     leptos::prelude::*,
 };
@@ -11,6 +15,7 @@ use {
 pub fn ActionsPage() -> impl IntoView {
     let create_action_action = ServerAction::<AddAction>::new();
     let delete_action_action = ServerAction::<DeleteAction>::new();
+    let run_action_action = ServerAction::<RunAction>::new();
     let actions = Resource::new(
         move || {
             (
@@ -23,7 +28,7 @@ pub fn ActionsPage() -> impl IntoView {
 
     let (show_create_action, set_show_create_action) = signal(false);
 
-    let toast = use_context::<WriteSignal<Option<Toast>>>().unwrap();
+    let toast = use_context::<ToastContext>().unwrap();
     Resource::new(
         move || {
             (
@@ -47,6 +52,19 @@ pub fn ActionsPage() -> impl IntoView {
         move |value| async move {
             if matches!(value.0, Some(Ok(_))) {
                 toast.set(Some(Toast("Action deleted".to_owned())));
+            }
+        },
+    );
+    Resource::new(
+        move || {
+            (
+                run_action_action.value().get(),
+                run_action_action.version().get(),
+            )
+        },
+        move |value| async move {
+            if matches!(value.0, Some(Ok(_))) {
+                toast.set(Some(Toast("Action ran".to_owned())));
             }
         },
     );
@@ -88,6 +106,9 @@ pub fn ActionsPage() -> impl IntoView {
                                                                         delete_action_action
                                                                             .dispatch(DeleteAction { id: action.id });
                                                                     }>"Delete"</button>
+                                                                    <button on:click=move |_| {
+                                                                        run_action_action.dispatch(RunAction { id: action.id });
+                                                                    }>"Run"</button>
                                                                 </li>
                                                             }
                                                         })
@@ -278,6 +299,7 @@ pub fn ActionsPage() -> impl IntoView {
                                                                                             "tplink_turn_light_on_off".to_owned(),
                                                                                             "tplink_turn_plug_on".to_owned(),
                                                                                             "tplink_turn_plug_off".to_owned(),
+                                                                                            "handle_smart_light_toggle".to_owned(),
                                                                                             "stoplight_toggle".to_owned(),
                                                                                         ]
                                                                                     />

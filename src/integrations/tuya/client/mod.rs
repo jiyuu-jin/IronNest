@@ -45,6 +45,7 @@ pub async fn get_refresh_token() -> Result<TuyaAuthRes, Box<dyn Error>> {
 
 pub async fn get_devices(user_id: &str, token: &str) -> Result<TuyaDeviceRes, Box<dyn Error>> {
     let res = request(&format!("/v1.0/users/{user_id}/devices"), token).await;
+    println!("get_devices res: {res:?}");
     let tuya_devices: TuyaDeviceRes = serde_json::from_str(&res)?;
     Ok(tuya_devices)
 }

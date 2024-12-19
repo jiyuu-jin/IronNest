@@ -1,4 +1,7 @@
-use {crate::components::layout::Toast, leptos::prelude::*};
+use {
+    crate::components::layout::{Toast, ToastContext},
+    leptos::prelude::*,
+};
 
 #[cfg(feature = "ssr")]
 use crate::integrations::iron_nest::types::config::Config;
@@ -62,7 +65,7 @@ pub fn ConfigsPage() -> impl IntoView {
     let set_config_server_action = ServerAction::<SetConfig>::new();
     let config = Resource::new(move || set_config_server_action.version(), |_| get_config());
 
-    let toast = use_context::<RwSignal<Option<Toast>>>().unwrap();
+    let toast = use_context::<ToastContext>().unwrap();
     Resource::new(
         move || {
             (
@@ -100,7 +103,13 @@ pub fn ConfigsPage() -> impl IntoView {
                                         Ok(config) => {
                                             view! {
                                                 <ActionForm action=set_config_server_action>
-                                                    <textarea name="config">{config}</textarea>
+                                                    <textarea
+                                                        name="config"
+                                                        class="w-full"
+                                                        style="text-wrap:nowrap; height:500px"
+                                                    >
+                                                        {config}
+                                                    </textarea>
                                                     <div class="flex flex-shrink-0 justify-end px-4 py-4">
                                                         <button
                                                             type="button"

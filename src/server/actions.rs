@@ -84,3 +84,17 @@ pub async fn delete_action_query(pool: &sqlx::PgPool, id: Uuid) -> Result<(), sq
     ";
     sqlx::query(query).bind(id).execute(pool).await.map(|_| ())
 }
+
+#[server(RunAction)]
+pub async fn run_action(id: Uuid) -> Result<(), ServerFnError> {
+    let pool = use_context::<sqlx::PgPool>().unwrap();
+    let actions = get_actions_query(&pool).await?;
+    let action = actions.iter().find(|a| a.id == id).unwrap();
+    crate::integrations::iron_nest::execute_function(
+        action.fields.function_name.clone(),
+        action.fields.function_args.clone(),
+    )
+    .await;
+
+    Ok(())
+}

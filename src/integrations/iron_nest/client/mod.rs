@@ -4,22 +4,29 @@ use {
         shared::get_default_integrations,
         types::{AuthState, ControlMessage, Device, DeviceType, Integration},
     },
-    crate::integrations::{
-        efuy,
-        ring::{
-            client::RingRestClient,
-            get_ring_camera,
-            types::{DevicesRes, RingCamera},
+    crate::{
+        integrations::{
+            efuy,
+            ring::{
+                client::RingRestClient,
+                get_ring_camera,
+                types::{DevicesRes, RingCamera},
+            },
+            roku::{
+                roku_discover, roku_get_device_info, roku_launch_app, roku_search,
+                roku_send_keypress,
+            },
+            stoplight::toggle_stoplight,
+            tplink::{
+                discover_devices, tplink_set_dimmer_brightness, tplink_set_light_brightness,
+                tplink_turn_light_on_off, tplink_turn_plug_off, tplink_turn_plug_on,
+                types::DeviceData,
+            },
+            tuya::{
+                discover_tuya_devices, get_devices, get_refresh_token, types::TuyaDeviceResResult,
+            },
         },
-        roku::{
-            roku_discover, roku_get_device_info, roku_launch_app, roku_search, roku_send_keypress,
-        },
-        stoplight::toggle_stoplight,
-        tplink::{
-            discover_devices, tplink_set_dimmer_brightness, tplink_set_light_brightness,
-            tplink_turn_light_on_off, tplink_turn_plug_off, tplink_turn_plug_on, types::DeviceData,
-        },
-        tuya::{discover_tuya_devices, get_devices, get_refresh_token, types::TuyaDeviceResResult},
+        server::tplink::handle_smart_light_toggle,
     },
     chrono::Utc,
     leptos::prelude::*,
@@ -202,6 +209,17 @@ pub async fn execute_function(function_name: String, function_args: serde_json::
                 .try_into()
                 .unwrap();
             tplink_set_dimmer_brightness(ip, &brightness).await;
+            json!({
+                "message": "success"
+            })
+        }
+        "handle_smart_light_toggle" => {
+            handle_smart_light_toggle(
+                function_args["state"].as_bool().unwrap(),
+                function_args["ip"].as_str().unwrap().to_string(),
+            )
+            .await
+            .unwrap();
             json!({
                 "message": "success"
             })
