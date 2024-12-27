@@ -411,7 +411,7 @@ pub fn DashboardPage() -> impl IntoView {
                                                                             .get()
                                                                             .camera_id
                                                                             .unwrap_or_default();
-                                                                        println!("{:?}", data.cameras.get(0).map(|c| c.id));
+                                                                        println!("{:?}", data.cameras.first().map(|c| c.id));
                                                                         println!("Looking for camera with ID: {}", camera_id);
                                                                         let camera = data
                                                                             .cameras
