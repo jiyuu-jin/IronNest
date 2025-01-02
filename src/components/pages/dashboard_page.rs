@@ -263,7 +263,7 @@ pub fn DashboardPage() -> impl IntoView {
         }
     };
 
-    let (sidebar_visible, set_sidebar_visible) = create_signal(false);
+    let (sidebar_visible, set_sidebar_visible) = signal(false);
     let toggle_sidebar = move |_| {
         let current = sidebar_visible.get();
         set_sidebar_visible.set(!current);
