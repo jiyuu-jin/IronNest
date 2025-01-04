@@ -5,7 +5,11 @@ use {
             planned_meals::PlannedMeals, ring_cameras::RingCameraPanel,
             roku_tv_remote::RokuTvRemote,
         },
-        integrations::{ring::types::RingCamera, roku::types::AppsAppWithIcon},
+        integrations::{
+            instacart::types::{Ingredient, ScheduledMeal},
+            ring::types::RingCamera,
+            roku::types::AppsAppWithIcon,
+        },
         server::dashboard_page::get_devices,
     },
     leptos::prelude::*,
@@ -21,18 +25,6 @@ cfg_if::cfg_if! {
             }
         };
     }
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Ingredient {
-    pub name: String,
-    pub amount: String,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct ScheduledMeal {
-    pub recipie_name: String,
-    pub ingredients: Ingredient,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -128,13 +120,50 @@ pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
         cameras,
         ws_url: "".to_string(),
         roku_apps: apps_with_icon,
-        scheduled_meals: vec![ScheduledMeal {
-            recipie_name: "Pizza".to_owned(),
-            ingredients: Ingredient {
-                name: "Doh".to_owned(),
-                amount: "1 lb".to_owned(),
+        scheduled_meals: vec![
+            ScheduledMeal {
+                recipie_name: "Pancakes & Eggs".to_owned(),
+                ingredients: Ingredient {
+                    name: "Doh".to_owned(),
+                    amount: "1 lb".to_owned(),
+                },
             },
-        }],
+            ScheduledMeal {
+                recipie_name: "Grilled Chicken Salad".to_owned(),
+                ingredients: Ingredient {
+                    name: "Doh".to_owned(),
+                    amount: "1 lb".to_owned(),
+                },
+            },
+            ScheduledMeal {
+                recipie_name: "Spaghetti Bolognese".to_owned(),
+                ingredients: Ingredient {
+                    name: "Doh".to_owned(),
+                    amount: "1 lb".to_owned(),
+                },
+            },
+            ScheduledMeal {
+                recipie_name: "French Toast & Sausage".to_owned(),
+                ingredients: Ingredient {
+                    name: "Doh".to_owned(),
+                    amount: "1 lb".to_owned(),
+                },
+            },
+            ScheduledMeal {
+                recipie_name: "Turkey Club Sandwich".to_owned(),
+                ingredients: Ingredient {
+                    name: "Doh".to_owned(),
+                    amount: "1 lb".to_owned(),
+                },
+            },
+            ScheduledMeal {
+                recipie_name: "Grilled Salmon with Quinoa".to_owned(),
+                ingredients: Ingredient {
+                    name: "Doh".to_owned(),
+                    amount: "1 lb".to_owned(),
+                },
+            },
+        ],
     })
 }
 
@@ -238,30 +267,30 @@ pub fn DashboardPage() -> impl IntoView {
         "toggles2".to_string(),
     ]);
 
-    let add_panel = {
-        move |panel_type: String, assigned_device_ids: Option<Vec<i64>>| {
-            let new_panel_id = format!("new_panel_{}", component_order.get().len());
-            component_order.update(|order| {
-                order.push(new_panel_id.clone());
-            });
-            panel_map.update(|map| {
-                map.insert(
-                    new_panel_id.clone(),
-                    PanelData {
-                        inner: RwSignal::new(PanelDataInner {
-                            component_type: panel_type.clone(),
-                            camera_id: None,
-                            device_ids: assigned_device_ids,
-                        }),
-                    },
-                );
-                println!(
-                    "Updated panel_map after adding new panel: {:?}",
-                    map.keys().collect::<Vec<_>>()
-                );
-            });
-        }
-    };
+    // let add_panel = {
+    //     move |panel_type: String, assigned_device_ids: Option<Vec<i64>>| {
+    //         let new_panel_id = format!("new_panel_{}", component_order.get().len());
+    //         component_order.update(|order| {
+    //             order.push(new_panel_id.clone());
+    //         });
+    //         panel_map.update(|map| {
+    //             map.insert(
+    //                 new_panel_id.clone(),
+    //                 PanelData {
+    //                     inner: RwSignal::new(PanelDataInner {
+    //                         component_type: panel_type.clone(),
+    //                         camera_id: None,
+    //                         device_ids: assigned_device_ids,
+    //                     }),
+    //                 },
+    //             );
+    //             println!(
+    //                 "Updated panel_map after adding new panel: {:?}",
+    //                 map.keys().collect::<Vec<_>>()
+    //             );
+    //         });
+    //     }
+    // };
 
     let (sidebar_visible, set_sidebar_visible) = signal(false);
     let toggle_sidebar = move |_| {
