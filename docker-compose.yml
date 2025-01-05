@@ -6,6 +6,8 @@ services:
     volumes:
       - "./docker-data/app/:/app/data/"
     restart: "unless-stopped"
+    environment:
+      LEPTOS_SITE_ADDR: "0.0.0.0:80"
 
   postgres:
     image: postgres:17
