@@ -27,8 +27,12 @@ The project has the following main files:
 ## Dependencies
 
 ```bash
-rustup target add wasm32-unknown-unknown
-cargo install trunk wasm-bindgen-cli cargo-leptos leptosfmt just
+# on Ubuntu
+sudo apt install build-essential
+```
+
+```bash
+./install.sh
 ```
 
 ## Running the Project
