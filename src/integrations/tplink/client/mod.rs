@@ -103,7 +103,7 @@ pub async fn discover_devices() -> Result<Vec<DeviceData>, Box<dyn Error + Send>
     Ok(devices)
 }
 
-pub async fn send(ip: &str, json: serde_json::Value) -> io::Result<()> {
+pub async fn send(ip: &str, json: serde_json::Value) -> io::Result<Value> {
     let _ip: IpAddr = match ip.parse() {
         Ok(addr) => addr,
         Err(e) => {
@@ -126,7 +126,7 @@ pub async fn send(ip: &str, json: serde_json::Value) -> io::Result<()> {
     let decrypted_msg = decrypt_with_header(&buf, KEY);
     let msg = serde_json::from_slice::<Value>(&decrypted_msg).unwrap();
     println!("msg: {msg:?}");
-    Ok(())
+    Ok(msg)
 }
 
 pub async fn tplink_set_alias(ip: &str, alias: &str) {
@@ -249,6 +249,26 @@ pub async fn tplink_set_light_hsl(ip: &str, color: String) {
             leptos::logging::log!("Failed to parse color '{}': {}", color, e);
         }
     }
+}
+
+pub async fn tplink_kasa_get_energy_usage(ip: &str, id: &str) -> io::Result<Value> {
+    send(
+        ip,
+        json!({"context": {
+                "child_ids": [id]
+            },"system":{"get_energy_usage":{}}}),
+    )
+    .await
+}
+
+pub async fn tplink_kasa_get_emeter_data(ip: &str, id: &str) -> io::Result<Value> {
+    send(
+        ip,
+        json!({"context": {
+                "child_ids": [id]
+            },"system":{"get_emeter_data":{}}}),
+    )
+    .await
 }
 
 fn encrypt_with_header(input: &[u8], first_key: u8) -> Vec<u8> {

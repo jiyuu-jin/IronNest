@@ -13,6 +13,7 @@ async fn main() {
             integrations::{
                 iron_nest::{client::AppState, cron::CronClient, run_devices_tasks},
                 ring::RingRestClient,
+                tplink::tplink_kasa_get_energy_usage,
             },
         },
         leptos::prelude::*,
@@ -85,6 +86,13 @@ async fn main() {
         .with_state(leptos_options);
 
     run_devices_tasks(ring_rest_client, &shared_pool, control_senders)
+        .await
+        .unwrap();
+
+    tplink_kasa_get_energy_usage("10.0.0.223", "1")
+        .await
+        .unwrap();
+    tplink_kasa_get_energy_usage("10.0.0.223", "1")
         .await
         .unwrap();
 
