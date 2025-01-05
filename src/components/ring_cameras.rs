@@ -8,7 +8,7 @@ use {
 pub fn RingCameraPanel(camera: RingCamera) -> impl IntoView {
     let start_of_day_timestamp = get_start_of_day_timestamp();
 
-    let (selected_video_url, set_selected_video_url) = create_signal(None::<String>);
+    let (selected_video_url, set_selected_video_url) = signal(None::<String>);
     let video_timeline = create_video_timeline(
         camera.videos.video_search.clone(),
         start_of_day_timestamp,
@@ -51,6 +51,7 @@ pub fn RingCameraPanel(camera: RingCamera) -> impl IntoView {
             <div class="text-xs text-center bg-gray-50 border-t">
                 {camera.snapshot.timestamp.to_string()}
             </div>
+            {video_timeline}
         </div>
     }
 }
@@ -116,8 +117,10 @@ fn calculate_position(
     start_of_day_timestamp: i64,
     timeline_width: i32,
 ) -> i32 {
-    let start_of_day = DateTime::from_utc(
-        chrono::NaiveDateTime::from_timestamp_millis(start_of_day_timestamp).unwrap(),
+    let start_of_day = DateTime::from_naive_utc_and_offset(
+        chrono::DateTime::from_timestamp_millis(start_of_day_timestamp)
+            .unwrap()
+            .naive_utc(),
         Utc,
     );
     let position = (timestamp - start_of_day).num_seconds() as f64;
