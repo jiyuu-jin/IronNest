@@ -1,12 +1,10 @@
 pub mod components;
 pub mod error_template;
-pub mod integrations;
-pub mod server;
 
 #[cfg(feature = "ssr")]
-pub mod app;
-#[cfg(feature = "ssr")]
 pub mod handlers;
+pub mod integrations;
+pub mod server;
 
 #[cfg(feature = "hydrate")]
 #[wasm_bindgen::prelude::wasm_bindgen]
