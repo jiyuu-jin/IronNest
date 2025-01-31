@@ -51,18 +51,19 @@ pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
     .fetch_all(&pool)
     .await?;
 
-    let apps = roku_get_apps("10.0.0.217").await;
-    let mut apps_with_icon = Vec::new();
+    // @TODO add error handling and make roku apps dynamic from roku devices in device table
+    // let apps = roku_get_apps("10.0.0.217").await;
+    // let mut apps_with_icon = Vec::new();
 
-    for app in apps.apps.into_iter() {
-        apps_with_icon.push(AppsAppWithIcon {
-            icon: roku_get_channel_icon("10.0.0.217", &app.id).await,
-            name: app.name,
-            id: app.id,
-            app_type: app.app_type,
-            version: app.version,
-        });
-    }
+    // for app in apps.apps.into_iter() {
+    //     apps_with_icon.push(AppsAppWithIcon {
+    //         icon: roku_get_channel_icon("10.0.0.217", &app.id).await,
+    //         name: app.name,
+    //         id: app.id,
+    //         app_type: app.app_type,
+    //         version: app.version,
+    //     });
+    // }
 
     let mut cameras = Vec::new();
     for ring_camera_row in ring_camera_rows {
@@ -119,7 +120,7 @@ pub async fn get_dashboard_values() -> Result<DashboardValues, ServerFnError> {
         location_name: "".to_string(),
         cameras,
         ws_url: "".to_string(),
-        roku_apps: apps_with_icon,
+        roku_apps: Vec::new(),
         scheduled_meals: vec![
             ScheduledMeal {
                 recipie_name: "Pancakes & Eggs".to_owned(),

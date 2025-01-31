@@ -1,5 +1,4 @@
-use leptos::prelude::*;
-use crate::server::openai::HandleAssistantCommand;
+use {crate::server::openai::HandleAssistantCommand, leptos::prelude::*};
 
 #[component]
 pub fn CommandBox() -> impl IntoView {
