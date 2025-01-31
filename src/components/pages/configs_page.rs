@@ -41,8 +41,13 @@ pub async fn get_config_query(pool: &sqlx::PgPool) -> Result<Option<Config>, sql
 #[server(SetConfig)]
 async fn set_config(config: String) -> Result<(), ServerFnError> {
     let pool = use_context::<sqlx::PgPool>().unwrap();
+    let cron_client = use_context::<crate::integrations::iron_nest::cron::CronClient>().unwrap();
     let config = serde_yaml::from_str(&config)?;
-    set_config_query(&pool, config).await.map_err(Into::into)
+    set_config_query(&pool, config).await?;
+    cron_client.schedule_tasks(&pool).await.map_err(|e| {
+        ServerFnError::ServerError::<server_fn::error::NoCustomError>(e.to_string())
+    })?;
+    Ok(())
 }
 
 #[cfg(feature = "ssr")]
