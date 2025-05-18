@@ -8,6 +8,7 @@ pub mod device_modal;
 pub mod device_panel;
 pub mod layout;
 pub mod login_form;
+pub mod mish;
 pub mod navbar;
 pub mod pages;
 pub mod planned_meals;

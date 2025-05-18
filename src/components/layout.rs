@@ -4,9 +4,10 @@ use {
             navbar::Navbar,
             pages::{
                 actions_page::ActionsPage, configs_page::ConfigsPage,
-                dashboard_page::DashboardPage, devices_page::DevicesPage,
-                integrations_page::IntegrationsPage, login_page::LoginPage,
-                settings_page::SettingsPage, websocket_page::WebSocketPage,
+                dag_inspector_page::DagInspectorPage, dashboard_page::DashboardPage,
+                devices_page::DevicesPage, integrations_page::IntegrationsPage,
+                login_page::LoginPage, mish_state_page::MishStatePage, settings_page::SettingsPage,
+                websocket_page::WebSocketPage,
             },
         },
         error_template::{AppError, ErrorTemplate},
@@ -225,6 +226,8 @@ pub fn App() -> impl IntoView {
                         <Route path=path!("/actions") view=ActionsPage />
                         <Route path=path!("/settings") view=SettingsPage />
                         <Route path=path!("/settings/configs") view=ConfigsPage />
+                        <Route path=path!("/settings/dag-inspector") view=DagInspectorPage />
+                        <Route path=path!("/settings/dag-inspector/:name") view=MishStatePage />
                         <Route path=path!("/devices") view=DevicesPage />
                         <Route path=path!("/websocket") view=WebSocketPage />
                     </Routes>

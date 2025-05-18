@@ -122,9 +122,14 @@ pub fn SettingsPage() -> impl IntoView {
                 <div>
                     <h2 class="text-base font-semibold leading-7 text-gray-900">"Advanced"</h2>
                     <p class="mt-1 text-sm leading-6 text-gray-500">"Advanced settings."</p>
-                    <a class="text-black" href="/settings/configs">
-                        "Config Import/Export"
-                    </a>
+                    <div class="flex flex-col gap-2 mt-2">
+                        <a class="text-black" href="/settings/configs">
+                            "Config Import/Export"
+                        </a>
+                        <a class="text-black" href="/settings/dag-inspector">
+                            "DAG Inspector"
+                        </a>
+                    </div>
                 </div>
             </div>
         </main>
