@@ -103,8 +103,7 @@ fn create_video_timeline(
                             on:click=move |_| {
                                 set_selected_video_url.set(Some(video.hq_url.clone()));
                             }
-                        >
-                        </a>
+                        ></a>
                     }
                 })
                 .collect::<Vec<_>>()}

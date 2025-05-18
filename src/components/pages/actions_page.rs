@@ -73,7 +73,7 @@ pub fn ActionsPage() -> impl IntoView {
         <main class="lg:p-40 lg:pt-20 cursor-pointer">
             <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
                 <h1 class="text-lg">"Actions"</h1>
-                <hr class="mb-2"/>
+                <hr class="mb-2" />
                 <Suspense fallback=move || {
                     view! { <p>"Loading actions..."</p> }
                 }>

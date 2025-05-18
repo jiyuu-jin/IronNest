@@ -10,8 +10,8 @@ pub fn LoginPage() -> impl IntoView {
     let integration = move || params.with(|params| params.get("integration").unwrap_or_default());
 
     match integration().as_str() {
-        "ring" => view! { <RingLoginPage/> }.into_any(),
-        _ => view! { <LoginPageNotFound/> }.into_any(),
+        "ring" => view! { <RingLoginPage /> }.into_any(),
+        _ => view! { <LoginPageNotFound /> }.into_any(),
     }
 }
 

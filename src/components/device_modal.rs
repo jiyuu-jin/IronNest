@@ -14,15 +14,15 @@ use {
 #[component]
 pub fn DeviceView(device: Device) -> impl IntoView {
     match device.device_type {
-        DeviceType::KasaPlug => view! { <SmartPlugView device=device/> }.into_any(),
-        DeviceType::KasaLight => view! { <SmartLightView device=device/> }.into_any(),
-        DeviceType::KasaDimmer => view! { <SmartDimmerView device=device/> }.into_any(),
-        DeviceType::KasaPowerStrip => view! { <SmartPowerStripView device=device/> }.into_any(),
-        DeviceType::TuyaLight => view! { <SmartLightView device=device/> }.into_any(),
-        DeviceType::TuyaGrowLight => view! { <SmartLightView device=device/> }.into_any(),
-        DeviceType::RingDoorbell => view! { <RingDoorbellView device=device/> }.into_any(),
-        DeviceType::RokuTv => view! { <RokuTvView device=device/> }.into_any(),
-        DeviceType::Stoplight => view! { <StoplightView device=device/> }.into_any(),
+        DeviceType::KasaPlug => view! { <SmartPlugView device=device /> }.into_any(),
+        DeviceType::KasaLight => view! { <SmartLightView device=device /> }.into_any(),
+        DeviceType::KasaDimmer => view! { <SmartDimmerView device=device /> }.into_any(),
+        DeviceType::KasaPowerStrip => view! { <SmartPowerStripView device=device /> }.into_any(),
+        DeviceType::TuyaLight => view! { <SmartLightView device=device /> }.into_any(),
+        DeviceType::TuyaGrowLight => view! { <SmartLightView device=device /> }.into_any(),
+        DeviceType::RingDoorbell => view! { <RingDoorbellView device=device /> }.into_any(),
+        DeviceType::RokuTv => view! { <RokuTvView device=device /> }.into_any(),
+        DeviceType::Stoplight => view! { <StoplightView device=device /> }.into_any(),
     }
 }
 
@@ -58,7 +58,7 @@ pub fn Modal(toggle_modal: WriteSignal<bool>, device: ReadSignal<Option<Device>>
                                                         {data.name.to_owned()}
                                                     </h3>
                                                     <div class="mt-2">
-                                                        <DeviceView device=data/>
+                                                        <DeviceView device=data />
                                                     </div>
                                                 </div>
                                             }
@@ -92,7 +92,7 @@ pub fn SmartLightView(device: Device) -> impl IntoView {
 
     view! {
         <div class="flex flex-col">
-            <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None/>
+            <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None />
             <Slider on_change=Box::new({
                 let ip = device.ip.clone();
                 move |value| {
@@ -101,7 +101,7 @@ pub fn SmartLightView(device: Device) -> impl IntoView {
                         handle_smart_light_brightness(value, ip).await.unwrap();
                     });
                 }
-            })/>
+            }) />
 
             <ColorPicker
                 label="Color".to_string()
@@ -136,7 +136,7 @@ pub fn SmartPlugView(device: Device) -> impl IntoView {
         }
     });
 
-    view! { <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None/> }
+    view! { <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None /> }
 }
 
 #[component]
@@ -154,7 +154,7 @@ pub fn SmartDimmerView(device: Device) -> impl IntoView {
 
     view! {
         <div class="flex flex-col">
-            <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None/>
+            <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None />
             <Slider on_change=Box::new({
                 let ip = device.ip.clone();
                 move |value| {
@@ -163,7 +163,7 @@ pub fn SmartDimmerView(device: Device) -> impl IntoView {
                         handle_smart_dimmer_brightness(value, ip).await.unwrap();
                     });
                 }
-            })/>
+            }) />
         </div>
     }
 }
@@ -181,7 +181,7 @@ pub fn SmartPowerStripView(device: Device) -> impl IntoView {
         }
     });
 
-    view! { <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None/> }
+    view! { <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None /> }
 }
 
 #[component]
@@ -202,7 +202,7 @@ pub fn RokuTvView(device: Device) -> impl IntoView {
         }
     });
 
-    view! { <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None/> }
+    view! { <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None /> }
 }
 
 #[component]

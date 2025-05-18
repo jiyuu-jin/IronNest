@@ -43,9 +43,9 @@ pub fn App() -> impl IntoView {
     provide_context(toast);
 
     view! {
-        <Stylesheet id="leptos" href="/pkg/iron_nest.css"/>
+        <Stylesheet id="leptos" href="/pkg/iron_nest.css" />
 
-        <Script src="https://cdn.tailwindcss.com"/>
+        <Script src="https://cdn.tailwindcss.com" />
         <Script>
             "window.addEventListener('DOMContentLoaded', () => {
                 const toggleButtons = document.querySelectorAll('.toggle-sidebar');
@@ -59,10 +59,10 @@ pub fn App() -> impl IntoView {
                 });
             });"
         </Script>
-        <Meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
-        <Meta name="apple-mobile-web-app-capable" content="yes"/>
-        <Meta name="mobile-web-app-capable" content="yes"/>
-        <Title text="IronNest"/>
+        <Meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+        <Meta name="apple-mobile-web-app-capable" content="yes" />
+        <Meta name="mobile-web-app-capable" content="yes" />
+        <Title text="IronNest" />
 
         {move || {
             toast
@@ -106,7 +106,7 @@ pub fn App() -> impl IntoView {
 
                         <div class="flex grow flex-col gap-y-5 overflow-y-auto bg-gray-900 px-6 pb-2 ring-1 ring-white/10">
                             <div class="flex h-16 shrink-0 items-center">
-                                <img class="h-8 w-auto" src="/icon.png" alt="Iron Nest"/>
+                                <img class="h-8 w-auto" src="/icon.png" alt="Iron Nest" />
                             </div>
                             <nav class="flex flex-1 flex-col">
                                 <ul role="list" class="-mx-2 flex-1 space-y-1">
@@ -184,7 +184,7 @@ pub fn App() -> impl IntoView {
             </div>
 
             <Router>
-                <Navbar/>
+                <Navbar />
 
                 <div class="sticky top-0 z-40 flex items-center gap-x-6 bg-gray-900 px-4 py-4 shadow-sm sm:px-6 lg:hidden">
                     <button
@@ -210,23 +210,23 @@ pub fn App() -> impl IntoView {
                     <div class="flex-1 text-sm font-semibold leading-6 text-white">"Dashboard"</div>
                     <a href="#">
                         <span class="sr-only">"Icon"</span>
-                        <img class="h-8 w-8 rounded-full bg-gray-800" src="/icon.png" alt=""/>
+                        <img class="h-8 w-8 rounded-full bg-gray-800" src="/icon.png" alt="" />
                     </a>
                 </div>
                 <main class="lg:pl-20 bg-blue-100 min-h-screen">
                     <Routes fallback=|| {
                         let mut errors = Errors::default();
                         errors.insert_with_default_key(AppError::NotFound);
-                        view! { <ErrorTemplate errors/> }.into_view()
+                        view! { <ErrorTemplate errors /> }.into_view()
                     }>
-                        <Route path=path!("/") view=DashboardPage/>
-                        <Route path=path!("/integrations") view=IntegrationsPage/>
-                        <Route path=path!("/integrations/:integration") view=LoginPage/>
-                        <Route path=path!("/actions") view=ActionsPage/>
-                        <Route path=path!("/settings") view=SettingsPage/>
-                        <Route path=path!("/settings/configs") view=ConfigsPage/>
-                        <Route path=path!("/devices") view=DevicesPage/>
-                        <Route path=path!("/websocket") view=WebSocketPage/>
+                        <Route path=path!("/") view=DashboardPage />
+                        <Route path=path!("/integrations") view=IntegrationsPage />
+                        <Route path=path!("/integrations/:integration") view=LoginPage />
+                        <Route path=path!("/actions") view=ActionsPage />
+                        <Route path=path!("/settings") view=SettingsPage />
+                        <Route path=path!("/settings/configs") view=ConfigsPage />
+                        <Route path=path!("/devices") view=DevicesPage />
+                        <Route path=path!("/websocket") view=WebSocketPage />
                     </Routes>
                 </main>
             </Router>

@@ -121,7 +121,7 @@ pub fn Navbar() -> impl IntoView {
     view! {
         <div class="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:block lg:w-20 lg:overflow-y-auto bg-white lg:pb-4">
             <div class="flex h-16 shrink-0 items-center justify-center">
-                <img class="h-8 w-auto rounded-full" src="/icon.png" alt="Iron Nest"/>
+                <img class="h-8 w-auto rounded-full" src="/icon.png" alt="Iron Nest" />
             </div>
             <nav class="mt-8">
                 <ul role="list" class="flex flex-col items-center space-y-1">

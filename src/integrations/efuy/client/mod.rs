@@ -167,7 +167,7 @@ fn encrypt_api_data(data: &str, key: &[u8]) -> Result<String, Box<dyn std::error
     // PKCS7 padding
     let mut padded_data = data.as_bytes().to_vec();
     let padding_len = 16 - (padded_data.len() % 16);
-    padded_data.extend(iter::repeat(padding_len as u8).take(padding_len));
+    padded_data.extend(iter::repeat_n(padding_len as u8, padding_len));
 
     // Split the key into the AES key and the IV
     let aes_key = GenericArray::from_slice(key);

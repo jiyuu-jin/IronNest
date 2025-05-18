@@ -36,9 +36,9 @@ pub fn DeviceList(
                             refresh_devices().await.unwrap();
                         });
                     }
-                })/>
+                }) />
             </div>
-            <hr class="mb-2"/>
+            <hr class="mb-2" />
             <Suspense fallback=|| {
                 view! { <p>"Loading devices..."</p> }
             }>
@@ -62,7 +62,7 @@ pub fn DeviceList(
                                                             on_device_click.run(device.id);
                                                         }>
                                                             <div>
-                                                                <DeviceListItem device=device.clone()/>
+                                                                <DeviceListItem device=device.clone() />
                                                                 <button
                                                                     class="bg-indigo-600"
                                                                     on:click=move |e| {
@@ -94,7 +94,7 @@ pub fn DeviceList(
             {move || {
                 modal
                     .get()
-                    .then(|| view! { <Modal toggle_modal=toggle_modal device=current_device/> })
+                    .then(|| view! { <Modal toggle_modal=toggle_modal device=current_device /> })
             }}
 
         </div>
@@ -108,55 +108,55 @@ pub fn DeviceListItem(device: Device) -> impl IntoView {
     match device.device_type {
         DeviceType::KasaPlug => view! {
             <div>
-                <SmartPlugItem device=device/>
+                <SmartPlugItem device=device />
             </div>
         }
         .into_any(),
         DeviceType::KasaLight => view! {
             <div>
-                <SmartLightItem device=device/>
+                <SmartLightItem device=device />
             </div>
         }
         .into_any(),
         DeviceType::KasaDimmer => view! {
             <div>
-                <SmartDimmerItem device=device/>
+                <SmartDimmerItem device=device />
             </div>
         }
         .into_any(),
         DeviceType::KasaPowerStrip => view! {
             <div>
-                <SmartPowerStripItem device=device/>
+                <SmartPowerStripItem device=device />
             </div>
         }
         .into_any(),
         DeviceType::TuyaLight => view! {
             <div>
-                <SmartLightItem device=device/>
+                <SmartLightItem device=device />
             </div>
         }
         .into_any(),
         DeviceType::TuyaGrowLight => view! {
             <div>
-                <SmartLightItem device=device/>
+                <SmartLightItem device=device />
             </div>
         }
         .into_any(),
         DeviceType::RingDoorbell => view! {
             <div>
-                <RingDoorbellItem device=device/>
+                <RingDoorbellItem device=device />
             </div>
         }
         .into_any(),
         DeviceType::Stoplight => view! {
             <div>
-                <StoplightItem device=device/>
+                <StoplightItem device=device />
             </div>
         }
         .into_any(),
         DeviceType::RokuTv => view! {
             <div>
-                <RokuTvItem device=device/>
+                <RokuTvItem device=device />
             </div>
         }
         .into_any(),
@@ -178,7 +178,7 @@ pub fn SmartPlugItem(device: Device) -> impl IntoView {
 
     view! {
         <DeviceListCard device=device.clone()>
-            <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None/>
+            <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None />
 
         </DeviceListCard>
     }
@@ -199,7 +199,7 @@ pub fn SmartDimmerItem(device: Device) -> impl IntoView {
 
     view! {
         <DeviceListCard device=device.clone()>
-            <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None/>
+            <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None />
         </DeviceListCard>
     }
 }
@@ -223,7 +223,7 @@ pub fn SmartPowerStripItem(device: Device) -> impl IntoView {
 
     view! {
         <DeviceListCard device=device.clone()>
-            <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None/>
+            <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None />
 
         </DeviceListCard>
     }
@@ -262,7 +262,7 @@ pub fn SmartLightItem(device: Device) -> impl IntoView {
 
     view! {
         <DeviceListCard device=device.clone()>
-            <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None/>
+            <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None />
 
         </DeviceListCard>
     }
@@ -283,7 +283,7 @@ pub fn RokuTvItem(device: Device) -> impl IntoView {
 
     view! {
         <DeviceListCard device=device.clone()>
-            <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None/>
+            <Checkbox value=device.power_state == 1 on_click=Some(toggle_action) on_click_fn=None />
 
         </DeviceListCard>
     }

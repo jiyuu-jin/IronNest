@@ -395,7 +395,7 @@ pub fn DashboardPage() -> impl IntoView {
                                             fallback=|| view! { <></> }
                                         >
                                             <aside class="ml-20 bg-blue-100 fixed inset-y-0 left-0 w-96 overflow-y-auto border-r border-gray-200 px-4 py-6 space-y-0.5 transition-transform duration-300 ease-in-out">
-                                                <DeviceList devices=devices on_device_click=callback/>
+                                                <DeviceList devices=devices on_device_click=callback />
                                             </aside>
                                         </Show>
                                         <div class="absolute top-4 left-4">
@@ -428,14 +428,14 @@ pub fn DashboardPage() -> impl IntoView {
                                                                 leptos::logging::log!("for: id: {id}");
                                                                 match panel_data.inner.get().component_type.as_str() {
                                                                     "roku" => {
-                                                                        view! { <RokuTvRemote dashboard_values=dashboard_values/> }
+                                                                        view! { <RokuTvRemote dashboard_values=dashboard_values /> }
                                                                             .into_any()
                                                                     }
                                                                     "meals" => {
-                                                                        view! { <PlannedMeals dashboard_values=dashboard_values/> }
+                                                                        view! { <PlannedMeals dashboard_values=dashboard_values /> }
                                                                             .into_any()
                                                                     }
-                                                                    "command" => view! { <CommandBox/> }.into_any(),
+                                                                    "command" => view! { <CommandBox /> }.into_any(),
                                                                     "ring" => {
                                                                         let camera_id = panel_data
                                                                             .inner
@@ -451,7 +451,7 @@ pub fn DashboardPage() -> impl IntoView {
                                                                         match camera {
                                                                             Some(camera) => {
                                                                                 println!("Found camera: {:?}", camera.id);
-                                                                                view! { <RingCameraPanel camera=camera.clone()/> }
+                                                                                view! { <RingCameraPanel camera=camera.clone() /> }
                                                                                     .into_any()
                                                                             }
                                                                             None => {
@@ -473,7 +473,7 @@ pub fn DashboardPage() -> impl IntoView {
                                                                             .clone()
                                                                         {
                                                                             view! {
-                                                                                <DeviceListPanel devices=devices device_ids=device_ids/>
+                                                                                <DeviceListPanel devices=devices device_ids=device_ids />
                                                                             }
                                                                                 .into_any()
                                                                         } else {
