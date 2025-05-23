@@ -8,6 +8,7 @@ pub fn TextEditor(
 ) -> impl IntoView {
     let (state, set_state) = signal(state);
     view! {
+        <p>"Text editor"</p>
         <textarea on:input=move |ev| {
             set_state.set(event_target_value(&ev));
         }>{state}</textarea>
