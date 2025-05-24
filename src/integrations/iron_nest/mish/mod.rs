@@ -50,6 +50,37 @@ pub async fn register_native_queries(
                         }
                     }
                 }
+                "chris.fish_tank" => {
+                    let state = serde_json::from_value(state);
+                    match state {
+                        Ok(state) => {
+                            let mut scope = rhai::Scope::new();
+                            scope.push_dynamic("state", state);
+                            rhai::Engine::new()
+                                .register_fn("tplink_turn_plug_on", |ip: String| {
+                                    tokio::task::spawn(async move {
+                                        tplink_turn_plug_on(&ip).await;
+                                    });
+                                })
+                                .register_fn("tplink_turn_plug_off", |ip: String| {
+                                    tokio::task::spawn(async move {
+                                        tplink_turn_plug_off(&ip).await;
+                                    });
+                                })
+                                .run_file_with_scope(
+                                    &mut scope,
+                                    "src/integrations/iron_nest/mish/fish_tank.rhai".into(),
+                                )
+                                .unwrap();
+                        }
+                        Err(e) => {
+                            log::error!("Failed to parse fish tank state on: {:?}", e);
+                        }
+                    }
+                }
+                "run" => {
+                    // TODO spawn/respawn these install services
+                }
                 _ => {}
             },
             MishStateModification::Delete { name: _ } => {}
