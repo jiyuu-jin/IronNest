@@ -1,4 +1,4 @@
-use {crate::components::pages::mish_state_page::SetMishState, leptos::prelude::*};
+use {crate::components::mish::mish_state_page::SetMishState, leptos::prelude::*};
 
 #[component]
 pub fn TextEditor(

@@ -1,13 +1,13 @@
 use {
     crate::{
         components::{
+            mish::{dag_inspector_page::DagInspectorPage, mish_state_page::MishStatePage},
             navbar::Navbar,
             pages::{
                 actions_page::ActionsPage, configs_page::ConfigsPage,
-                dag_inspector_page::DagInspectorPage, dashboard_page::DashboardPage,
-                devices_page::DevicesPage, integrations_page::IntegrationsPage,
-                login_page::LoginPage, mish_state_page::MishStatePage, settings_page::SettingsPage,
-                websocket_page::WebSocketPage,
+                dashboard_page::DashboardPage, devices_page::DevicesPage,
+                integrations_page::IntegrationsPage, login_page::LoginPage,
+                settings_page::SettingsPage, websocket_page::WebSocketPage,
             },
         },
         error_template::{AppError, ErrorTemplate},

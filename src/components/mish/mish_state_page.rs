@@ -274,9 +274,7 @@ pub fn MishStatePage() -> impl IntoView {
                         </div>
                         <div>{move || format!("{:?}", values.get())}</div>
                         <button on:click=move |_| {
-                            delete_mish_state_action.dispatch(DeleteMishState {
-                                name: name(),
-                            });
+                            delete_mish_state_action.dispatch(DeleteMishState { name: name() });
                         }>"Delete"</button>
                     </Suspense>
                 </div>

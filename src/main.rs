@@ -11,7 +11,12 @@ async fn main() {
             components::layout::App,
             handlers::roku_keypress_handler,
             integrations::{
-                iron_nest::{client::AppState, cron::CronClient, mish::{create_mish_state_modification_bus, register_native_queries}, run_devices_tasks},
+                iron_nest::{
+                    client::AppState,
+                    cron::CronClient,
+                    mish::{create_mish_state_modification_bus, register_native_queries},
+                    run_devices_tasks,
+                },
                 ring::RingRestClient,
                 tplink::tplink_kasa_get_energy_usage,
             },
