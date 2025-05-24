@@ -174,6 +174,9 @@ pub fn MishStatePage() -> impl IntoView {
             <div class="mx-auto max-w-2xl space-y-16 sm:space-y-20 lg:mx-0 lg:max-w-none">
                 <div>
                     <div>
+                        <a href="/settings/dag-inspector">"Back to Dag Inspector"</a>
+                    </div>
+                    <div>
                         <label for="raw-editor-mode">"RAW editor mode"</label>
                         <input type="checkbox" id="raw-editor-mode" bind:checked=raw_editor_mode />
                     </div>
