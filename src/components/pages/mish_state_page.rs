@@ -61,9 +61,15 @@ pub async fn get_mish_state_query(
 
 #[server(SetMishState)]
 async fn set_mish_state(name: String, state: String) -> Result<(), ServerFnError> {
+    use crate::integrations::iron_nest::mish::MishStateModification;
     let pool = use_context::<sqlx::PgPool>().unwrap();
+    let mish_state_modification_bus_sender =
+        use_context::<tokio::sync::mpsc::UnboundedSender<MishStateModification>>().unwrap();
     let state = serde_json::from_str(&state).unwrap();
     set_mish_state_query(&pool, &name, &state).await?;
+    mish_state_modification_bus_sender
+        .send(MishStateModification::CreateOrUpdate { name, state })
+        .unwrap();
     Ok(())
 }
 
@@ -89,8 +95,14 @@ pub async fn set_mish_state_query(
 
 #[server(DeleteMishState)]
 async fn delete_mish_state(name: String) -> Result<(), ServerFnError> {
-    let pool = use_context::<sqlx::PgPool>().unwrap();
+    use crate::integrations::iron_nest::mish::MishStateModification;
+    let pool = use_context::<sqlx::PgPool>().expect("PgPool context should be set");
+    let mish_state_modification_bus_sender =
+        use_context::<tokio::sync::mpsc::UnboundedSender<MishStateModification>>().unwrap();
     delete_mish_state_query(&pool, &name).await?;
+    mish_state_modification_bus_sender
+        .send(MishStateModification::Delete { name })
+        .unwrap();
     Ok(())
 }
 
