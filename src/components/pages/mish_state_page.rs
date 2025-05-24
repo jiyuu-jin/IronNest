@@ -4,7 +4,10 @@ use {
         mish::{number_editor::NumberEditor, raw_editor::RawEditor, text_editor::TextEditor},
     },
     leptos::prelude::*,
-    leptos_router::{hooks::use_params, params::Params},
+    leptos_router::{
+        hooks::{use_navigate, use_params},
+        params::Params,
+    },
     serde::{Deserialize, Serialize},
 };
 
@@ -84,6 +87,26 @@ pub async fn set_mish_state_query(
         .map(|_| ())
 }
 
+#[server(DeleteMishState)]
+async fn delete_mish_state(name: String) -> Result<(), ServerFnError> {
+    let pool = use_context::<sqlx::PgPool>().unwrap();
+    delete_mish_state_query(&pool, &name).await?;
+    Ok(())
+}
+
+#[cfg(feature = "ssr")]
+pub async fn delete_mish_state_query(pool: &sqlx::PgPool, name: &str) -> Result<(), sqlx::Error> {
+    let query = "
+        DELETE FROM mish_states
+        WHERE name = $1
+    ";
+    sqlx::query(query)
+        .bind(name)
+        .execute(pool)
+        .await
+        .map(|_| ())
+}
+
 #[component]
 pub fn MishStatePage() -> impl IntoView {
     #[derive(Params, PartialEq)]
@@ -99,6 +122,8 @@ pub fn MishStatePage() -> impl IntoView {
         |(_version, name)| get_mish_state(name),
     );
 
+    let delete_mish_state_action = ServerAction::<DeleteMishState>::new();
+
     let toast = use_context::<ToastContext>().unwrap();
     Resource::new(
         move || {
@@ -107,9 +132,25 @@ pub fn MishStatePage() -> impl IntoView {
                 set_mish_state_action.version().get(),
             )
         },
-        move |value| async move {
-            if matches!(value.0, Some(Ok(_))) {
+        move |(value, _version)| async move {
+            if matches!(value, Some(Ok(_))) {
                 toast.set(Some(Toast("Mish State saved".to_owned())));
+            }
+        },
+    );
+
+    Resource::new(
+        move || {
+            (
+                delete_mish_state_action.value().get(),
+                delete_mish_state_action.version().get(),
+            )
+        },
+        move |(value, _version)| async move {
+            if matches!(value, Some(Ok(_))) {
+                toast.set(Some(Toast("Mish State deleted".to_owned())));
+                let navigate = use_navigate();
+                navigate("/settings/dag-inspector", Default::default());
             }
         },
     );
@@ -220,6 +261,11 @@ pub fn MishStatePage() -> impl IntoView {
                             }}
                         </div>
                         <div>{move || format!("{:?}", values.get())}</div>
+                        <button on:click=move |_| {
+                            delete_mish_state_action.dispatch(DeleteMishState {
+                                name: name(),
+                            });
+                        }>"Delete"</button>
                     </Suspense>
                 </div>
             </div>
