@@ -1,6 +1,10 @@
 use {
     crate::integrations::tplink::{tplink_turn_plug_off, tplink_turn_plug_on},
-    tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender},
+    rhai::Dynamic,
+    tokio::{
+        sync::mpsc::{UnboundedReceiver, UnboundedSender},
+        time::{Duration, Instant},
+    },
 };
 
 #[derive(Debug, Clone)]
@@ -51,32 +55,46 @@ pub async fn register_native_queries(
                     }
                 }
                 "chris.fish_tank" => {
-                    let state = serde_json::from_value(state);
-                    match state {
-                        Ok(state) => {
-                            let mut scope = rhai::Scope::new();
-                            scope.push_dynamic("state", state);
-                            rhai::Engine::new()
-                                .register_fn("tplink_turn_plug_on", |ip: String| {
-                                    tokio::task::spawn(async move {
-                                        tplink_turn_plug_on(&ip).await;
-                                    });
-                                })
-                                .register_fn("tplink_turn_plug_off", |ip: String| {
-                                    tokio::task::spawn(async move {
-                                        tplink_turn_plug_off(&ip).await;
-                                    });
-                                })
-                                .run_file_with_scope(
-                                    &mut scope,
-                                    "src/integrations/iron_nest/mish/fish_tank.rhai".into(),
-                                )
-                                .unwrap();
+                    tokio::task::spawn_blocking(|| {
+                        let state = serde_json::from_value(state);
+                        match state {
+                            Ok(state) => {
+                                let start = Instant::now();
+                                let mut scope = rhai::Scope::new();
+                                scope.push_dynamic("state", state);
+                                let result = rhai::Engine::new()
+                                    .on_progress(move |_| {
+                                        if start.elapsed() > Duration::from_secs(10) {
+                                            // Return a dummy token just to force-terminate the script
+                                            Some(Dynamic::UNIT)
+                                        } else {
+                                            // Continue
+                                            None
+                                        }
+                                    })
+                                    .register_fn("tplink_turn_plug_on", |ip: String| {
+                                        tokio::task::spawn(async move {
+                                            tplink_turn_plug_on(&ip).await;
+                                        });
+                                    })
+                                    .register_fn("tplink_turn_plug_off", |ip: String| {
+                                        tokio::task::spawn(async move {
+                                            tplink_turn_plug_off(&ip).await;
+                                        });
+                                    })
+                                    .run_file_with_scope(
+                                        &mut scope,
+                                        "src/integrations/iron_nest/mish/fish_tank.rhai".into(),
+                                    );
+                                if let Err(e) = result {
+                                    log::error!("Failed to run fish tank script: {:?}", e);
+                                }
+                            }
+                            Err(e) => {
+                                log::error!("Failed to parse fish tank state on: {:?}", e);
+                            }
                         }
-                        Err(e) => {
-                            log::error!("Failed to parse fish tank state on: {:?}", e);
-                        }
-                    }
+                    });
                 }
                 "run" => {
                     // TODO spawn/respawn these install services
