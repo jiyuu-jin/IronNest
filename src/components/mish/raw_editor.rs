@@ -17,7 +17,7 @@ pub fn RawEditor(
             on:input=move |ev| {
                 set_state.set(event_target_value(&ev));
             }
-            style="height: 200px"
+            style="height: 200px; width: 100%;"
         >
             {state}
         </textarea>
