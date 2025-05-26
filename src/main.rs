@@ -5,7 +5,10 @@ mod shell;
 #[tokio::main]
 async fn main() {
     use {
-        axum::{routing::get, Router},
+        axum::{
+            routing::{get, post},
+            Router,
+        },
         dotenv::dotenv,
         iron_nest::{
             components::layout::App,
@@ -20,6 +23,7 @@ async fn main() {
                 ring::RingRestClient,
                 tplink::tplink_kasa_get_energy_usage,
             },
+            mish_api::{upload_dag_json_file, upload_raw_file},
         },
         leptos::prelude::*,
         leptos_axum::{generate_route_list, LeptosRoutes},
@@ -70,7 +74,10 @@ async fn main() {
 
     let iron_nest_router = Router::new()
         .route("/roku/:device_id/keypress/:key", get(roku_keypress_handler))
-        .with_state(ring_rest_client.clone());
+        // .route("/mish/state", get(get_mish_state))
+        .route("/mish/blob.dag-json", post(upload_dag_json_file))
+        .route("/mish/blob.raw", post(upload_raw_file))
+        .with_state(app_state.clone());
 
     let routes = generate_route_list(App);
     let app = Router::new()

@@ -1,7 +1,10 @@
 use {
     crate::{
         components::{
-            mish::{dag_inspector_page::DagInspectorPage, mish_state_page::MishStatePage},
+            mish::{
+                dag_inspector_page::DagInspectorPage, ipld_blob_page::IpldBlobPage,
+                mish_state_page::MishStatePage,
+            },
             navbar::Navbar,
             pages::{
                 actions_page::ActionsPage, configs_page::ConfigsPage,
@@ -227,7 +230,14 @@ pub fn App() -> impl IntoView {
                         <Route path=path!("/settings") view=SettingsPage />
                         <Route path=path!("/settings/configs") view=ConfigsPage />
                         <Route path=path!("/settings/dag-inspector") view=DagInspectorPage />
-                        <Route path=path!("/settings/dag-inspector/:name") view=MishStatePage />
+                        <Route
+                            path=path!("/settings/dag-inspector/mish-state/:name")
+                            view=MishStatePage
+                        />
+                        <Route
+                            path=path!("/settings/dag-inspector/ipld-blob/:cid")
+                            view=IpldBlobPage
+                        />
                         <Route path=path!("/devices") view=DevicesPage />
                         <Route path=path!("/websocket") view=WebSocketPage />
                     </Routes>

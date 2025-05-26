@@ -83,7 +83,7 @@ pub fn DagInspectorPage() -> impl IntoView {
                                                             <div>
                                                                 <h3>
                                                                     <a href=format!(
-                                                                        "/settings/dag-inspector/{}",
+                                                                        "/settings/dag-inspector/mish-state/{}",
                                                                         state.name,
                                                                     )>{state.name.clone()}</a>
                                                                 </h3>

@@ -57,12 +57,14 @@ pub async fn register_native_queries(
                     if let Some(item) = lookup.get(name).cloned() {
                         match item {
                             InstallItem::MishStateAtMostOnceRhai { rhai, .. } => {
+                                let name = name.to_owned();
                                 tokio::task::spawn_blocking(move || {
                                     let state = serde_json::from_value(state);
                                     match state {
                                         Ok(state) => {
                                             let start = Instant::now();
                                             let mut scope = rhai::Scope::new();
+                                            scope.push_constant("name", name);
                                             scope.push_dynamic("state", state);
                                             let result = rhai::Engine::new()
                                                 .on_progress(move |_| {

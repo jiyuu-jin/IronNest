@@ -1,7 +1,7 @@
 use {
     crate::components::{
         layout::{Toast, ToastContext},
-        mish::{number_editor::NumberEditor, raw_editor::RawEditor, text_editor::TextEditor},
+        mish::{editor::Editor, json_editor::JsonEditor},
     },
     leptos::prelude::*,
     leptos_router::{
@@ -65,7 +65,8 @@ async fn set_mish_state(name: String, state: String) -> Result<(), ServerFnError
     let pool = use_context::<sqlx::PgPool>().unwrap();
     let mish_state_modification_bus_sender =
         use_context::<tokio::sync::mpsc::UnboundedSender<MishStateModification>>().unwrap();
-    let state = serde_json::from_str(&state).unwrap();
+    let state = hex::decode(state).unwrap();
+    let state = serde_json::from_slice(&state).unwrap();
     set_mish_state_query(&pool, &name, &state).await?;
     mish_state_modification_bus_sender
         .send(MishStateModification::CreateOrUpdate { name, state })
@@ -134,6 +135,13 @@ pub fn MishStatePage() -> impl IntoView {
         |(_version, name)| get_mish_state(name),
     );
 
+    let set_mish_state_action2 = move |state: Vec<u8>| {
+        set_mish_state_action.dispatch(SetMishState {
+            name: name(),
+            state: hex::encode(state),
+        });
+    };
+
     let delete_mish_state_action = ServerAction::<DeleteMishState>::new();
 
     let toast = use_context::<ToastContext>().unwrap();
@@ -167,18 +175,12 @@ pub fn MishStatePage() -> impl IntoView {
         },
     );
 
-    let raw_editor_mode = RwSignal::new(false);
-
     view! {
         <main class="lg:p-40 lg:pt-20 cursor-pointer">
             <div class="mx-auto max-w-2xl space-y-16 sm:space-y-20 lg:mx-0 lg:max-w-none">
                 <div>
                     <div>
                         <a href="/settings/dag-inspector">"Back to Dag Inspector"</a>
-                    </div>
-                    <div>
-                        <label for="raw-editor-mode">"RAW editor mode"</label>
-                        <input type="checkbox" id="raw-editor-mode" bind:checked=raw_editor_mode />
                     </div>
                     <Suspense fallback=|| {
                         view! { <p>"Loading Mish State..."</p> }
@@ -198,74 +200,16 @@ pub fn MishStatePage() -> impl IntoView {
                                             Ok(value) => {
                                                 value
                                                     .map(|state| {
-                                                        if raw_editor_mode.get() {
-                                                            // leptos::logging::log!("state: {:?}", state);
-                                                            view! {
-                                                                <RawEditor
-                                                                    name=state.name.clone()
-                                                                    state=Some(state.state)
-                                                                    set_config_server_action=set_mish_state_action
-                                                                />
-                                                            }
-                                                                .into_any()
-                                                        } else {
-                                                            match state.state {
-                                                                serde_json::Value::Bool(b) => {
-                                                                    view! {
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked=b
-                                                                            on:input:target=move |ev| {
-                                                                                let value = ev.target().checked();
-                                                                                set_mish_state_action
-                                                                                    .dispatch(SetMishState {
-                                                                                        name: state.name.clone(),
-                                                                                        state: serde_json::to_string(&value).unwrap(),
-                                                                                    });
-                                                                            }
-                                                                        />
-                                                                    }
-                                                                        .into_any()
-                                                                }
-                                                                serde_json::Value::String(s) => {
-                                                                    view! {
-                                                                        <TextEditor
-                                                                            name=state.name.clone()
-                                                                            state=s
-                                                                            set_config_server_action=set_mish_state_action
-                                                                        />
-                                                                    }
-                                                                        .into_any()
-                                                                }
-                                                                serde_json::Value::Number(n) => {
-                                                                    view! {
-                                                                        <NumberEditor
-                                                                            name=state.name.clone()
-                                                                            state=n.to_string()
-                                                                            set_config_server_action=set_mish_state_action
-                                                                        />
-                                                                    }
-                                                                        .into_any()
-                                                                }
-                                                                _ => {
-                                                                    view! {
-                                                                        <RawEditor
-                                                                            name=state.name
-                                                                            state=Some(state.state)
-                                                                            set_config_server_action=set_mish_state_action
-                                                                        />
-                                                                    }
-                                                                        .into_any()
-                                                                }
-                                                            }
+                                                        view! {
+                                                            <Editor state=state.state action=set_mish_state_action2 />
                                                         }
+                                                            .into_any()
                                                     })
                                                     .unwrap_or_else(|| {
                                                         view! {
-                                                            <RawEditor
-                                                                name=name()
+                                                            <JsonEditor
                                                                 state=None
-                                                                set_config_server_action=set_mish_state_action
+                                                                set_config_server_action=set_mish_state_action2
                                                             />
                                                         }
                                                             .into_any()

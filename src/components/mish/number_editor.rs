@@ -1,10 +1,9 @@
-use {crate::components::mish::mish_state_page::SetMishState, leptos::prelude::*};
+use leptos::prelude::*;
 
 #[component]
 pub fn NumberEditor(
-    name: String,
     state: String,
-    set_config_server_action: ServerAction<SetMishState>,
+    set_config_server_action: impl Fn(Vec<u8>) + 'static,
 ) -> impl IntoView {
     let (state, set_state) = signal(state);
     view! {
@@ -18,11 +17,7 @@ pub fn NumberEditor(
             let s = serde_json::from_str::<serde_json::Value>(&s);
             if let Ok(s) = s {
                 if s.is_number() {
-                    set_config_server_action
-                        .dispatch(SetMishState {
-                            name: name.clone(),
-                            state: s.to_string(),
-                        });
+                    set_config_server_action(serde_json::to_vec(&s).unwrap());
                 } else {
                     web_sys::window()
                         .unwrap()

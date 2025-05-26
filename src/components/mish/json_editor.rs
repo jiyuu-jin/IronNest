@@ -1,16 +1,16 @@
-use {crate::components::mish::mish_state_page::SetMishState, leptos::prelude::*};
+use leptos::prelude::*;
 
 #[component]
-pub fn RawEditor(
-    name: String,
+pub fn JsonEditor(
     state: Option<serde_json::Value>,
-    set_config_server_action: ServerAction<SetMishState>,
+    set_config_server_action: impl Fn(Vec<u8>) + 'static,
 ) -> impl IntoView {
     let (state, set_state) = signal(
         state
             .map(|s| serde_json::to_string_pretty(&s).unwrap())
             .unwrap_or_default(),
     );
+
     view! {
         <p>"Raw editor"</p>
         <textarea
@@ -25,11 +25,7 @@ pub fn RawEditor(
             let s = state.get();
             match serde_json::from_str::<serde_json::Value>(&s) {
                 Ok(s) => {
-                    set_config_server_action
-                        .dispatch(SetMishState {
-                            name: name.clone(),
-                            state: serde_json::to_string(&s).unwrap(),
-                        });
+                    set_config_server_action(serde_json::to_vec(&s).unwrap());
                 }
                 Err(e) => {
                     web_sys::window()

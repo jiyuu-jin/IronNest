@@ -1,3 +1,7 @@
+[workspace]
+resolver = "2"
+members = [".", "./crates/*"]
+
 [package]
 name = "iron_nest"
 version = "0.1.0"
@@ -6,9 +10,18 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[workspace.dependencies]
+tokio = { version = "1" }
+ipld-core = { version = "0.4.2" }
+serde_ipld_dagjson = { version = "0.2.0" }
+multibase = { version = "0.9.1" }
+multihash-codetable = { version = "0.1.4" }
+cid = { version = "0.11.1" }
+reqwest = { version = "0.12.9", default-features = false }
+
 [dependencies]
 anyhow = "1.0.75"
-axum = { version = "0.7.9", optional = true }
+axum = { version = "0.7.9", optional = true, features = ["macros"] }
 base64 = "0.21.5"
 bytes = "1.5.0"
 cfg-if = "1.0.0"
@@ -28,14 +41,14 @@ leptos-use = "0.14.0"
 leptos_reactive = "0.7.0-preview2"
 log = "0.4.20"
 rand = "0.8.5"
-reqwest = { version = "0.12.9", features = ["json", "cookies"] }
+reqwest = { workspace = true, features = ["json"] }
 serde = { version = "1.0.190", features = ["derive"] }
 serde_json = "1.0.107"
 sha2 = "0.10.8"
 simple_logger = "4.2.0"
 ssdp-client = { version = "2.0.0", optional = true }
 thiserror = "1.0.50"
-tokio = { version = "1", features = ["full"], optional = true }
+tokio = { workspace = true, features = ["full"], optional = true }
 tower = { version = "0.4.13", optional = true }
 tower-http = { version = "0.4.4", features = ["fs"], optional = true }
 uuid = { version = "1.5.0", features = ["v4", "serde"] }
@@ -79,6 +92,11 @@ csscolorparser = "0.7.0"
 getrandom = { version = "0.2.15", features = ["js"] }
 leptos_drag_reorder = "0.1.0"
 rhai = { version = "1.21.0", features = ["metadata"] }
+ipld-core = { workspace = true }
+serde_ipld_dagjson = { workspace = true }
+multibase = { workspace = true }
+multihash-codetable = { workspace = true, features = ["sha2"] }
+cid = { workspace = true, features = ["serde"] }
 
 [features]
 hydrate = ["leptos/hydrate"]
@@ -102,6 +120,7 @@ ssr = [
   "dep:elliptic-curve",
   "dep:rand_core",
   "dep:async-nats",
+  "reqwest/cookies"
 ]
 
 # Defines a size-optimized profile for the WASM bundle in release mode
