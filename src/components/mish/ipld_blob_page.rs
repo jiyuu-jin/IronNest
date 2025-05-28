@@ -30,7 +30,7 @@ pub struct MishStateRow {
     state: serde_json::Value,
 }
 
-#[server(GetIpldBlob)]
+#[server(name = GetIpldBlob, encoding = "cbor")]
 async fn get_ipld_blob(cid: String) -> Result<Option<Vec<u8>>, ServerFnError> {
     let pool = use_context::<sqlx::PgPool>().unwrap();
     let ipld_blob = get_ipld_blob_query(&pool, &cid.parse::<Cid>().unwrap()).await?;
@@ -58,7 +58,7 @@ pub async fn get_ipld_blob_query(
         .map(|row| row.map(|row| row.content))
 }
 
-#[server(SetIpldBlob)]
+#[server(name = SetIpldBlob, encoding = "cbor")]
 async fn set_ipld_blob(content: String) -> Result<String, ServerFnError> {
     let pool = use_context::<sqlx::PgPool>().unwrap();
     let content = hex::decode(content).unwrap();
