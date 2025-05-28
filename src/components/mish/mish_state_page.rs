@@ -3,12 +3,14 @@ use {
         layout::{Toast, ToastContext},
         mish::{editor::Editor, json_editor::JsonEditor},
     },
+    ipld_core::codec::Links,
     leptos::prelude::*,
     leptos_router::{
         hooks::{use_navigate, use_params},
         params::Params,
     },
     serde::{Deserialize, Serialize},
+    serde_ipld_dagjson::codec::DagJsonCodec,
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -220,6 +222,40 @@ pub fn MishStatePage() -> impl IntoView {
                             }}
                         </div>
                         <div>{move || format!("{:?}", values.get())}</div>
+                        <div>
+                            {move || {
+                                if let Some(Ok(Some(value))) = values.get() {
+                                    let state = serde_json::to_vec(&value.state).unwrap();
+                                    let links = <DagJsonCodec as Links>::links(&state);
+                                    match links {
+                                        Ok(links) => {
+                                            view! {
+                                                {links
+                                                    .into_iter()
+                                                    .map(|link| {
+                                                        view! {
+                                                            <p>
+                                                                <a href=format!(
+                                                                    "/settings/dag-inspector/ipld-blob/{link}",
+                                                                )>"Link: "{link.to_string()}</a>
+                                                            </p>
+                                                        }
+                                                            .into_any()
+                                                    })
+                                                    .collect::<Vec<_>>()}
+                                            }
+                                                .into_any()
+                                        }
+                                        Err(e) => {
+                                            view! { <p>{format!("Error getting links: {e}")}</p> }
+                                                .into_any()
+                                        }
+                                    }
+                                } else {
+                                    ().into_any()
+                                }
+                            }}
+                        </div>
                         <button on:click=move |_| {
                             delete_mish_state_action.dispatch(DeleteMishState { name: name() });
                         }>"Delete"</button>

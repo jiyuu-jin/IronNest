@@ -20,8 +20,13 @@ pub enum Operation {
     // },
     #[command()]
     UploadFile {
+        file_path: PathBuf,
+
         #[arg(long)]
-        path: PathBuf,
+        mish_state_name: String,
+
+        #[arg(long)]
+        path: String,
     },
     // ReadMishState {
     //     name: String,

@@ -7,7 +7,7 @@ use {
         ipld_codecs,
     },
     cid::Cid,
-    ipld_core::codec::Codec,
+    ipld_core::codec::{Codec, Links},
     leptos::prelude::*,
     leptos_router::{
         hooks::{use_navigate, use_params},
@@ -226,6 +226,43 @@ pub fn IpldBlobPage() -> impl IntoView {
                             }}
                         </div>
                         <div>{move || format!("{:?}", values.get())}</div>
+                        <div>
+                            {move || {
+                                if let Some(Ok(Some(data))) = values.get() {
+                                    if cid().codec() == ipld_codecs::DAG_JSON {
+                                        let links = <DagJsonCodec as Links>::links(&data);
+                                        match links {
+                                            Ok(links) => {
+                                                view! {
+                                                    {links
+                                                        .into_iter()
+                                                        .map(|link| {
+                                                            view! {
+                                                                <p>
+                                                                    <a href=format!(
+                                                                        "/settings/dag-inspector/ipld-blob/{link}",
+                                                                    )>"Link: "{link.to_string()}</a>
+                                                                </p>
+                                                            }
+                                                                .into_any()
+                                                        })
+                                                        .collect::<Vec<_>>()}
+                                                }
+                                                    .into_any()
+                                            }
+                                            Err(e) => {
+                                                view! { <p>{format!("Error getting links: {e}")}</p> }
+                                                    .into_any()
+                                            }
+                                        }
+                                    } else {
+                                        ().into_any()
+                                    }
+                                } else {
+                                    ().into_any()
+                                }
+                            }}
+                        </div>
                     </Suspense>
                 </div>
             </div>

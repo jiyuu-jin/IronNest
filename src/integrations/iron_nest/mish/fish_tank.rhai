@@ -21,5 +21,3 @@ if state["light.blue.on"] {
 } else {
     tplink_turn_plug_off(ips["light_blue"]);
 }
-
-# comment
