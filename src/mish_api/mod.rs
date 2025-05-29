@@ -7,9 +7,11 @@ use {
     bytes::Bytes,
     cid::Cid,
     ipld_core::codec::Codec,
+    jsonpath_rust::{parser::errors::JsonPathError, query::queryable::Queryable, JsonPath},
     multihash_codetable::{Code, MultihashDigest},
     serde::Deserialize,
     serde_ipld_dagjson::codec::DagJsonCodec,
+    tokio::sync::mpsc::UnboundedSender,
 };
 
 pub async fn upload_dag_json_file(
@@ -55,9 +57,9 @@ pub async fn upload_raw_file(
 
 #[derive(Deserialize)]
 pub struct UpdateMishStateBody {
-    mish_state_name: String,
-    path: String,
-    content: serde_json::Value,
+    pub mish_state_name: String,
+    pub path: String,
+    pub content: serde_json::Value,
 }
 
 #[derive(sqlx::FromRow)]
@@ -65,10 +67,21 @@ struct MishStateRow {
     state: serde_json::Value,
 }
 
-pub async fn update_mish_state(
+pub async fn update_mish_state_handler(
     State(state): State<AppState>,
     Json(body): Json<UpdateMishStateBody>,
-) {
+) -> Result<(), String> {
+    update_mish_state(&state.pool, &state.mish_state_modification_bus_sender, body)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub async fn update_mish_state(
+    pool: &sqlx::PgPool,
+    mish_state_modification_bus_sender: &UnboundedSender<MishStateModification>,
+    body: UpdateMishStateBody,
+) -> Result<(), anyhow::Error> {
     let query = "
         SELECT state
         FROM mish_states
@@ -76,12 +89,11 @@ pub async fn update_mish_state(
     ";
     let row = sqlx::query_as::<_, MishStateRow>(query)
         .bind(&body.mish_state_name)
-        .fetch_optional(&state.pool)
-        .await
-        .unwrap();
+        .fetch_optional(pool)
+        .await?;
 
     if let Some(mut mish_state) = row {
-        update_json_at_path(&mut mish_state.state, &body.path, &body.content);
+        update_json_via_jsonpath(&mut mish_state.state, &body.path, &body.content)?;
 
         // Update the state in the database
         let update_query = "
@@ -92,20 +104,16 @@ pub async fn update_mish_state(
         sqlx::query(update_query)
             .bind(&mish_state.state)
             .bind(&body.mish_state_name)
-            .execute(&state.pool)
-            .await
-            .unwrap();
-        state
-            .mish_state_modification_bus_sender
-            .send(MishStateModification::CreateOrUpdate {
-                name: body.mish_state_name,
-                state: mish_state.state,
-            })
-            .unwrap();
+            .execute(pool)
+            .await?;
+        mish_state_modification_bus_sender.send(MishStateModification::CreateOrUpdate {
+            name: body.mish_state_name,
+            state: mish_state.state,
+        })?;
     } else {
         // If the state doesn't exist, create a new one
         let mut new_state = serde_json::json!({});
-        update_json_at_path(&mut new_state, &body.path, &body.content);
+        update_json_via_jsonpath(&mut new_state, &body.path, &body.content)?;
         let insert_query = "
             INSERT INTO mish_states (name, state)
             VALUES ($1, $2)
@@ -113,98 +121,27 @@ pub async fn update_mish_state(
         sqlx::query(insert_query)
             .bind(&body.mish_state_name)
             .bind(&new_state)
-            .execute(&state.pool)
-            .await
-            .unwrap();
-        state
-            .mish_state_modification_bus_sender
-            .send(MishStateModification::CreateOrUpdate {
-                name: body.mish_state_name,
-                state: new_state,
-            })
-            .unwrap();
+            .execute(pool)
+            .await?;
+        mish_state_modification_bus_sender.send(MishStateModification::CreateOrUpdate {
+            name: body.mish_state_name,
+            state: new_state,
+        })?;
     }
+    Ok(())
 }
 
-fn update_json_at_path(state: &mut serde_json::Value, path: &str, content: &serde_json::Value) {
-    let path_parts: Vec<&str> = path.split('.').collect();
-    let mut current = state.as_object_mut().unwrap();
-    for (i, part) in path_parts.iter().enumerate() {
-        if i == path_parts.len() - 1 {
-            current.insert(part.to_string(), content.clone());
-        } else {
-            current = current
-                .entry(part.to_string())
-                .or_insert_with(|| serde_json::json!({}))
-                .as_object_mut()
-                .unwrap();
+fn update_json_via_jsonpath(
+    state: &mut serde_json::Value,
+    path: &str,
+    content: &serde_json::Value,
+) -> Result<(), JsonPathError> {
+    let result = state.query_only_path(path)?;
+    for item in result {
+        let state = state.reference_mut(item);
+        if let Some(state) = state {
+            *state = content.clone();
         }
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_update_json_at_path_existing() {
-        let mut state = serde_json::json!({
-            "a": {
-                "b": 42
-            }
-        });
-        let content = serde_json::json!(100);
-        update_json_at_path(&mut state, "a.b", &content);
-        assert_eq!(
-            state,
-            serde_json::json!({
-                "a": {
-                    "b": 100
-                }
-            })
-        );
-    }
-
-    #[test]
-    fn test_update_json_at_path_new() {
-        let mut state = serde_json::json!({});
-        let content = serde_json::json!("new value");
-        update_json_at_path(&mut state, "x.y.z", &content);
-        assert_eq!(
-            state,
-            serde_json::json!({
-                "x": {
-                    "y": {
-                        "z": "new value"
-                    }
-                }
-            })
-        );
-    }
-
-    #[test]
-    fn test_update_json_at_path_single_element() {
-        let mut state = serde_json::json!({});
-        let content = serde_json::json!("single");
-        update_json_at_path(&mut state, "single", &content);
-        assert_eq!(
-            state,
-            serde_json::json!({
-                "single": "single"
-            })
-        );
-    }
-
-    #[test]
-    fn test_update_json_at_path_zero_element() {
-        let mut state = serde_json::json!({});
-        let content = serde_json::json!("root");
-        update_json_at_path(&mut state, "", &content);
-        assert_eq!(
-            state,
-            serde_json::json!({
-                "": "root"
-            })
-        );
-    }
+    Ok(())
 }

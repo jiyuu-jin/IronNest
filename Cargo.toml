@@ -98,6 +98,7 @@ serde_ipld_dagjson = { workspace = true }
 multibase = { workspace = true }
 multihash-codetable = { workspace = true, features = ["sha2"] }
 cid = { workspace = true, features = ["serde"] }
+jsonpath-rust = "1.0.2"
 
 [features]
 hydrate = ["leptos/hydrate"]

@@ -21,9 +21,8 @@ async fn main() {
                     run_devices_tasks,
                 },
                 ring::RingRestClient,
-                tplink::tplink_kasa_get_energy_usage,
             },
-            mish_api::{update_mish_state, upload_dag_json_file, upload_raw_file},
+            mish_api::{update_mish_state_handler, upload_dag_json_file, upload_raw_file},
         },
         leptos::prelude::*,
         leptos_axum::{generate_route_list, LeptosRoutes},
@@ -77,7 +76,7 @@ async fn main() {
         .route("/roku/:device_id/keypress/:key", get(roku_keypress_handler))
         .route("/mish/blob.dag-json", post(upload_dag_json_file))
         .route("/mish/blob.raw", post(upload_raw_file))
-        .route("/mish/state", post(update_mish_state))
+        .route("/mish/state", post(update_mish_state_handler))
         .with_state(app_state.clone());
 
     let routes = generate_route_list(App);
@@ -85,12 +84,15 @@ async fn main() {
         .leptos_routes_with_context(
             &leptos_options,
             routes,
-            move || {
-                provide_context(app_state.ring_rest_client.clone());
-                provide_context(app_state.pool.clone());
-                provide_context(app_state.cron_client.clone());
-                provide_context(app_state.control_senders.clone());
-                provide_context(mish_state_modification_bus_sender.clone());
+            {
+                let mish_state_modification_bus_sender = mish_state_modification_bus_sender.clone();
+                move || {
+                    provide_context(app_state.ring_rest_client.clone());
+                    provide_context(app_state.pool.clone());
+                    provide_context(app_state.cron_client.clone());
+                    provide_context(app_state.control_senders.clone());
+                    provide_context(mish_state_modification_bus_sender.clone());
+                }
             },
             {
                 let leptos_options = leptos_options.clone();
@@ -106,15 +108,20 @@ async fn main() {
         .unwrap();
 
     tokio::spawn(async move {
-        register_native_queries(&shared_pool, mish_state_modification_bus_receiver).await;
+        register_native_queries(
+            &shared_pool,
+            mish_state_modification_bus_receiver,
+            mish_state_modification_bus_sender,
+        )
+        .await;
     });
 
-    tplink_kasa_get_energy_usage("10.0.0.223", "1")
-        .await
-        .unwrap();
-    tplink_kasa_get_energy_usage("10.0.0.223", "1")
-        .await
-        .unwrap();
+    // tplink_kasa_get_energy_usage("10.0.0.223", "1")
+    //     .await
+    //     .unwrap();
+    // tplink_kasa_get_energy_usage("10.0.0.223", "1")
+    //     .await
+    //     .unwrap();
 
     let http_server = {
         let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();

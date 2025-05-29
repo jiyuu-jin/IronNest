@@ -4,6 +4,7 @@ use {
             ipld_blob_page::get_ipld_blob_query, mish_state_page::get_mish_state_query,
         },
         integrations::tplink::{tplink_turn_plug_off, tplink_turn_plug_on},
+        mish_api::{update_mish_state, UpdateMishStateBody},
     },
     cid::Cid,
     ipld_core::codec::Codec,
@@ -42,13 +43,21 @@ pub fn create_mish_state_modification_bus() -> (
 pub async fn register_native_queries(
     pool: &sqlx::PgPool,
     mut mish_state_modification_bus_receiver: UnboundedReceiver<MishStateModification>,
+    mish_state_modification_bus_sender: UnboundedSender<MishStateModification>,
 ) {
     let mut lookup = HashMap::new();
     let mut job_scheduler = JobScheduler::new().await.unwrap();
 
-    let state = get_mish_state_query(pool, &"run").await.unwrap();
+    let state = get_mish_state_query(pool, "run").await.unwrap();
     if let Some(state) = state {
-        do_install(pool, &mut lookup, &mut job_scheduler, state.state.clone()).await;
+        do_install(
+            pool,
+            mish_state_modification_bus_sender.clone(),
+            &mut lookup,
+            &mut job_scheduler,
+            state.state.clone(),
+        )
+        .await;
     }
 
     while let Some(mish_state_modification) = mish_state_modification_bus_receiver.recv().await {
@@ -56,7 +65,14 @@ pub async fn register_native_queries(
         match mish_state_modification {
             MishStateModification::CreateOrUpdate { name, state } => match name.as_str() {
                 "run" => {
-                    do_install(pool, &mut lookup, &mut job_scheduler, state).await;
+                    do_install(
+                        pool,
+                        mish_state_modification_bus_sender.clone(),
+                        &mut lookup,
+                        &mut job_scheduler,
+                        state,
+                    )
+                    .await;
                 }
                 name => {
                     if let Some(item) = lookup.get(name).cloned() {
@@ -80,7 +96,13 @@ pub async fn register_native_queries(
                                         }
                                     }
                                 };
-                                run_mish_state_at_most_once_rhai(pool, rhai, scope).await;
+                                run_mish_state_at_most_once_rhai(
+                                    pool.clone(),
+                                    mish_state_modification_bus_sender.clone(),
+                                    rhai,
+                                    scope,
+                                )
+                                .await;
                             }
                             InstallItem::CronAtMostOnceRhai { .. } => {
                                 // TODO avoid panic
@@ -112,6 +134,7 @@ enum InstallItem {
 
 async fn do_install(
     pool: &sqlx::PgPool,
+    mish_state_modification_bus_sender: UnboundedSender<MishStateModification>,
     lookup: &mut HashMap<String, InstallItem>,
     job_scheduler: &mut JobScheduler,
     state: serde_json::Value,
@@ -154,28 +177,34 @@ async fn do_install(
                                         }
                                     }
                                 };
-                                run_mish_state_at_most_once_rhai(pool, rhai.clone(), scope).await;
+                                run_mish_state_at_most_once_rhai(
+                                    pool.clone(),
+                                    mish_state_modification_bus_sender.clone(),
+                                    rhai.clone(),
+                                    scope,
+                                )
+                                .await;
                             }
                         }
                     }
                     InstallItem::CronAtMostOnceRhai { cron_string, rhai } => {
                         let pool = pool.clone();
+                        let mish_state_modification_bus_sender =
+                            mish_state_modification_bus_sender.clone();
                         let rhai = rhai.clone();
                         job_scheduler
                             .add(
                                 Job::new_async(cron_string.as_ref(), move |_uuid, mut _l| {
                                     let pool = pool.clone();
+                                    let mish_state_modification_bus_sender =
+                                        mish_state_modification_bus_sender.clone();
                                     let rhai = rhai.clone();
                                     Box::pin(async move {
                                         let scope = rhai::Scope::new();
-                                        // scope.push_constant(
-                                        //     "name",
-                                        //     name.to_owned(),
-                                        // );
-                                        // scope.push_dynamic("state", state);
                                         run_mish_state_at_most_once_rhai(
-                                            &pool,
-                                            rhai.clone(),
+                                            pool,
+                                            mish_state_modification_bus_sender,
+                                            rhai,
                                             scope,
                                         )
                                         .await;
@@ -196,7 +225,8 @@ async fn do_install(
 }
 
 async fn run_mish_state_at_most_once_rhai(
-    pool: &sqlx::PgPool,
+    pool: sqlx::PgPool,
+    mish_state_modification_bus_sender: UnboundedSender<MishStateModification>,
     rhai: serde_json::Value,
     scope: rhai::Scope<'static>,
 ) {
@@ -210,7 +240,7 @@ async fn run_mish_state_at_most_once_rhai(
         }
         (Ok(rhai_string), Err(_)) => rhai_string,
         (Err(_), Ok(rhai_cid)) => {
-            if let Some(blob) = get_ipld_blob_query(pool, &rhai_cid).await.unwrap() {
+            if let Some(blob) = get_ipld_blob_query(&pool, &rhai_cid).await.unwrap() {
                 match String::from_utf8(blob) {
                     Ok(rhai_string) => rhai_string,
                     Err(e) => {
@@ -245,7 +275,7 @@ async fn run_mish_state_at_most_once_rhai(
                 SystemTime::now()
                     .duration_since(UNIX_EPOCH)
                     .unwrap()
-                    .as_secs() as i64
+                    .as_secs() as i64 // conversion to i64 needed or else modulos in the script will fail
             })
             .register_fn("tplink_turn_plug_on", |ip: String| {
                 tokio::task::spawn(async move {
@@ -257,6 +287,30 @@ async fn run_mish_state_at_most_once_rhai(
                     tplink_turn_plug_off(&ip).await;
                 });
             })
+            .register_fn(
+                "update_mish_state",
+                move |name: String, path: String, content: Dynamic| {
+                    let pool = pool.clone();
+                    let mish_state_modification_bus_sender =
+                        mish_state_modification_bus_sender.clone();
+                    let content = serde_json::to_value(&content).unwrap();
+                    tokio::task::spawn(async move {
+                        if let Err(e) = update_mish_state(
+                            &pool,
+                            &mish_state_modification_bus_sender,
+                            UpdateMishStateBody {
+                                mish_state_name: name,
+                                path,
+                                content,
+                            },
+                        )
+                        .await
+                        {
+                            log::error!("Failed to update mish state: {e}");
+                        }
+                    });
+                },
+            )
             .run_with_scope(&mut scope, &rhai);
         if let Err(e) = result {
             log::error!("Failed to run fish tank script: {:?}", e);

@@ -24,8 +24,8 @@ let ips = #{
 
 let timestamp = unix_timestamp();
 
-if timestamp % 2 == 0 {
-    tplink_turn_plug_on(ips["light_blue"]);
+if timestamp % 10 == 0 {
+    update_mish_state("chris.fish_tank", "$['light.blue.on']", true);
 } else {
-    tplink_turn_plug_off(ips["light_blue"]);
+    update_mish_state("chris.fish_tank", "$['light.blue.on']", false);
 }

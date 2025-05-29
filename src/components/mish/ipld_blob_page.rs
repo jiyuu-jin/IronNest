@@ -176,9 +176,14 @@ pub fn IpldBlobPage() -> impl IntoView {
                                                                 let checkbox = view! {
                                                                     <div>
                                                                         <label for="hex-editor-mode">"Hex editor mode"</label>
-                                                                        <input type="checkbox" id="hex-editor-mode" bind:checked=hex_editor_mode />
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            id="hex-editor-mode"
+                                                                            bind:checked=hex_editor_mode
+                                                                        />
                                                                     </div>
-                                                                }.into_any();
+                                                                }
+                                                                    .into_any();
                                                                 let editor = if hex_editor_mode.get() {
                                                                     view! {
                                                                         <TextEditor
@@ -197,25 +202,27 @@ pub fn IpldBlobPage() -> impl IntoView {
                                                                                 <TextEditor
                                                                                     state=state
                                                                                     set_config_server_action=move |content| {
-                                                                                        set_ipld_blob_action.dispatch(SetIpldBlob { content: hex::encode(content) });
+                                                                                        set_ipld_blob_action
+                                                                                            .dispatch(SetIpldBlob {
+                                                                                                content: hex::encode(content),
+                                                                                            });
                                                                                     }
                                                                                 />
                                                                             }
-                                                                            .into_any()
+                                                                                .into_any()
                                                                         }
                                                                         Err(e) => {
-                                                                            view! { <p>"Error parsing value as UTF-8, maybe try hex editor mode? " {e.to_string()}</p> }
+                                                                            view! {
+                                                                                <p>
+                                                                                    "Error parsing value as UTF-8, maybe try hex editor mode? "
+                                                                                    {e.to_string()}
+                                                                                </p>
+                                                                            }
                                                                                 .into_any()
                                                                         }
                                                                     }
                                                                 };
-                                                                view! {
-                                                                    <div>
-                                                                        {checkbox}
-                                                                        {editor}
-                                                                    </div>
-                                                                }
-                                                                    .into_any()
+                                                                view! { <div>{checkbox} {editor}</div> }.into_any()
                                                             }
                                                             ipld_codecs::DAG_JSON => {
                                                                 let parsed = <DagJsonCodec as Codec<
