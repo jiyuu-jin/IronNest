@@ -92,7 +92,7 @@ gloo-timers = "0.3.0"
 csscolorparser = "0.7.0"
 getrandom = { version = "0.2.15", features = ["js"] }
 leptos_drag_reorder = "0.1.0"
-rhai = { version = "1.21.0", features = ["metadata"] }
+rhai = { version = "1.21.0", features = ["metadata", "sync"] }
 ipld-core = { workspace = true }
 serde_ipld_dagjson = { workspace = true }
 multibase = { workspace = true }
