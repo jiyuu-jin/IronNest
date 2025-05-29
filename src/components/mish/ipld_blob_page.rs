@@ -141,6 +141,7 @@ pub fn IpldBlobPage() -> impl IntoView {
     );
 
     let raw_editor_mode = RwSignal::new(false);
+    let hex_editor_mode = RwSignal::new(false);
 
     view! {
         <main class="lg:p-40 lg:pt-20 cursor-pointer">
@@ -172,13 +173,47 @@ pub fn IpldBlobPage() -> impl IntoView {
                                                         let codec = cid().codec();
                                                         match codec {
                                                             ipld_codecs::RAW => {
-                                                                view! {
-                                                                    <TextEditor
-                                                                        state=hex::encode(state)
-                                                                        set_config_server_action=move |content| {
-                                                                            set_ipld_blob_action.dispatch(SetIpldBlob { content });
+                                                                let checkbox = view! {
+                                                                    <div>
+                                                                        <label for="hex-editor-mode">"Hex editor mode"</label>
+                                                                        <input type="checkbox" id="hex-editor-mode" bind:checked=hex_editor_mode />
+                                                                    </div>
+                                                                }.into_any();
+                                                                let editor = if hex_editor_mode.get() {
+                                                                    view! {
+                                                                        <TextEditor
+                                                                            state=hex::encode(state)
+                                                                            set_config_server_action=move |content| {
+                                                                                set_ipld_blob_action.dispatch(SetIpldBlob { content });
+                                                                            }
+                                                                        />
+                                                                    }
+                                                                        .into_any()
+                                                                } else {
+                                                                    let state = String::from_utf8(state);
+                                                                    match state {
+                                                                        Ok(state) => {
+                                                                            view! {
+                                                                                <TextEditor
+                                                                                    state=state
+                                                                                    set_config_server_action=move |content| {
+                                                                                        set_ipld_blob_action.dispatch(SetIpldBlob { content: hex::encode(content) });
+                                                                                    }
+                                                                                />
+                                                                            }
+                                                                            .into_any()
                                                                         }
-                                                                    />
+                                                                        Err(e) => {
+                                                                            view! { <p>"Error parsing value as UTF-8, maybe try hex editor mode? " {e.to_string()}</p> }
+                                                                                .into_any()
+                                                                        }
+                                                                    }
+                                                                };
+                                                                view! {
+                                                                    <div>
+                                                                        {checkbox}
+                                                                        {editor}
+                                                                    </div>
                                                                 }
                                                                     .into_any()
                                                             }
