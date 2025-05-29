@@ -10,7 +10,10 @@ use {
     rhai::Dynamic,
     serde::{Deserialize, Serialize},
     serde_ipld_dagjson::codec::DagJsonCodec,
-    std::{collections::HashMap, time::{SystemTime, UNIX_EPOCH}},
+    std::{
+        collections::HashMap,
+        time::{SystemTime, UNIX_EPOCH},
+    },
     tokio::{
         sync::mpsc::{UnboundedReceiver, UnboundedSender},
         time::{Duration, Instant},
@@ -43,101 +46,17 @@ pub async fn register_native_queries(
     let mut lookup = HashMap::new();
     let mut job_scheduler = JobScheduler::new().await.unwrap();
 
+    let state = get_mish_state_query(pool, &"run").await.unwrap();
+    if let Some(state) = state {
+        do_install(pool, &mut lookup, &mut job_scheduler, state.state.clone()).await;
+    }
+
     while let Some(mish_state_modification) = mish_state_modification_bus_receiver.recv().await {
         log::info!("Mish state modification: {:?}", mish_state_modification);
         match mish_state_modification {
             MishStateModification::CreateOrUpdate { name, state } => match name.as_str() {
                 "run" => {
-                    let result = serde_json::from_value::<HashMap<String, InstallItem>>(state);
-                    match result {
-                        Ok(items) => {
-                            lookup.clear();
-                            job_scheduler.shutdown().await.unwrap();
-                            job_scheduler = JobScheduler::new().await.unwrap();
-                            job_scheduler.start().await.unwrap();
-                            for (name, item) in items {
-                                log::info!("Installing {name}");
-                                match item.clone() {
-                                    InstallItem::MishStateAtMostOnceRhai {
-                                        query_name,
-                                        rhai,
-                                        run_on_startup,
-                                        ..
-                                    } => {
-                                        lookup.insert(query_name.clone(), item.clone());
-                                        if run_on_startup {
-                                            let state = get_mish_state_query(pool, &query_name)
-                                                .await
-                                                .unwrap();
-                                            if let Some(state) = state {
-                                                let scope = {
-                                                    let state = serde_json::from_value(state.state);
-                                                    match state {
-                                                        Ok(state) => {
-                                                            let mut scope = rhai::Scope::new();
-                                                            scope.push_constant(
-                                                                "name",
-                                                                name.to_owned(),
-                                                            );
-                                                            scope.push_dynamic("state", state);
-                                                            scope
-                                                        }
-                                                        Err(e) => {
-                                                            log::error!(
-                                                                "Failed to parse fish tank state on: {:?}",
-                                                                e
-                                                            );
-                                                            continue;
-                                                        }
-                                                    }
-                                                };
-                                                run_mish_state_at_most_once_rhai(
-                                                    pool,
-                                                    rhai.clone(),
-                                                    scope,
-                                                )
-                                                .await;
-                                            }
-                                        }
-                                    }
-                                    InstallItem::CronAtMostOnceRhai { cron_string, rhai } => {
-                                        let pool = pool.clone();
-                                        let rhai = rhai.clone();
-                                        job_scheduler
-                                            .add(
-                                                Job::new_async(
-                                                    cron_string.as_ref(),
-                                                    move |_uuid, mut _l| {
-                                                        let pool = pool.clone();
-                                                        let rhai = rhai.clone();
-                                                        Box::pin(async move {
-                                                            let scope = rhai::Scope::new();
-                                                            // scope.push_constant(
-                                                            //     "name",
-                                                            //     name.to_owned(),
-                                                            // );
-                                                            // scope.push_dynamic("state", state);
-                                                            run_mish_state_at_most_once_rhai(
-                                                                &pool,
-                                                                rhai.clone(),
-                                                                scope,
-                                                            )
-                                                            .await;
-                                                        })
-                                                    },
-                                                )
-                                                .unwrap(),
-                                            )
-                                            .await
-                                            .unwrap();
-                                    }
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            log::error!("Failed to parse install items: {e}");
-                        }
-                    }
+                    do_install(pool, &mut lookup, &mut job_scheduler, state).await;
                 }
                 name => {
                     if let Some(item) = lookup.get(name).cloned() {
@@ -174,8 +93,6 @@ pub async fn register_native_queries(
             MishStateModification::Delete { name: _ } => {}
         }
     }
-    // TODO listen to events first and then poll the current state in-case something was missed
-    // Specifically, I think we should just poll the current `run` but NOT the other queries. These should be `run` hooks instead.
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -191,6 +108,91 @@ enum InstallItem {
         cron_string: String,
         rhai: serde_json::Value,
     },
+}
+
+async fn do_install(
+    pool: &sqlx::PgPool,
+    lookup: &mut HashMap<String, InstallItem>,
+    job_scheduler: &mut JobScheduler,
+    state: serde_json::Value,
+) {
+    let result = serde_json::from_value::<HashMap<String, InstallItem>>(state);
+    match result {
+        Ok(items) => {
+            lookup.clear();
+            job_scheduler.shutdown().await.unwrap();
+            *job_scheduler = JobScheduler::new().await.unwrap();
+            job_scheduler.start().await.unwrap();
+            for (name, item) in items {
+                log::info!("Installing {name}");
+                match item.clone() {
+                    InstallItem::MishStateAtMostOnceRhai {
+                        query_name,
+                        rhai,
+                        run_on_startup,
+                        ..
+                    } => {
+                        lookup.insert(query_name.clone(), item.clone());
+                        if run_on_startup {
+                            let state = get_mish_state_query(pool, &query_name).await.unwrap();
+                            if let Some(state) = state {
+                                let scope = {
+                                    let state = serde_json::from_value(state.state);
+                                    match state {
+                                        Ok(state) => {
+                                            let mut scope = rhai::Scope::new();
+                                            scope.push_constant("name", name.to_owned());
+                                            scope.push_dynamic("state", state);
+                                            scope
+                                        }
+                                        Err(e) => {
+                                            log::error!(
+                                                "Failed to parse fish tank state on: {:?}",
+                                                e
+                                            );
+                                            continue;
+                                        }
+                                    }
+                                };
+                                run_mish_state_at_most_once_rhai(pool, rhai.clone(), scope).await;
+                            }
+                        }
+                    }
+                    InstallItem::CronAtMostOnceRhai { cron_string, rhai } => {
+                        let pool = pool.clone();
+                        let rhai = rhai.clone();
+                        job_scheduler
+                            .add(
+                                Job::new_async(cron_string.as_ref(), move |_uuid, mut _l| {
+                                    let pool = pool.clone();
+                                    let rhai = rhai.clone();
+                                    Box::pin(async move {
+                                        let scope = rhai::Scope::new();
+                                        // scope.push_constant(
+                                        //     "name",
+                                        //     name.to_owned(),
+                                        // );
+                                        // scope.push_dynamic("state", state);
+                                        run_mish_state_at_most_once_rhai(
+                                            &pool,
+                                            rhai.clone(),
+                                            scope,
+                                        )
+                                        .await;
+                                    })
+                                })
+                                .unwrap(),
+                            )
+                            .await
+                            .unwrap();
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            log::error!("Failed to parse install items: {e}");
+        }
+    }
 }
 
 async fn run_mish_state_at_most_once_rhai(
