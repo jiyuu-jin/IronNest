@@ -64,6 +64,7 @@ async fn main() {
         pool: shared_pool.clone(),
         cron_client: CronClient::new().await,
         control_senders: control_senders.clone(),
+        mish_state_modification_bus_sender: mish_state_modification_bus_sender.clone(),
     };
 
     app_state
@@ -105,7 +106,7 @@ async fn main() {
         .unwrap();
 
     tokio::spawn(async move {
-        register_native_queries(mish_state_modification_bus_receiver).await;
+        register_native_queries(&shared_pool, mish_state_modification_bus_receiver).await;
     });
 
     tplink_kasa_get_energy_usage("10.0.0.223", "1")

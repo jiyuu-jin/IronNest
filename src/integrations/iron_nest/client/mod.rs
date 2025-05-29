@@ -1,6 +1,7 @@
 use {
     super::{
         cron::CronClient,
+        mish::MishStateModification,
         shared::get_default_integrations,
         types::{AuthState, ControlMessage, Device, DeviceType, Integration},
     },
@@ -365,6 +366,8 @@ pub struct AppState {
     pub pool: PgPool,
     pub cron_client: CronClient,
     pub control_senders: Arc<RwLock<HashMap<String, Sender<ControlMessage>>>>,
+    pub mish_state_modification_bus_sender:
+        tokio::sync::mpsc::UnboundedSender<MishStateModification>,
 }
 
 pub fn match_control_message(msg: ControlMessage, running: &mut bool) -> bool {

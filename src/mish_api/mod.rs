@@ -1,5 +1,8 @@
 use {
-    crate::{integrations::iron_nest::AppState, ipld_codecs},
+    crate::{
+        integrations::iron_nest::{mish::MishStateModification, AppState},
+        ipld_codecs,
+    },
     axum::{extract::State, Json},
     bytes::Bytes,
     cid::Cid,
@@ -92,6 +95,13 @@ pub async fn update_mish_state(
             .execute(&state.pool)
             .await
             .unwrap();
+        state
+            .mish_state_modification_bus_sender
+            .send(MishStateModification::CreateOrUpdate {
+                name: body.mish_state_name,
+                state: mish_state.state,
+            })
+            .unwrap();
     } else {
         // If the state doesn't exist, create a new one
         let mut new_state = serde_json::json!({});
@@ -105,6 +115,13 @@ pub async fn update_mish_state(
             .bind(&new_state)
             .execute(&state.pool)
             .await
+            .unwrap();
+        state
+            .mish_state_modification_bus_sender
+            .send(MishStateModification::CreateOrUpdate {
+                name: body.mish_state_name,
+                state: new_state,
+            })
             .unwrap();
     }
 }

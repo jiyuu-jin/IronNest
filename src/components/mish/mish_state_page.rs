@@ -16,7 +16,7 @@ use {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MishState {
     name: String,
-    state: serde_json::Value,
+    pub state: serde_json::Value,
 }
 
 #[cfg(feature = "ssr")]
