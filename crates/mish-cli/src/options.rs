@@ -1,11 +1,15 @@
 use {
     clap::{Parser, Subcommand},
+    reqwest::Url,
     std::path::PathBuf,
 };
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Options {
+    #[arg(long, env)]
+    pub server_url: Option<Url>,
+
     #[command(subcommand)]
     pub operation: Operation,
 }

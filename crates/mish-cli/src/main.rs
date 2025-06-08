@@ -1,10 +1,14 @@
 mod options;
-use {clap::Parser, options::Options};
+use {clap::Parser, options::Options, reqwest::Url};
 
 #[tokio::main]
 async fn main() {
     let options = Options::parse();
     println!("{:?}", options);
+
+    let server_url = options
+        .server_url
+        .unwrap_or_else(|| Url::parse("http://localhost:3000").unwrap());
 
     let client = reqwest::Client::new();
 
@@ -18,11 +22,11 @@ async fn main() {
             let req = if file_path.ends_with(".json") {
                 let json = serde_json::from_slice::<serde_json::Value>(&data).unwrap();
                 client
-                    .post("http://localhost:3000/api/mish/blob.dag-json")
+                    .post(server_url.join("/api/mish/blob.dag-json").unwrap())
                     .json(&json)
             } else {
                 client
-                    .post("http://localhost:3000/api/mish/blob.raw")
+                    .post(server_url.join("/api/mish/blob.raw").unwrap())
                     .body(data)
                 // .header("Content-Type", "application/octet-stream")
             };
@@ -46,7 +50,7 @@ async fn main() {
             });
 
             let req = client
-                .post("http://localhost:3000/api/mish/state")
+                .post(server_url.join("/api/mish/state").unwrap())
                 .json(&json);
             let result = req.send().await.unwrap();
             if result.status().is_success() {

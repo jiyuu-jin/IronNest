@@ -1,9 +1,10 @@
-FROM rust:1.82-bookworm AS chef
+FROM rust:1.86-bookworm AS chef
 RUN cargo install cargo-chef --locked
 
 FROM chef AS planner
 COPY ./Cargo.lock ./Cargo.lock
 COPY ./Cargo.toml ./Cargo.toml
+COPY ./crates ./crates
 COPY ./src ./src
 COPY ./migrations ./migrations
 COPY ./public ./public
@@ -17,7 +18,7 @@ FROM chef AS builder
 # RUN tar -xvf cargo-binstall-armv7-unknown-linux-musleabihf.full.tgz
 # RUN cp cargo-binstall /usr/local/cargo/bin
 
-RUN cargo install cargo-leptos@0.2.22 --locked
+RUN cargo install cargo-leptos@0.2.35 --locked
 
 RUN apt update && apt install -y npm
 RUN npm install -g sass
@@ -31,6 +32,7 @@ RUN cargo chef cook --release --recipe-path recipe.json
 # Copy over build files
 COPY ./Cargo.lock ./Cargo.lock
 COPY ./Cargo.toml ./Cargo.toml
+COPY ./crates ./crates
 COPY ./src ./src
 COPY ./migrations ./migrations
 COPY ./public ./public

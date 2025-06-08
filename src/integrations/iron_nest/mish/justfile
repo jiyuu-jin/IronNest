@@ -1,0 +1,3 @@
+deploy:
+  cargo run -p mish-cli -- upload-file --mish-state-name run --path $.fish_tank.rhai fish_tank.rhai
+  cargo run -p mish-cli -- upload-file --mish-state-name run --path $.fish_tank_cron.rhai fish_tank_cron.rhai

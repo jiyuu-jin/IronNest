@@ -1,7 +1,9 @@
 ```bash
-cargo run -p mish-cli -- upload-file --mish-state-name run --path $.fish_tank.rhai src/integrations/iron_nest/mish/fish_tank.rhai
+just deploy
 ```
 
 ```bash
-cargo run -p mish-cli -- upload-file --mish-state-name run --path $.fish_tank_cron.rhai src/integrations/iron_nest/mish/fish_tank_cron.rhai
+SERVER_URL=http://turingpi-1 just deploy
 ```
+
+Then manually create `run` and `chris.fish_tank`

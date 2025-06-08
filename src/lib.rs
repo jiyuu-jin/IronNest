@@ -1,3 +1,5 @@
+#![recursion_limit = "512"]
+
 pub mod components;
 pub mod error_template;
 
