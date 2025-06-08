@@ -13,6 +13,7 @@ use {
     serde_ipld_dagjson::codec::DagJsonCodec,
     std::{
         collections::HashMap,
+        str::FromStr,
         time::{SystemTime, UNIX_EPOCH},
     },
     tokio::{
@@ -311,9 +312,129 @@ async fn run_mish_state_at_most_once_rhai(
                     });
                 },
             )
+            .register_fn(
+                "is_now_between",
+                |timezone: String, start: String, up_to: String| {
+                    is_now_between(&timezone, &start, &up_to, chrono::Utc::now())
+                },
+            )
             .run_with_scope(&mut scope, &rhai);
         if let Err(e) = result {
             log::error!("Failed to run fish tank script: {:?}", e);
         }
     });
+}
+
+fn is_now_between(
+    timezone: &str,
+    start: &str,
+    up_to: &str,
+    current_time: chrono::DateTime<chrono::Utc>,
+) -> bool {
+    // Parse timezone
+    let tz = match chrono_tz::Tz::from_str(timezone) {
+        Ok(tz) => tz,
+        Err(_) => {
+            log::error!("Invalid timezone: {}", timezone);
+            return false;
+        }
+    };
+
+    // Parse time strings
+    let start_time = match chrono::NaiveTime::parse_from_str(start, "%H:%M:%S") {
+        Ok(time) => time,
+        Err(_) => {
+            log::error!("Invalid start time format: {}", start);
+            return false;
+        }
+    };
+
+    let up_to_time = match chrono::NaiveTime::parse_from_str(up_to, "%H:%M:%S") {
+        Ok(time) => time,
+        Err(_) => {
+            log::error!("Invalid up_to time format: {}", up_to);
+            return false;
+        }
+    };
+
+    let local_now = current_time.with_timezone(&tz);
+    let today = local_now.date_naive();
+
+    // Create datetime objects for start and end times
+    let start_dt = today.and_time(start_time).and_local_timezone(tz).unwrap();
+    let up_to_dt = today.and_time(up_to_time).and_local_timezone(tz).unwrap();
+
+    // Handle case where time range spans across midnight
+    if start_time > up_to_time {
+        // If current time is after start time OR before up_to time
+        local_now >= start_dt || local_now <= up_to_dt
+    } else {
+        // Normal case: current time is between start and up_to
+        local_now >= start_dt && local_now <= up_to_dt
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        chrono::{TimeZone, Utc},
+    };
+
+    #[test]
+    fn test_is_now_between() {
+        // Test case 1: Current time is between start and up_to
+        let timezone = "America/New_York";
+        let start = "10:00:00";
+        let up_to = "18:00:00";
+        let current_time = Utc.with_ymd_and_hms(2024, 3, 15, 14, 0, 0).unwrap(); // 2 PM UTC
+        let result = is_now_between(timezone, start, up_to, current_time);
+        assert!(
+            result,
+            "Should be true when current time is between start and up_to"
+        );
+
+        // Test case 2: Current time is before start
+        let timezone = "America/New_York";
+        let start = "20:00:00";
+        let up_to = "22:00:00";
+        let current_time = Utc.with_ymd_and_hms(2024, 3, 15, 14, 0, 0).unwrap(); // 2 PM UTC
+        let result = is_now_between(timezone, start, up_to, current_time);
+        assert!(!result, "Should be false when current time is before start");
+
+        // Test case 3: Current time is after up_to
+        let timezone = "America/New_York";
+        let start = "00:00:00";
+        let up_to = "06:00:00";
+        let current_time = Utc.with_ymd_and_hms(2024, 3, 15, 14, 0, 0).unwrap(); // 2 PM UTC
+        let result = is_now_between(timezone, start, up_to, current_time);
+        assert!(!result, "Should be false when current time is after up_to");
+
+        // Test case 4: Invalid timezone
+        let timezone = "Invalid/Timezone";
+        let start = "10:00:00";
+        let up_to = "18:00:00";
+        let current_time = Utc.with_ymd_and_hms(2024, 3, 15, 14, 0, 0).unwrap();
+        let result = is_now_between(timezone, start, up_to, current_time);
+        assert!(!result, "Should return false for invalid timezone");
+
+        // Test case 5: Invalid time format
+        let timezone = "America/New_York";
+        let start = "25:00:00"; // Invalid hour
+        let up_to = "18:00:00";
+        let current_time = Utc.with_ymd_and_hms(2024, 3, 15, 14, 0, 0).unwrap();
+        let result = is_now_between(timezone, start, up_to, current_time);
+        assert!(!result, "Should return false for invalid time format");
+
+        // Test case 6: Time range spanning midnight
+        let timezone = "America/New_York";
+        let start = "23:00:00";
+        let up_to = "01:00:00";
+        let current_time = Utc.with_ymd_and_hms(2024, 3, 15, 4, 0, 0).unwrap(); // 4 AM UTC (midnight NY)
+        let result = is_now_between(timezone, start, up_to, current_time);
+        assert!(
+            result,
+            "Should be true when current time is within midnight-spanning range"
+        );
+    }
 }

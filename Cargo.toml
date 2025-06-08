@@ -33,11 +33,11 @@ dotenv = "0.15.0"
 futures = "0.3.29"
 hex = "0.4.3"
 http = "1.2.0"
-leptos = { version = "0.7.0" }
-server_fn = { version = "0.7.0", features = ["cbor"] }
-leptos_axum = { version = "0.7.0", optional = true }
-leptos_meta = { version = "0.7.0" }
-leptos_router = { version = "0.7.0" }
+leptos = { version = "0.7.8" }
+server_fn = { version = "0.7.8", features = ["cbor"] }
+leptos_axum = { version = "0.7.8", optional = true }
+leptos_meta = { version = "0.7.8" }
+leptos_router = { version = "0.7.8" }
 leptos-use = "0.14.0"
 leptos_reactive = "0.7.0-preview2"
 log = "0.4.20"

@@ -2,15 +2,15 @@
     "fish_tank": {
         "query_name": "chris.fish_tank",
         "rhai": {
-            "/": "bafkreidugba35to5j754ssdjpciamjkzduggirtu5bxlolsdoqcp6vkutm"
+            ".": "fish_tank.rhai"
         },
         "run_on_startup": true,
         "type": "MishStateAtMostOnceRhai"
     },
     "fish_tank_cron": {
-        "cron_string": "0 * * * * *",
+        "cron_string": "0/5 * * * * *",
         "rhai": {
-            "/": ""
+            ".": "fish_tank_cron.rhai"
         },
         "type": "CronAtMostOnceRhai"
     }
