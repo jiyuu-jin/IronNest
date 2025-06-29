@@ -3,6 +3,7 @@ use {
         json_editor::JsonEditor, number_editor::NumberEditor, text_editor::TextEditor,
     },
     leptos::prelude::*,
+    std::sync::Arc,
 };
 
 #[component]
@@ -33,6 +34,53 @@ pub fn Editor(state: serde_json::Value, action: impl Fn(Vec<u8>) + 'static) -> i
             .into_any(),
             serde_json::Value::Number(n) => {
                 view! { <NumberEditor state=n.to_string() set_config_server_action=action /> }
+                    .into_any()
+            }
+            // serde_json::Value::Array(a) => {
+            //     let action = Arc::new(action);
+            //     a.iter()
+            //         .enumerate()
+            //         .map(|(i, v)| {
+            //             let a = a.clone();
+            //             let action = action.clone();
+            //             view! {
+            //                 <div>
+            //                     <Editor
+            //                         state=v.clone()
+            //                         action=move |s| {
+            //                             let mut a = a.clone();
+            //                             a[i] = serde_json::from_slice(&s).unwrap();
+            //                             action(serde_json::to_vec(&a).unwrap());
+            //                         }
+            //                     />
+            //                 </div>
+            //             }
+            //         })
+            //         .collect::<Vec<_>>()
+            //         .into_any()
+            // }
+            serde_json::Value::Object(o) => {
+                let action = Arc::new(action);
+                o.clone()
+                    .into_iter()
+                    .map(|(k, v)| {
+                        let o = o.clone();
+                        let action = action.clone();
+                        view! {
+                            <div>
+                                <div>{k.clone()}</div>
+                                <Editor
+                                    state=v.clone()
+                                    action=move |s| {
+                                        let mut o = o.clone();
+                                        o.insert(k.clone(), serde_json::from_slice(&s).unwrap());
+                                        action(serde_json::to_vec(&o).unwrap());
+                                    }
+                                />
+                            </div>
+                        }
+                    })
+                    .collect::<Vec<_>>()
                     .into_any()
             }
             _ => view! { <JsonEditor state=Some(state) set_config_server_action=action /> }

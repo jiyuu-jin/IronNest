@@ -13,5 +13,8 @@
             ".": "fish_tank_cron.rhai"
         },
         "type": "CronAtMostOnceRhai"
+    },
+    "chat_app0": {
+        "type": "MishPage"
     }
 }

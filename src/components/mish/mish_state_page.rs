@@ -209,6 +209,7 @@ pub fn MishStatePage() -> impl IntoView {
                                                     })
                                                     .unwrap_or_else(|| {
                                                         view! {
+                                                            <p>"Fallback editor"</p>
                                                             <JsonEditor
                                                                 state=None
                                                                 set_config_server_action=set_mish_state_action2
