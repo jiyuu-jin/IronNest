@@ -89,7 +89,7 @@ pub async fn post(ip: &str, query: &str) -> serde_json::Value {
     let client = reqwest::Client::new();
 
     match client.post(&roku_url).send().await {
-        Ok(data) => println!("input: {:?}", data),
+        Ok(data) => println!("input: {data:?}"),
         Err(err) => println!("Error! {err}"),
     };
 
@@ -129,7 +129,7 @@ pub async fn roku_ws() {
 
     read.for_each(|message| async {
         let message = message.unwrap();
-        println!("Received a message: {:?}", message);
+        println!("Received a message: {message:?}");
     })
     .await;
 }

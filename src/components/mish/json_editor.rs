@@ -30,7 +30,7 @@ pub fn JsonEditor(
                 Err(e) => {
                     web_sys::window()
                         .unwrap()
-                        .alert_with_message(&format!("Error parsing JSON: {:?}", e))
+                        .alert_with_message(&format!("Error parsing JSON: {e:?}"))
                         .unwrap();
                 }
             }

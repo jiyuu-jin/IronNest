@@ -36,29 +36,29 @@ pub fn Editor(state: serde_json::Value, action: impl Fn(Vec<u8>) + 'static) -> i
                 view! { <NumberEditor state=n.to_string() set_config_server_action=action /> }
                     .into_any()
             }
-            // serde_json::Value::Array(a) => {
-            //     let action = Arc::new(action);
-            //     a.iter()
-            //         .enumerate()
-            //         .map(|(i, v)| {
-            //             let a = a.clone();
-            //             let action = action.clone();
-            //             view! {
-            //                 <div>
-            //                     <Editor
-            //                         state=v.clone()
-            //                         action=move |s| {
-            //                             let mut a = a.clone();
-            //                             a[i] = serde_json::from_slice(&s).unwrap();
-            //                             action(serde_json::to_vec(&a).unwrap());
-            //                         }
-            //                     />
-            //                 </div>
-            //             }
-            //         })
-            //         .collect::<Vec<_>>()
-            //         .into_any()
-            // }
+            serde_json::Value::Array(a) => {
+                let action = Arc::new(action);
+                a.iter()
+                    .enumerate()
+                    .map(|(i, v)| {
+                        let a = a.clone();
+                        let action = action.clone();
+                        view! {
+                            <div>
+                                <NestedEditor
+                                    state=v.clone()
+                                    action=Box::new(move |s| {
+                                        let mut a = a.clone();
+                                        a[i] = serde_json::from_slice(&s).unwrap();
+                                        action(serde_json::to_vec(&a).unwrap());
+                                    })
+                                />
+                            </div>
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .into_any()
+            }
             serde_json::Value::Object(o) => {
                 let action = Arc::new(action);
                 o.clone()
@@ -69,13 +69,13 @@ pub fn Editor(state: serde_json::Value, action: impl Fn(Vec<u8>) + 'static) -> i
                         view! {
                             <div>
                                 <div>{k.clone()}</div>
-                                <Editor
+                                <NestedEditor
                                     state=v.clone()
-                                    action=move |s| {
+                                    action=Box::new(move |s| {
                                         let mut o = o.clone();
                                         o.insert(k.clone(), serde_json::from_slice(&s).unwrap());
                                         action(serde_json::to_vec(&o).unwrap());
-                                    }
+                                    })
                                 />
                             </div>
                         }
@@ -95,4 +95,12 @@ pub fn Editor(state: serde_json::Value, action: impl Fn(Vec<u8>) + 'static) -> i
         </div>
         {editor}
     }
+}
+
+#[component]
+pub fn NestedEditor(
+    state: serde_json::Value,
+    action: Box<dyn Fn(Vec<u8>) + 'static>,
+) -> impl IntoView {
+    view! { <Editor state=state action=action /> }
 }

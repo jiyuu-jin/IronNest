@@ -18,7 +18,7 @@ pub fn TextEditor(
         </textarea>
         <button on:click=move |_| {
             let s = state.get();
-            web_sys::console::log_1(&format!("state: {:?}", s).into());
+            web_sys::console::log_1(&format!("state: {s:?}").into());
             set_config_server_action(s);
         }>"Save"</button>
     }

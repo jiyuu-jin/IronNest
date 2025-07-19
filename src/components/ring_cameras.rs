@@ -91,9 +91,7 @@ fn create_video_timeline(
                     );
                     let width = calculate_width(video.duration, timeline_width);
                     let video_style = format!(
-                        "position: absolute; left: {}px; width: {}px; height: 10px; background-color: #007bff; border-radius: 5px;",
-                        position,
-                        width,
+                        "position: absolute; left: {position}px; width: {width}px; height: 10px; background-color: #007bff; border-radius: 5px;",
                     );
                     view! {
                         <a

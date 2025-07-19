@@ -1,6 +1,9 @@
 use {
     crate::components::layout::{Toast, ToastContext},
     leptos::prelude::*,
+    serde::{Deserialize, Serialize},
+    server_fn::codec::JsonEncoding,
+    std::fmt::Display,
 };
 
 #[cfg(feature = "ssr")]
@@ -38,15 +41,41 @@ pub async fn get_config_query(pool: &sqlx::PgPool) -> Result<Option<Config>, sql
         .map(|row| row.map(|row: Row| row.data.0))
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum SetConfigError {
+    ServerFnError(ServerFnErrorErr),
+    ParseConfig(String),
+    SaveConfig(String),
+    ScheduleTasks(String),
+}
+
+impl FromServerFnError for SetConfigError {
+    type Encoder = JsonEncoding;
+
+    fn from_server_fn_error(value: ServerFnErrorErr) -> Self {
+        SetConfigError::ServerFnError(value)
+    }
+}
+
+impl Display for SetConfigError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self:?}")
+    }
+}
+
 #[server(SetConfig)]
-async fn set_config(config: String) -> Result<(), ServerFnError> {
+async fn set_config(config: String) -> Result<(), SetConfigError> {
     let pool = use_context::<sqlx::PgPool>().unwrap();
     let cron_client = use_context::<crate::integrations::iron_nest::cron::CronClient>().unwrap();
-    let config = serde_yaml::from_str(&config)?;
-    set_config_query(&pool, config).await?;
-    cron_client.schedule_tasks(&pool).await.map_err(|e| {
-        ServerFnError::ServerError::<server_fn::error::NoCustomError>(e.to_string())
-    })?;
+    let config =
+        serde_yaml::from_str(&config).map_err(|e| SetConfigError::ParseConfig(e.to_string()))?;
+    set_config_query(&pool, config)
+        .await
+        .map_err(|e| SetConfigError::SaveConfig(e.to_string()))?;
+    cron_client
+        .schedule_tasks(&pool)
+        .await
+        .map_err(|e| SetConfigError::ScheduleTasks(e.to_string()))?;
     Ok(())
 }
 

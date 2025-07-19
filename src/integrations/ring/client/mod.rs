@@ -245,8 +245,7 @@ impl RingRestClient {
         let date_to = get_end_of_today();
 
         let recordings_url = format!(
-            "{}video_search/history?doorbot_id={}&date_from={}&date_to={}&order=asc&api_version=11",
-            CLIENT_API_BASE_URL, id, date_from, date_to
+            "{CLIENT_API_BASE_URL}video_search/history?doorbot_id={id}&date_from={date_from}&date_to={date_to}&order=asc&api_version=11"
         );
 
         self.request_json::<VideoSearchRes>(&recordings_url, Method::GET)

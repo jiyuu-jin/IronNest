@@ -443,7 +443,7 @@ pub fn DashboardPage() -> impl IntoView {
                                                                             .camera_id
                                                                             .unwrap_or_default();
                                                                         println!("{:?}", data.cameras.first().map(|c| c.id));
-                                                                        println!("Looking for camera with ID: {}", camera_id);
+                                                                        println!("Looking for camera with ID: {camera_id}");
                                                                         let camera = data
                                                                             .cameras
                                                                             .iter()
@@ -455,7 +455,7 @@ pub fn DashboardPage() -> impl IntoView {
                                                                                     .into_any()
                                                                             }
                                                                             None => {
-                                                                                println!("Camera with ID {} not found", camera_id);
+                                                                                println!("Camera with ID {camera_id} not found");
                                                                                 view! {
                                                                                     <div class="bg-gray-200 h-full flex items-center justify-center text-gray-600">
                                                                                         "Camera Not Found"
@@ -506,7 +506,7 @@ pub fn DashboardPage() -> impl IntoView {
                                     .into_any()
                             }
                             Err(e) => {
-                                println!("Error loading dashboard values: {}", e);
+                                println!("Error loading dashboard values: {e}");
                                 view! {
                                     <p class="text-red-500">
                                         {format!("Error loading dashboard: {e}")}

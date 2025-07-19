@@ -57,7 +57,7 @@ pub async fn toggle_integration(id: i64, enabled: bool, name: String) -> Result<
         } else {
             ControlMessage::Stop
         };
-        println!("Sending message: {:?}", message);
+        println!("Sending message: {message:?}");
         sender.send(message).await.unwrap();
     } else {
         println!("No sender found for {}", &name.clone());

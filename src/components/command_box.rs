@@ -22,7 +22,7 @@ pub fn CommandBox() -> impl IntoView {
                             Submit command
                         </button>
                     </div>
-                    <div class="mt-2">{value}</div>
+                    <div class="mt-2">{value.get()}</div>
                 </div>
             </ActionForm>
         </div>

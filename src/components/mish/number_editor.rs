@@ -13,7 +13,7 @@ pub fn NumberEditor(
         }>{state}</textarea>
         <button on:click=move |_| {
             let s = state.get();
-            web_sys::console::log_1(&format!("state: {:?}", s).into());
+            web_sys::console::log_1(&format!("state: {s:?}").into());
             let s = serde_json::from_str::<serde_json::Value>(&s);
             if let Ok(s) = s {
                 if s.is_number() {
@@ -21,7 +21,7 @@ pub fn NumberEditor(
                 } else {
                     web_sys::window()
                         .unwrap()
-                        .alert_with_message(&format!("State is not a number: {:?}", s))
+                        .alert_with_message(&format!("State is not a number: {s:?}"))
                         .unwrap();
                 }
             } else {

@@ -107,7 +107,7 @@ pub async fn send(ip: &str, json: serde_json::Value) -> io::Result<Value> {
     let _ip: IpAddr = match ip.parse() {
         Ok(addr) => addr,
         Err(e) => {
-            eprintln!("Failed to parse IP address '{}': {}", ip, e);
+            eprintln!("Failed to parse IP address '{ip}': {e}");
             return Err(io::Error::new(io::ErrorKind::InvalidInput, e));
         }
     };

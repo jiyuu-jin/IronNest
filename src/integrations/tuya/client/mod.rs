@@ -39,7 +39,7 @@ pub struct TuyaRestClient {
 pub async fn get_refresh_token() -> Result<TuyaAuthRes, Box<dyn Error>> {
     let res = request("/v1.0/token?grant_type=1", "").await;
     let tuya_auth: TuyaAuthRes = serde_json::from_str(&res)?;
-    println!("{:?}", tuya_auth);
+    println!("{tuya_auth:?}");
     Ok(tuya_auth)
 }
 
@@ -138,7 +138,7 @@ pub async fn request(path: &str, token: &str) -> String {
 pub async fn discover_tuya_devices() -> Result<(), Box<dyn std::error::Error>> {
     let port = 6666;
     let socket = tokio::net::UdpSocket::bind(("0.0.0.0", port)).await?;
-    println!("Listening for Tuya devices on port {}", port);
+    println!("Listening for Tuya devices on port {port}");
 
     let mut buf = [0u8; 2048];
 
@@ -155,7 +155,7 @@ pub async fn discover_tuya_devices() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             Err(e) => {
-                println!("Error receiving UDP message: {}", e);
+                println!("Error receiving UDP message: {e}");
                 break;
             }
         }

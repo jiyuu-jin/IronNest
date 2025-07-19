@@ -42,7 +42,7 @@ pub async fn handle_ring_login(
 #[component]
 pub fn RingLoginPage() -> impl IntoView {
     let handle_login = ServerAction::<HandleRingLogin>::new();
-    let value: RwSignal<Option<Result<String, ServerFnError>>> = handle_login.value();
+    let value = handle_login.value();
     let name = "ring".to_owned();
     let logo = "logo".to_owned();
 

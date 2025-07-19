@@ -1,4 +1,4 @@
-#![recursion_limit = "512"]
+// #![recursion_limit = "256"]
 
 #[cfg(feature = "ssr")]
 mod shell;
@@ -75,7 +75,7 @@ async fn main() {
         .unwrap();
 
     let iron_nest_router = Router::new()
-        .route("/roku/:device_id/keypress/:key", get(roku_keypress_handler))
+        .route("/roku/{device_id}/keypress/{key}", get(roku_keypress_handler))
         .route("/mish/blob.dag-json", post(upload_dag_json_file))
         .route("/mish/blob.raw", post(upload_raw_file))
         .route("/mish/state", post(update_mish_state_handler))

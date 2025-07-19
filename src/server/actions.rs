@@ -1,4 +1,11 @@
-use {crate::integrations::iron_nest::types::FullAction, leptos::prelude::*, uuid::Uuid};
+use {
+    crate::integrations::iron_nest::types::FullAction,
+    leptos::prelude::*,
+    serde::{Deserialize, Serialize},
+    server_fn::codec::JsonEncoding,
+    std::fmt::Display,
+    uuid::Uuid,
+};
 
 #[server(GetActions)]
 pub async fn get_actions() -> Result<Vec<FullAction>, ServerFnError> {
@@ -23,13 +30,34 @@ pub async fn get_actions_query(pool: &sqlx::PgPool) -> Result<Vec<FullAction>, s
     sqlx::query_as(query).fetch_all(pool).await
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum AddActionError {
+    ServerFnError(ServerFnErrorErr),
+    ScheduleTasks(String),
+    Sql(String),
+}
+
+impl FromServerFnError for AddActionError {
+    type Encoder = JsonEncoding;
+
+    fn from_server_fn_error(value: ServerFnErrorErr) -> Self {
+        AddActionError::ServerFnError(value)
+    }
+}
+
+impl Display for AddActionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self:?}")
+    }
+}
+
 #[server(AddAction)]
 pub async fn add_action(
     name: String,
     cron: String,
     function_name: String,
     function_args: String,
-) -> Result<(), ServerFnError> {
+) -> Result<(), AddActionError> {
     let function_args = serde_json::from_str::<serde_json::Value>(&function_args).unwrap();
     let pool = use_context::<sqlx::PgPool>().unwrap();
     let cron_client = use_context::<crate::integrations::iron_nest::cron::CronClient>().unwrap();
@@ -54,10 +82,12 @@ pub async fn add_action(
         .bind(function_name)
         .bind(function_args)
         .execute(&pool)
-        .await?;
-    cron_client.schedule_tasks(&pool).await.map_err(|e| {
-        ServerFnError::ServerError::<server_fn::error::NoCustomError>(e.to_string())
-    })?;
+        .await
+        .map_err(|e| AddActionError::Sql(e.to_string()))?;
+    cron_client
+        .schedule_tasks(&pool)
+        .await
+        .map_err(|e| AddActionError::ScheduleTasks(e.to_string()))?;
     Ok(())
 }
 
