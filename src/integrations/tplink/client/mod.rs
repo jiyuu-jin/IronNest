@@ -1,7 +1,7 @@
 use {
     super::types::{DeviceData, GetSysInfo, TPLinkDiscoveryRes, TPLinkDiscoverySysInfo},
     log::{info, trace, warn},
-    serde_json::{json, Value},
+    serde_json::{Value, json},
     std::{
         error::Error,
         io,
@@ -10,7 +10,7 @@ use {
     tokio::{
         io::{AsyncReadExt, AsyncWriteExt},
         net::{TcpStream, UdpSocket},
-        time::{timeout, Duration},
+        time::{Duration, timeout},
     },
 };
 

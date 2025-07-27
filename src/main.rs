@@ -8,8 +8,8 @@ mod shell;
 async fn main() {
     use {
         axum::{
-            routing::{get, post},
             Router,
+            routing::{get, post},
         },
         dotenv::dotenv,
         iron_nest::{
@@ -27,8 +27,8 @@ async fn main() {
             mish_api::{update_mish_state_handler, upload_dag_json_file, upload_raw_file},
         },
         leptos::prelude::*,
-        leptos_axum::{generate_route_list, LeptosRoutes},
-        log::{error, LevelFilter},
+        leptos_axum::{LeptosRoutes, generate_route_list},
+        log::{LevelFilter, error},
         simple_logger::SimpleLogger,
         sqlx::postgres::PgPoolOptions,
         std::{collections::HashMap, sync::Arc},
@@ -75,7 +75,10 @@ async fn main() {
         .unwrap();
 
     let iron_nest_router = Router::new()
-        .route("/roku/{device_id}/keypress/{key}", get(roku_keypress_handler))
+        .route(
+            "/roku/{device_id}/keypress/{key}",
+            get(roku_keypress_handler),
+        )
         .route("/mish/blob.dag-json", post(upload_dag_json_file))
         .route("/mish/blob.raw", post(upload_raw_file))
         .route("/mish/state", post(update_mish_state_handler))

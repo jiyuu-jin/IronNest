@@ -1,8 +1,8 @@
 use {
     reqwest::{
+        Client,
         cookie::Jar,
         header::{HeaderMap, HeaderValue},
-        Client,
     },
     std::sync::Arc,
 };

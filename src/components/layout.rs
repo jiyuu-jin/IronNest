@@ -17,7 +17,7 @@ use {
     },
     gloo_timers::callback::Timeout,
     leptos::prelude::*,
-    leptos_meta::{provide_meta_context, Meta, Script, Stylesheet, Title},
+    leptos_meta::{Meta, Script, Stylesheet, Title, provide_meta_context},
     leptos_router::{
         components::{Route, Router, Routes},
         path,

@@ -6,7 +6,7 @@ use {
             text_input::TextInput,
         },
         integrations::iron_nest::types::RequiredAction,
-        server::actions::{get_actions, AddAction, DeleteAction, RunAction},
+        server::actions::{AddAction, DeleteAction, RunAction, get_actions},
     },
     leptos::prelude::*,
 };

@@ -4,10 +4,10 @@ use {
         RingCameraSnapshot, SocketTicketRes, VideoSearchRes,
     },
     crate::integrations::iron_nest::{get_auth_from_db, insert_auth, types::AuthState},
-    base64::{engine::general_purpose::STANDARD as base64, Engine},
+    base64::{Engine, engine::general_purpose::STANDARD as base64},
     chrono::{DateTime, Duration, Local, Utc},
     chrono_tz::US::Eastern,
-    http::{header::ToStrError, StatusCode},
+    http::{StatusCode, header::ToStrError},
     log::{error, info},
     reqwest::{self, Client, Method, Response},
     serde::de::DeserializeOwned,
@@ -210,7 +210,10 @@ impl RingRestClient {
             )
             .await?;
 
-        let url = format!("wss://api.prod.signalling.ring.devices.a2z.com:443/ws?api_version=4.0&auth_type=ring_solutions&client_id=ring_site-3333&token={}", &socket_ticket.ticket);
+        let url = format!(
+            "wss://api.prod.signalling.ring.devices.a2z.com:443/ws?api_version=4.0&auth_type=ring_solutions&client_id=ring_site-3333&token={}",
+            &socket_ticket.ticket
+        );
         Ok(url)
     }
 

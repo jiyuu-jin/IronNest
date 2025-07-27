@@ -1,15 +1,15 @@
 use {
     crate::integrations::efuy::types::{ApiResponse, CountryDomainResponse},
     aes::{
-        cipher::{generic_array::typenum::U16, BlockEncrypt, KeyInit},
         Aes256,
+        cipher::{BlockEncrypt, KeyInit, generic_array::typenum::U16},
     },
     base64::Engine,
     chrono::Utc,
     elliptic_curve::{generic_array::GenericArray, sec1::ToEncodedPoint},
     hex::decode,
     http::{HeaderMap, HeaderValue},
-    p256::{ecdh::EphemeralSecret, PublicKey},
+    p256::{PublicKey, ecdh::EphemeralSecret},
     rand_core::OsRng,
     reqwest::Client,
     serde_json::json,
@@ -18,7 +18,7 @@ use {
 
 static API_URL: &str = "https://extend.eufylife.com";
 static TIMEZONE: &str = "GMT+01:00";
-static SERVER_PUBLIC_KEY:&str = "04c5c00c4f8d1197cc7c3167c52bf7acb054d722f0ef08dcd7e0883236e0d72a3868d9750cb47fa4619248f3d83f0f662671dadc6e2d31c2f41db0161651c7c076";
+static SERVER_PUBLIC_KEY: &str = "04c5c00c4f8d1197cc7c3167c52bf7acb054d722f0ef08dcd7e0883236e0d72a3868d9750cb47fa4619248f3d83f0f662671dadc6e2d31c2f41db0161651c7c076";
 static SN: &str = "75814221ee75";
 static OS_TYPE: &str = "android";
 

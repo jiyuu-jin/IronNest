@@ -4,7 +4,7 @@ use {
             ipld_blob_page::get_ipld_blob_query, mish_state_page::get_mish_state_query,
         },
         integrations::tplink::{tplink_turn_plug_off, tplink_turn_plug_on},
-        mish_api::{update_mish_state, UpdateMishStateBody},
+        mish_api::{UpdateMishStateBody, update_mish_state},
     },
     cid::Cid,
     ipld_core::codec::Codec,
@@ -237,7 +237,9 @@ async fn run_mish_state_at_most_once_rhai(
         <DagJsonCodec as Codec<Cid>>::decode_from_slice(&serde_json::to_vec(&rhai).unwrap());
     let rhai = match (rhai_string, rhai_cid) {
         (Ok(rhai_string), Ok(rhai_cid)) => {
-            panic!("Both String and Cid should not be parsable at the same time: {rhai_string} and {rhai_cid}");
+            panic!(
+                "Both String and Cid should not be parsable at the same time: {rhai_string} and {rhai_cid}"
+            );
         }
         (Ok(rhai_string), Err(_)) => rhai_string,
         (Err(_), Ok(rhai_cid)) => {

@@ -1,6 +1,7 @@
 use {
     crate::components::mish::{
-        json_editor::JsonEditor, number_editor::NumberEditor, text_editor::TextEditor,
+        json_editor::JsonEditor, mish_button::MishButton, number_editor::NumberEditor,
+        text_editor::TextEditor,
     },
     leptos::prelude::*,
     std::sync::Arc,
@@ -21,7 +22,7 @@ pub fn Editor(
             view! { <JsonEditor state=Some(state) set_config_server_action=move |s| { action(s) } /> }.into_any()
         } else {
             let action = action.clone();
-            match state {
+            match state.clone() {
                 serde_json::Value::Bool(b) => view! {
                     <input
                         type="checkbox"
@@ -36,7 +37,9 @@ pub fn Editor(
                 serde_json::Value::String(s) => view! {
                     <TextEditor
                         state=s
-                        set_config_server_action=move |s| { action(serde_json::to_vec(&s).unwrap()) }
+                        set_config_server_action=move |s| {
+                            action(serde_json::to_vec(&s).unwrap())
+                        }
                     />
                 }
                 .into_any(),
@@ -70,27 +73,31 @@ pub fn Editor(
                 }
                 serde_json::Value::Object(o) => {
                     let action = Arc::new(action);
-                    o.clone()
-                        .into_iter()
-                        .map(|(k, v)| {
-                            let o = o.clone();
-                            let action = action.clone();
-                            view! {
-                                <div>Key: {k.clone()}</div>
-                                <div style="border-left: 5px solid black">
-                                    <NestedEditor
-                                        state=v.clone()
-                                        action=Box::new(move |s| {
-                                            let mut o = o.clone();
-                                            o.insert(k.clone(), serde_json::from_slice(&s).unwrap());
-                                            action(serde_json::to_vec(&o).unwrap());
-                                        })
-                                    />
-                                </div>
-                            }
-                        })
-                        .collect::<Vec<_>>()
-                        .into_any()
+                    if let Some(v) = o.get("/") && let Some(v) = v.as_str() && v == "mish-button" {
+                        view! { <MishButton value=state.clone() /> }.into_any()
+                    } else {
+                        o.clone()
+                            .into_iter()
+                            .map(|(k, v)| {
+                                let o = o.clone();
+                                let action = action.clone();
+                                view! {
+                                    <div>Key: {k.clone()}</div>
+                                    <div style="border-left: 5px solid black">
+                                        <NestedEditor
+                                            state=v.clone()
+                                            action=Box::new(move |s| {
+                                                let mut o = o.clone();
+                                                o.insert(k.clone(), serde_json::from_slice(&s).unwrap());
+                                                action(serde_json::to_vec(&o).unwrap());
+                                            })
+                                        />
+                                    </div>
+                                }
+                            })
+                            .collect::<Vec<_>>()
+                            .into_any()
+                    }
                 }
                 _ => view! { <JsonEditor state=Some(state) set_config_server_action=move |s| { action(s) } /> }
                     .into_any(),

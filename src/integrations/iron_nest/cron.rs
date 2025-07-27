@@ -45,7 +45,7 @@ impl CronClient {
                         let function_name = action.fields.function_name.clone();
                         let function_args = action.fields.function_args.clone();
                         Box::pin(async move {
-                            println!("Calling {}({})", function_name, function_args);
+                            println!("Calling {function_name}({function_args})");
                             execute_function(function_name, function_args).await;
                         })
                     },

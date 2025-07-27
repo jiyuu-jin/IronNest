@@ -32,12 +32,12 @@ use {
     chrono::Utc,
     leptos::prelude::*,
     log::{error, info},
-    serde_json::{json, Value},
+    serde_json::{Value, json},
     sqlx::PgPool,
     std::{collections::HashMap, net::Ipv4Addr, sync::Arc},
     tokio::sync::{
-        mpsc::{self, Receiver, Sender},
         RwLock,
+        mpsc::{self, Receiver, Sender},
     },
     tokio_cron_scheduler::{Job, JobScheduler},
     url::Url,
@@ -672,7 +672,7 @@ pub fn roku_discovery_job(
                     tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
                 },
                 Some(msg) = control_rx.recv() => {
-                    println!("Received control message: {:?}", msg);
+                    println!("Received control message: {msg:?}");
                     if !match_control_message(msg, &mut running) {
                         break;
                     }
@@ -758,7 +758,7 @@ pub async fn refresh_tplink_devices(shared_pool: PgPool) {
                 .unwrap();
         }
         Err(e) => {
-            eprintln!("Error discovering devices: {}", e);
+            eprintln!("Error discovering devices: {e}");
         }
     }
 }
@@ -780,7 +780,7 @@ pub fn tplink_discovery_job(
                     refresh_tplink_devices(shared_pool.clone()).await;
                 },
                 Some(msg) = control_rx.recv() => {
-                    println!("Received control message: {:?}", msg);
+                    println!("Received control message: {msg:?}");
                     match msg {
                         ControlMessage::Start => {
                             println!("Starting discovery job");

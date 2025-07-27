@@ -26,7 +26,7 @@ pub async fn toggle_integration(id: i64, enabled: bool, name: String) -> Result<
         crate::integrations::iron_nest::types::ControlMessage,
         sqlx::PgPool,
         std::{collections::HashMap, sync::Arc},
-        tokio::sync::{mpsc::Sender, RwLock},
+        tokio::sync::{RwLock, mpsc::Sender},
     };
 
     let pool = use_context::<PgPool>().unwrap();

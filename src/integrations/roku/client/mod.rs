@@ -29,7 +29,7 @@ pub async fn roku_discover() -> Vec<RokuDiscoverRes> {
                 }
             }
             Err(e) => {
-                println!("Error: {:?}", e);
+                println!("Error: {e:?}");
             }
         }
     }

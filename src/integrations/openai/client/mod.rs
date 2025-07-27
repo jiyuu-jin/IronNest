@@ -40,7 +40,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 }}
 
 pub async fn open_api_command(text: String, pool: &PgPool) -> Result<String, ServerFnError> {
-    println!("calling assistant with {:?}", text);
+    println!("calling assistant with {text:?}");
     let client = Client::new();
 
     let mut tp_link_plug_ips: Vec<String> = Vec::new();
@@ -296,11 +296,12 @@ pub async fn open_api_command(text: String, pool: &PgPool) -> Result<String, Ser
         });
         let function_responses = join_all(tool_call_futs).await;
 
-        let mut messages: Vec<ChatCompletionRequestMessage> =
-            vec![ChatCompletionRequestUserMessageArgs::default()
+        let mut messages: Vec<ChatCompletionRequestMessage> = vec![
+            ChatCompletionRequestUserMessageArgs::default()
                 .content(initial_system_prompt)
                 .build()?
-                .into()];
+                .into(),
+        ];
 
         let tool_calls: Vec<ChatCompletionMessageToolCall> = function_responses
             .iter()
