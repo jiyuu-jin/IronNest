@@ -63,35 +63,20 @@ pub mod devices;
 pub mod discovery;
 pub mod error;
 pub mod protocol;
+pub mod registry;
 pub mod types;
 
 // Re-export the most commonly used items
-// Re-export device operations for convenience
-pub use devices::{
-    get_power_strip_emeter_data,
-    get_power_strip_energy_usage,
-    reboot_plug,
-    // Smart dimmers
-    set_dimmer_brightness,
-    set_dimmer_inactivity_timeout,
-    set_light_brightness,
-    set_light_color,
-    set_plug_alias,
-    // Smart lights
-    turn_light_on_off,
-    turn_plug_off,
-    // Smart plugs
-    turn_plug_on,
-    turn_power_strip_socket_off,
-    // Power strips
-    turn_power_strip_socket_on,
-};
 pub use {
     client::TpLinkClient,
-    discovery::discover_devices,
+    devices::{Device, PowerStrip, SmartDimmer, SmartLight, SmartPlug},
+    discovery::{discover, discover_devices, discover_devices_with_client},
     error::{Result, TpLinkError},
+    registry::{create_registry, DeviceRegistry, SafeDeviceRegistry},
     types::*,
 };
+
+// Legacy standalone functions for backward compatibility
 
 #[cfg(test)]
 mod tests {

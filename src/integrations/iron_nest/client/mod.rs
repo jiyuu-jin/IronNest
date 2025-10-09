@@ -18,11 +18,7 @@ use {
                 roku_send_keypress,
             },
             stoplight::toggle_stoplight,
-            tplink::{
-                discover_devices, tplink_set_dimmer_brightness, tplink_set_light_brightness,
-                tplink_turn_light_on_off, tplink_turn_plug_off, tplink_turn_plug_on,
-                types::DeviceData,
-            },
+            tplink_bridge::get_tplink_bridge,
             tuya::{
                 discover_tuya_devices, get_devices, get_refresh_token, types::TuyaDeviceResResult,
             },
@@ -170,25 +166,40 @@ pub async fn execute_function(function_name: String, function_args: serde_json::
         }
         "tplink_turn_plug_on" => {
             let ip = function_args["ip"].as_str().unwrap();
-            tplink_turn_plug_on(ip).await;
-            json!({
-                "message": "success"
-            })
+            let bridge = get_tplink_bridge();
+            if let Some(plug) = bridge.get_smart_plug(ip).await {
+                match plug.turn_on().await {
+                    Ok(()) => json!({"message": "success"}),
+                    Err(e) => json!({"error": e.to_string()}),
+                }
+            } else {
+                json!({"error": "Device not found"})
+            }
         }
         "tplink_turn_plug_off" => {
             let ip = function_args["ip"].as_str().unwrap();
-            tplink_turn_plug_off(ip).await;
-            json!({
-                "message": "success"
-            })
+            let bridge = get_tplink_bridge();
+            if let Some(plug) = bridge.get_smart_plug(ip).await {
+                match plug.turn_off().await {
+                    Ok(()) => json!({"message": "success"}),
+                    Err(e) => json!({"error": e.to_string()}),
+                }
+            } else {
+                json!({"error": "Device not found"})
+            }
         }
         "tplink_turn_light_on_off" => {
             let ip = function_args["ip"].as_str().unwrap();
             let state: u8 = function_args["state"].as_str().unwrap().parse().unwrap();
-            tplink_turn_light_on_off(ip, state).await;
-            json!({
-                "message": "success"
-            })
+            let bridge = get_tplink_bridge();
+            if let Some(light) = bridge.get_smart_light(ip).await {
+                match light.turn_on_off(state == 1).await {
+                    Ok(()) => json!({"message": "success"}),
+                    Err(e) => json!({"error": e.to_string()}),
+                }
+            } else {
+                json!({"error": "Device not found"})
+            }
         }
         "tplink_set_light_brightness" => {
             let ip = function_args["ip"].as_str().unwrap();
@@ -197,10 +208,15 @@ pub async fn execute_function(function_name: String, function_args: serde_json::
                 .unwrap()
                 .try_into()
                 .unwrap();
-            tplink_set_light_brightness(ip, brightness).await;
-            json!({
-                "message": "success"
-            })
+            let bridge = get_tplink_bridge();
+            if let Some(light) = bridge.get_smart_light(ip).await {
+                match light.set_brightness(brightness).await {
+                    Ok(()) => json!({"message": "success"}),
+                    Err(e) => json!({"error": e.to_string()}),
+                }
+            } else {
+                json!({"error": "Device not found"})
+            }
         }
         "tplink_set_dimmer_brightness" => {
             let ip = function_args["ip"].as_str().unwrap();
@@ -209,10 +225,15 @@ pub async fn execute_function(function_name: String, function_args: serde_json::
                 .unwrap()
                 .try_into()
                 .unwrap();
-            tplink_set_dimmer_brightness(ip, &brightness).await;
-            json!({
-                "message": "success"
-            })
+            let bridge = get_tplink_bridge();
+            if let Some(dimmer) = bridge.get_smart_dimmer(ip).await {
+                match dimmer.set_brightness(brightness).await {
+                    Ok(()) => json!({"message": "success"}),
+                    Err(e) => json!({"error": e.to_string()}),
+                }
+            } else {
+                json!({"error": "Device not found"})
+            }
         }
         "handle_smart_light_toggle" => {
             handle_smart_light_toggle(
@@ -683,82 +704,16 @@ pub fn roku_discovery_job(
 }
 
 pub async fn refresh_tplink_devices(shared_pool: PgPool) {
-    match discover_devices().await {
-        Ok(tp_link_devices) => {
-            let mut devices: Vec<Device> = Vec::new();
-
-            for device_data in tp_link_devices {
-                match device_data {
-                    DeviceData::SmartPlug(data) => {
-                        if let Some(ip) = data.ip {
-                            devices.push(Device {
-                                id: 0,
-                                name: data.alias,
-                                device_type: DeviceType::KasaPlug,
-                                ip: ip.to_string(),
-                                power_state: data.relay_state,
-                                battery_percentage: 0,
-                                last_seen: Utc::now(),
-                                mac_address: None,
-                                child_id: None,
-                            });
-                        }
-                    }
-                    DeviceData::SmartLight(data) => {
-                        if let Some(ip) = data.ip {
-                            devices.push(Device {
-                                id: 0,
-                                name: data.alias,
-                                device_type: DeviceType::KasaLight,
-                                ip: ip.to_string(),
-                                power_state: data.light_state.on_off,
-                                battery_percentage: 0,
-                                last_seen: Utc::now(),
-                                mac_address: None,
-                                child_id: None,
-                            });
-                        }
-                    }
-                    DeviceData::SmartDimmer(data) => {
-                        if let Some(ip) = data.ip {
-                            devices.push(Device {
-                                id: 0,
-                                name: data.alias,
-                                device_type: DeviceType::KasaDimmer,
-                                ip: ip.to_string(),
-                                power_state: data.relay_state,
-                                battery_percentage: 0,
-                                last_seen: Utc::now(),
-                                mac_address: None,
-                                child_id: None,
-                            });
-                        }
-                    }
-                    DeviceData::SmartPowerStrip(data) => {
-                        if let Some(ip) = data.ip {
-                            for outlet in data.children {
-                                devices.push(Device {
-                                    id: 0,
-                                    name: outlet.alias,
-                                    device_type: DeviceType::KasaPowerStrip,
-                                    ip: ip.to_string(),
-                                    power_state: outlet.state,
-                                    battery_percentage: 0,
-                                    last_seen: Utc::now(),
-                                    mac_address: None,
-                                    child_id: Some(format!("{}{}", data.device_id, outlet.id)),
-                                });
-                            }
-                        }
-                    }
-                }
-            }
+    let bridge = get_tplink_bridge();
+    
+    match bridge.refresh_devices().await {
+        Ok(devices) => {
             insert_devices_into_db(&shared_pool, &devices)
                 .await
                 .unwrap();
         }
         Err(e) => {
-            eprintln!("Error discovering devices: {e}");
+            eprintln!("Error discovering TP-Link devices: {}", e);
         }
     }
 }

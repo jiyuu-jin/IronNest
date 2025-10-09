@@ -9,4 +9,5 @@ pub mod roku;
 pub mod simpli_safe;
 pub mod stoplight;
 pub mod tplink;
+pub mod tplink_bridge;
 pub mod tuya;

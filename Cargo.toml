@@ -89,6 +89,7 @@ hmac = "0.12.1"
 serde_yaml = "0.9.34"
 gloo-timers = "0.3.0"
 csscolorparser = "0.7.0"
+tplink = { path = "./crates/tplink" }
 getrandom = { version = "0.2.15", features = ["js"] }
 rhai = { version = "1.21.0", features = ["metadata", "sync"] }
 ipld-core = { workspace = true }
