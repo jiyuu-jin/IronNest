@@ -3,7 +3,7 @@ use {
         components::mish::{
             ipld_blob_page::get_ipld_blob_query, mish_state_page::get_mish_state_query,
         },
-        integrations::tplink::{tplink_turn_plug_off, tplink_turn_plug_on},
+        integrations::tplink_bridge::get_tplink_bridge,
         mish_api::{UpdateMishStateBody, update_mish_state},
     },
     cid::Cid,
@@ -282,12 +282,26 @@ async fn run_mish_state_at_most_once_rhai(
             })
             .register_fn("tplink_turn_plug_on", |ip: String| {
                 tokio::task::spawn(async move {
-                    tplink_turn_plug_on(&ip).await;
+                    let bridge = get_tplink_bridge();
+                    if let Some(plug) = bridge.get_smart_plug(&ip).await {
+                        if let Err(e) = plug.turn_on().await {
+                            eprintln!("Error turning plug on: {}", e);
+                        }
+                    } else {
+                        eprintln!("Smart plug not found at IP: {}", ip);
+                    }
                 });
             })
             .register_fn("tplink_turn_plug_off", |ip: String| {
                 tokio::task::spawn(async move {
-                    tplink_turn_plug_off(&ip).await;
+                    let bridge = get_tplink_bridge();
+                    if let Some(plug) = bridge.get_smart_plug(&ip).await {
+                        if let Err(e) = plug.turn_off().await {
+                            eprintln!("Error turning plug off: {}", e);
+                        }
+                    } else {
+                        eprintln!("Smart plug not found at IP: {}", ip);
+                    }
                 });
             })
             .register_fn(

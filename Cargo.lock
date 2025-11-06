@@ -2511,6 +2511,7 @@ dependencies = [
  "tokio-tungstenite 0.21.0",
  "tower 0.4.13",
  "tower-http 0.4.4",
+ "tplink",
  "tungstenite 0.21.0",
  "url",
  "urlencoding",
@@ -5460,7 +5461,7 @@ checksum = "8df9b6e13f2d32c91b9bd719c00d1958837bc7dec474d94952798cc8e69eeec3"
 
 [[package]]
 name = "tplink"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "csscolorparser",
  "log",
