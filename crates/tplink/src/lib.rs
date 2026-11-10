@@ -70,6 +70,8 @@ pub mod types;
 pub use devices::{
     get_power_strip_emeter_data,
     get_power_strip_energy_usage,
+    parse_power_reading,
+    parse_strip_info,
     reboot_plug,
     // Smart dimmers
     set_dimmer_brightness,
@@ -85,10 +87,13 @@ pub use devices::{
     turn_power_strip_socket_off,
     // Power strips
     turn_power_strip_socket_on,
+    Outlet,
+    PowerReading,
+    StripInfo,
 };
 pub use {
     client::TpLinkClient,
-    discovery::discover_devices,
+    discovery::{discover_devices, hosts_in, scan, Found},
     error::{Result, TpLinkError},
     types::*,
 };
