@@ -137,6 +137,49 @@ pub fn parse_power_reading(answer: &Value) -> Result<PowerReading> {
     })
 }
 
+/// Energy one outlet used on one day, by the strip's own counter.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DayEnergy {
+    pub year: i32,
+    pub month: u32,
+    pub day: u32,
+    pub wh: f64,
+}
+
+/// Read an `emeter.get_daystat` reply: one entry per day of the month the
+/// strip has counted. Newer firmware answers in watt-hours (`energy_wh`),
+/// older in kilowatt-hours (`energy`); both are read.
+pub fn parse_daystat(answer: &Value) -> Result<Vec<DayEnergy>> {
+    let stat = answer
+        .pointer("/emeter/get_daystat")
+        .ok_or_else(|| error("this device has no power meter"))?;
+    check(stat)?;
+    let days = stat
+        .get("day_list")
+        .and_then(Value::as_array)
+        .ok_or_else(|| error("the reply has no list of days"))?;
+    days.iter()
+        .map(|entry| {
+            let number = |key: &str| entry.get(key).and_then(Value::as_i64);
+            Ok(DayEnergy {
+                year: number("year").ok_or_else(|| error("a day has no year"))? as i32,
+                month: number("month").ok_or_else(|| error("a day has no month"))? as u32,
+                day: number("day").ok_or_else(|| error("a day has no day"))? as u32,
+                wh: entry
+                    .get("energy_wh")
+                    .and_then(Value::as_f64)
+                    .or_else(|| {
+                        entry
+                            .get("energy")
+                            .and_then(Value::as_f64)
+                            .map(|kwh| kwh * 1000.0)
+                    })
+                    .ok_or_else(|| error("a day has no energy"))?,
+            })
+        })
+        .collect()
+}
+
 fn address(ip: &str) -> Result<SocketAddr> {
     let ip: IpAddr = ip
         .parse()
@@ -172,6 +215,27 @@ impl TpLinkClient {
                     json!({
                         "context": {"child_ids": [outlet_id]},
                         "emeter": {"get_realtime": {}}
+                    }),
+                )
+                .await?,
+        )
+    }
+
+    /// One outlet's energy per day for a month, by the strip's own counters.
+    pub async fn outlet_daily_energy_at(
+        &self,
+        addr: SocketAddr,
+        outlet_id: &str,
+        year: i32,
+        month: u32,
+    ) -> Result<Vec<DayEnergy>> {
+        parse_daystat(
+            &self
+                .send_to(
+                    addr,
+                    json!({
+                        "context": {"child_ids": [outlet_id]},
+                        "emeter": {"get_daystat": {"year": year, "month": month}}
                     }),
                 )
                 .await?,
@@ -375,6 +439,42 @@ mod tests {
             "err_code": -1, "err_msg": "module not support"
         }}}))
         .is_err());
+    }
+
+    #[tokio::test]
+    async fn a_month_of_days_is_asked_of_one_outlet_and_read_in_watt_hours() {
+        let (addr, seen) = fake::device(|_| {
+            json!({"emeter": {"get_daystat": {"err_code": 0, "day_list": [
+                {"year": 2026, "month": 11, "day": 1, "energy_wh": 3400},
+                {"year": 2026, "month": 11, "day": 2, "energy_wh": 3512}
+            ]}}})
+        })
+        .await;
+        let days = TpLinkClient::new()
+            .outlet_daily_energy_at(addr, "8006ABCDEF05", 2026, 11)
+            .await
+            .unwrap();
+        assert_eq!(days.len(), 2);
+        assert_eq!(
+            days[1],
+            DayEnergy {
+                year: 2026,
+                month: 11,
+                day: 2,
+                wh: 3512.0
+            }
+        );
+        assert_eq!(
+            seen.lock().unwrap()[0],
+            json!({"context": {"child_ids": ["8006ABCDEF05"]},
+                   "emeter": {"get_daystat": {"year": 2026, "month": 11}}})
+        );
+        let older = parse_daystat(&json!({"emeter": {"get_daystat": {"day_list": [
+            {"year": 2026, "month": 11, "day": 1, "energy": 3.4}
+        ]}}}))
+        .unwrap();
+        assert_eq!(older[0].wh, 3400.0);
+        assert!(parse_daystat(&json!({"emeter": {"get_daystat": {"err_code": -1}}})).is_err());
     }
 
     #[tokio::test]
