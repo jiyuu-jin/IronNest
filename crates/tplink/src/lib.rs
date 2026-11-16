@@ -106,7 +106,7 @@ pub use {
     types::*,
 };
 
-#[cfg(test)]
+#[cfg(all(test, feature = "client"))]
 mod tests {
     use super::*;
 
