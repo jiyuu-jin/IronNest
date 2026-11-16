@@ -1,0 +1,10 @@
+[package]
+name = "roku"
+version = "0.1.0"
+edition = "2024"
+description = "Roku devices over the External Control Protocol (ECP): power, keypresses, apps, what is playing"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+roxmltree = "0.20"
+ureq = { version = "2", default-features = false }
