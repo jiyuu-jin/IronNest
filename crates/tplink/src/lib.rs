@@ -58,8 +58,11 @@
 //! }
 //! ```
 
+#[cfg(feature = "client")]
 pub mod client;
+#[cfg(feature = "client")]
 pub mod devices;
+#[cfg(feature = "client")]
 pub mod discovery;
 pub mod error;
 pub mod protocol;
@@ -68,6 +71,7 @@ pub mod types;
 
 // Re-export the most commonly used items
 // Re-export device operations for convenience
+#[cfg(feature = "client")]
 pub use devices::{
     get_power_strip_emeter_data,
     get_power_strip_energy_usage,
@@ -92,9 +96,12 @@ pub use devices::{
     PowerReading,
     StripInfo,
 };
+#[cfg(feature = "client")]
 pub use {
     client::TpLinkClient,
     discovery::{discover_devices, hosts_in, scan, Found},
+};
+pub use {
     error::{Result, TpLinkError},
     types::*,
 };
