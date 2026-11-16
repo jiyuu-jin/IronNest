@@ -137,12 +137,18 @@ pub struct KeyExchange {
     pub signature: String,
 }
 
-/// A negotiated session key.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+/// A negotiated session key. Its `Debug` names no key.
+#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SessionKey {
     pub key_ident: String,
     /// 32 hex digits.
     pub share_key: String,
+}
+
+impl std::fmt::Debug for SessionKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SessionKey").finish_non_exhaustive()
+    }
 }
 
 /// Start a key exchange under the bootstrap `local_key_hex`, at `ts`.

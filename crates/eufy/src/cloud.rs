@@ -29,6 +29,8 @@ pub struct Config {
     pub country: String,
     /// The phone model reported as this install's device.
     pub phone_model: String,
+    /// The install id; derived from the email when blank.
+    pub openudid: String,
 }
 
 impl std::fmt::Debug for Config {
@@ -47,23 +49,40 @@ impl Config {
             password: password.to_string(),
             country: "US".to_string(),
             phone_model: "Pixel 8".to_string(),
+            openudid: String::new(),
         }
     }
 
     /// A stable per-install id the token is bound to.
     fn openudid(&self) -> String {
+        if !self.openudid.is_empty() {
+            return self.openudid.clone();
+        }
         crypto::md5_hex(&format!("eufy-mega:{}", self.email))[..16].to_string()
     }
 }
 
-/// A signed-in session, to keep and resume.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+/// A signed-in session, to keep and resume. A credential: its `Debug` names
+/// no token or key.
+#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Session {
     pub region: String,
     pub user_id: String,
     pub account_user_id: String,
     pub auth_token: String,
     pub key: SessionKey,
+    /// The install id the token is bound to; a resumed session must send the
+    /// same one.
+    #[serde(default)]
+    pub openudid: String,
+}
+
+impl std::fmt::Debug for Session {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Session")
+            .field("region", &self.region)
+            .finish_non_exhaustive()
+    }
 }
 
 /// Where a sign-in stands.
@@ -210,7 +229,12 @@ impl Cloud {
     }
 
     /// Pick up a kept session: no sign-in, no code.
-    pub fn resume(config: Config, session: Session) -> Self {
+    /// `config` may carry no email or password when the session holds its
+    /// install id; it is used again only to sign in afresh.
+    pub fn resume(mut config: Config, session: Session) -> Self {
+        if !session.openudid.is_empty() {
+            config.openudid = session.openudid.clone();
+        }
         let mut cloud = Self::new(config);
         cloud.region = session.region;
         cloud.key = Some(session.key);
@@ -227,6 +251,7 @@ impl Cloud {
             account_user_id,
             auth_token,
             key: self.key.clone()?,
+            openudid: self.config.openudid(),
         })
     }
 
@@ -634,10 +659,45 @@ mod tests {
     }
 
     #[test]
+    fn a_kept_session_resumes_with_the_install_id_it_was_bound_to() {
+        let mut cloud = Cloud::new(Config::new("someone@example.com", "pw"));
+        cloud.auth = Some(("u".into(), "a".into(), "t".into()));
+        cloud.key = Some(SessionKey {
+            key_ident: "k".into(),
+            share_key: "0".repeat(32),
+        });
+        let kept = cloud.session().expect("a session");
+        assert_eq!(
+            kept.openudid,
+            Config::new("someone@example.com", "").openudid()
+        );
+        let text = serde_json::to_string(&kept).expect("json");
+        let back: Session = serde_json::from_str(&text).expect("read back");
+        let resumed = Cloud::resume(Config::new("", ""), back);
+        assert_eq!(resumed.session(), Some(kept), "no email needed to carry on");
+    }
+
+    #[test]
     fn the_password_never_appears_in_debug_output() {
         let config = Config::new("someone@example.com", "hunter2-secret");
         let shown = format!("{config:?}");
         assert!(!shown.contains("hunter2"), "{shown}");
         assert!(!shown.contains("someone@"), "{shown}");
+        let session = Session {
+            region: "us-pr".into(),
+            user_id: "u".into(),
+            account_user_id: "a".into(),
+            auth_token: "token-secret".into(),
+            key: SessionKey {
+                key_ident: "ident".into(),
+                share_key: "share-secret".into(),
+            },
+            openudid: "o".into(),
+        };
+        let shown = format!("{session:?}");
+        assert!(
+            !shown.contains("token-secret") && !shown.contains("share-secret"),
+            "{shown}"
+        );
     }
 }
