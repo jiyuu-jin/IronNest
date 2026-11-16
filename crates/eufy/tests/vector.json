@@ -1,0 +1,10 @@
+{
+  "_note": "SYNTHETIC self-consistent fixture (no real account data). The algo_ecdh formula was originally verified 724/724 against live traffic.",
+  "sharedKey": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "ts": "1700000000",
+  "once": "00112233445566778899aabbccddeeff",
+  "ident": "ffeeddccbbaa99887766554433221100",
+  "body_b64": "Dw4NDAsKCQgHBgUEAwIBAON7nAdtN7DzIooLLHfGyy/gYJMK1jWa/qbASxRBJcl6Hw62mx/9J0Bw1nLTUhsURA==",
+  "body_pt": "{\"example\":\"synthetic-test-vector\",\"n\":42}",
+  "sig": "9860cd44b02b7b68e7feb1ea128e87c8304982b3de1250a5b49c0fda96f0ba10"
+}
