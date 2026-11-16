@@ -49,6 +49,7 @@ const NL80211_ATTR_IFINDEX: u16 = 3;
 const NL80211_ATTR_PID: u16 = 82;
 const NL80211_ATTR_MAC: u16 = 6;
 const NL80211_ATTR_WIPHY_FREQ: u16 = 38;
+const NL80211_ATTR_SCAN_FREQUENCIES: u16 = 44;
 const NL80211_ATTR_SCAN_SSIDS: u16 = 45;
 const NL80211_ATTR_BSS: u16 = 47;
 const NL80211_ATTR_SSID: u16 = 52;
@@ -123,15 +124,36 @@ pub fn get_family(seq: u32, name: &str) -> Vec<u8> {
 
 /// An active scan (the wildcard SSID), so a quiet access point answers too.
 pub fn trigger_scan(family: u16, seq: u32, ifindex: u32) -> Vec<u8> {
+    trigger_scan_on(family, seq, ifindex, &[])
+}
+
+/// The 2.4 GHz channels 1-13, in MHz.
+pub const CHANNELS_2_4_GHZ: [u32; 13] = [
+    2412, 2417, 2422, 2427, 2432, 2437, 2442, 2447, 2452, 2457, 2462, 2467, 2472,
+];
+
+/// A scan of only these frequencies (MHz); every channel when empty. Fewer
+/// channels finish sooner, so the same time holds more scans of the ones
+/// that matter.
+pub fn trigger_scan_on(family: u16, seq: u32, ifindex: u32, frequencies: &[u32]) -> Vec<u8> {
+    let mut attributes = vec![
+        attr(NL80211_ATTR_IFINDEX, &ifindex.to_ne_bytes()),
+        nested(NL80211_ATTR_SCAN_SSIDS, &[attr(1, &[])]),
+    ];
+    if !frequencies.is_empty() {
+        let list: Vec<Vec<u8>> = frequencies
+            .iter()
+            .enumerate()
+            .map(|(index, mhz)| attr(index as u16 + 1, &mhz.to_ne_bytes()))
+            .collect();
+        attributes.push(nested(NL80211_ATTR_SCAN_FREQUENCIES, &list));
+    }
     genl_message(
         family,
         NLM_F_ACK,
         seq,
         NL80211_CMD_TRIGGER_SCAN,
-        &[
-            attr(NL80211_ATTR_IFINDEX, &ifindex.to_ne_bytes()),
-            nested(NL80211_ATTR_SCAN_SSIDS, &[attr(1, &[])]),
-        ],
+        &attributes,
     )
 }
 
@@ -521,8 +543,18 @@ impl Radio {
 
     /// Scan and return every network seen.
     pub fn scan(&mut self) -> Result<Vec<Bss>, String> {
+        self.scan_on(&[])
+    }
+
+    /// Scan only these frequencies (MHz); every channel when empty.
+    pub fn scan_on(&mut self, frequencies: &[u32]) -> Result<Vec<Bss>, String> {
         let seq = self.next_seq();
-        self.send(&trigger_scan(self.family, seq, self.ifindex))?;
+        self.send(&trigger_scan_on(
+            self.family,
+            seq,
+            self.ifindex,
+            frequencies,
+        ))?;
         self.replies(seq)?;
         match self.event(
             &[NL80211_CMD_NEW_SCAN_RESULTS, NL80211_CMD_SCAN_ABORTED],
@@ -773,6 +805,34 @@ mod tests {
                 "{what} asks for no answer that ends it ({flags:#x})"
             );
         }
+    }
+
+    #[test]
+    fn a_scan_can_be_held_to_some_channels() {
+        let all = messages(&trigger_scan(30, 1, 3));
+        assert!(
+            !attrs(&all[0].payload)
+                .iter()
+                .any(|(kind, _)| *kind == NL80211_ATTR_SCAN_FREQUENCIES),
+            "an unrestricted scan names no frequencies"
+        );
+        let some = messages(&trigger_scan_on(30, 1, 3, &CHANNELS_2_4_GHZ));
+        let fields = attrs(&some[0].payload);
+        let list = fields
+            .iter()
+            .find(|(kind, _)| *kind == NL80211_ATTR_SCAN_FREQUENCIES)
+            .map(|(_, value)| attrs(value))
+            .expect("the frequencies");
+        let mhz: Vec<u32> = list
+            .iter()
+            .map(|(_, value)| u32::from_ne_bytes((*value).try_into().expect("4 bytes")))
+            .collect();
+        assert_eq!(mhz, CHANNELS_2_4_GHZ.to_vec());
+        assert!(
+            fields
+                .iter()
+                .any(|(kind, _)| *kind == NL80211_ATTR_SCAN_SSIDS)
+        );
     }
 
     #[test]
