@@ -137,3 +137,12 @@ This project is licensed under either of
  * MIT License
 
 at your option.
+
+
+## Setup mode (`setup`)
+
+A Kasa device in setup mode opens an open access point (`TP-LINK_…` or
+`Kasa_…`) and answers at 192.168.0.1:9999. `tplink::setup` has the bytes to
+read what it is (`read_setup_device`) and hand it a Wi-Fi network
+(`hand_over`) once a client has joined that access point, with no account
+and no cloud. Joining the access point needs a radio (see the `wifi` crate).

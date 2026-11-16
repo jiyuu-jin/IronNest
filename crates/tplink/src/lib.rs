@@ -63,6 +63,7 @@ pub mod devices;
 pub mod discovery;
 pub mod error;
 pub mod protocol;
+pub mod setup;
 pub mod types;
 
 // Re-export the most commonly used items

@@ -1,0 +1,9 @@
+[package]
+name = "wifi"
+version = "0.1.0"
+edition = "2024"
+description = "A Wi-Fi radio on Linux over nl80211: scan, join an open network, set an address, lend the phy to a namespace"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+libc = "0.2"
