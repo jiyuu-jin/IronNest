@@ -32,6 +32,10 @@ type Aes256CbcEnc = cbc::Encryptor<aes::Aes256>;
 /// API hosts.
 pub const MEGA_LOCAL_KEY_HEX: &str = "2500a7d5617812f9d52515b2c8f20a3d";
 
+/// The bootstrap key for the key exchange on the `*.eufylife.com` data
+/// host (cipher keys, faces).
+pub const EUFYLIFE_LOCAL_KEY_HEX: &str = "118c12c81e211149304bd70a0c071d01";
+
 /// The server's fixed P-256 public key the login password is encrypted to.
 pub const SERVER_STATIC_PUBLIC_KEY_HEX: &str = "04c5c00c4f8d1197cc7c3167c52bf7acb054d722f0ef08dcd7e0883236e0d72a3868d9750cb47fa4619248f3d83f0f662671dadc6e2d31c2f41db0161651c7c076";
 

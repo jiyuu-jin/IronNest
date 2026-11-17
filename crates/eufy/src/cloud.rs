@@ -15,6 +15,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use serde_json::{Value, json};
 
 use crate::crypto::{self, SessionKey};
+use crate::p2p::CipherKeys;
 
 /// The app identity the API expects.
 const APP_NAME: &str = "eufy_mega";
@@ -31,6 +32,9 @@ pub struct Config {
     pub phone_model: String,
     /// The install id; derived from the email when blank.
     pub openudid: String,
+    /// The name lock commands attribute themselves to; the email's local
+    /// part (what the app writes) when blank.
+    pub account_name: String,
 }
 
 impl std::fmt::Debug for Config {
@@ -50,6 +54,20 @@ impl Config {
             country: "US".to_string(),
             phone_model: "Pixel 8".to_string(),
             openudid: String::new(),
+            account_name: String::new(),
+        }
+    }
+
+    /// The acting name lock commands carry: [`Config::account_name`], else
+    /// the email's local part.
+    pub fn acting_name(&self) -> String {
+        let pinned = self.account_name.trim();
+        if !pinned.is_empty() {
+            return pinned.to_string();
+        }
+        match self.email.find('@') {
+            Some(at) if at > 0 => self.email[..at].to_string(),
+            _ => self.email.clone(),
         }
     }
 
@@ -210,6 +228,9 @@ pub struct Cloud {
     region: String,
     bootstrap_host: Option<String>,
     key: Option<SessionKey>,
+    /// The key for the `*.eufylife.com` data host, which runs its own
+    /// exchange (its own bootstrap key and `/v3/` path).
+    life_key: Option<SessionKey>,
     auth: Option<(String, String, String)>,
     agent: ureq::Agent,
 }
@@ -221,6 +242,7 @@ impl Cloud {
             region: "us-pr".to_string(),
             bootstrap_host: None,
             key: None,
+            life_key: None,
             auth: None,
             agent: ureq::AgentBuilder::new()
                 .timeout(Duration::from_secs(20))
@@ -357,7 +379,17 @@ impl Cloud {
             .bootstrap_host
             .clone()
             .unwrap_or_else(|| format!("app-openapi-{}.eufy.com", self.region));
-        let exchange = crypto::prepare_key_exchange(crypto::MEGA_LOCAL_KEY_HEX, &now_secs())?;
+        self.key = Some(self.exchange(
+            &host,
+            "/openapi/oauth/key/exchange",
+            crypto::MEGA_LOCAL_KEY_HEX,
+        )?);
+        Ok(())
+    }
+
+    /// One key exchange against `host` under the bootstrap `local_key`.
+    fn exchange(&self, host: &str, path: &str, local_key: &str) -> Result<SessionKey, String> {
+        let exchange = crypto::prepare_key_exchange(local_key, &now_secs())?;
         let mut headers = self.base_headers();
         headers.extend([
             ("x-encryption-info", "algo_ecdh".to_string()),
@@ -370,11 +402,7 @@ impl Cloud {
         ]);
         headers.extend(self.auth_headers());
         let body = json!({"client_public_key": exchange.encrypted_client_public_key}).to_string();
-        let (status, envelope) = self.post(
-            &format!("https://{host}/openapi/oauth/key/exchange"),
-            &body,
-            &headers,
-        )?;
+        let (status, envelope) = self.post(&format!("https://{host}{path}"), &body, &headers)?;
         let server = envelope
             .pointer("/data/server_public_key")
             .and_then(Value::as_str)
@@ -385,8 +413,7 @@ impl Cloud {
                     envelope_message(&envelope)
                 )
             })?;
-        self.key = Some(exchange.finish(server)?);
-        Ok(())
+        exchange.finish(server)
     }
 
     /// An encrypted, signed POST to `host`; the decrypted `data`.
@@ -397,12 +424,24 @@ impl Cloud {
         body: &Value,
         authed: bool,
     ) -> Result<Value, String> {
-        if self.key.is_none() {
-            self.exchange_key()?;
-        }
-        let key = self.key.clone().expect("exchanged");
+        let life = host.ends_with(".eufylife.com");
+        let key = if life {
+            if self.life_key.is_none() {
+                self.life_key = Some(self.exchange(
+                    host,
+                    "/v3/openapi/oauth/key/exchange",
+                    crypto::EUFYLIFE_LOCAL_KEY_HEX,
+                )?);
+            }
+            self.life_key.clone().expect("exchanged")
+        } else {
+            if self.key.is_none() {
+                self.exchange_key()?;
+            }
+            self.key.clone().expect("exchanged")
+        };
         let encrypted = crypto::encrypt_body(body.to_string().as_bytes(), &key.share_key)?;
-        let text_first = path.contains("/passport/");
+        let text_first = life || path.contains("/passport/");
         let mut last = String::new();
         for content_type in if text_first {
             ["text/plain", "application/json"]
@@ -560,6 +599,60 @@ impl Cloud {
         self.post_signed(&host, path, body, true)
     }
 
+    /// The signed-in user's id.
+    pub fn user_id(&self) -> Option<&str> {
+        self.auth.as_ref().map(|(user_id, _, _)| user_id.as_str())
+    }
+
+    /// The name lock commands attribute themselves to.
+    pub fn acting_name(&self) -> String {
+        self.config.acting_name()
+    }
+
+    /// The security-app data host: no suffix for the US shard.
+    fn security_app_host(&self) -> String {
+        match self.region.split('-').next().unwrap_or("us") {
+            "us" => "security-app.eufylife.com".to_string(),
+            shard => format!("security-app-{shard}.eufylife.com"),
+        }
+    }
+
+    /// An authed call to the security-app (`*.eufylife.com`) data host.
+    pub fn request_security_app(&mut self, path: &str, body: &Value) -> Result<Value, String> {
+        if self.auth.is_none() {
+            return Err("not signed in".to_string());
+        }
+        let host = self.security_app_host();
+        self.post_signed(&host, path, body, true)
+    }
+
+    /// A station's DSK key, which the P2P cloud lookup carries.
+    pub fn dsk_key(&mut self, station_serial: &str) -> Result<String, String> {
+        let body = json!({
+            "device_dsks": [{"invalid_dsk": "", "device_sn": station_serial, "category": "eufy_security"}],
+            "invalid_dsks": {station_serial: ""},
+            "station_sns": [station_serial],
+        });
+        let answer = self.request("devicerelation", "/app/devicerelation/get_dsk_keys", &body)?;
+        dsk_of(&answer, station_serial)
+            .ok_or_else(|| format!("the cloud gave no DSK key for {station_serial}"))
+    }
+
+    /// A cipher's private keys (`/v3/app/cipher/get_ciphers`); `user_id`
+    /// is the station's `member.admin_user_id`.
+    pub fn cipher_keys(
+        &mut self,
+        cipher_id: u16,
+        user_id: &str,
+        station_serial: &str,
+    ) -> Result<CipherKeys, String> {
+        let body =
+            json!({"cipher_ids": [cipher_id], "user_id": user_id, "station_sn": station_serial});
+        let answer = self.request_security_app("/v3/app/cipher/get_ciphers", &body)?;
+        cipher_of(&answer, cipher_id)
+            .ok_or_else(|| format!("the cloud has no keys for cipher {cipher_id}"))
+    }
+
     /// Every device on the account. The device list is scoped by house in a
     /// way no one call covers, so the unscoped list and every house's list
     /// are merged by serial.
@@ -603,6 +696,59 @@ impl Cloud {
             _ => Ok(seen.into_values().collect()),
         }
     }
+}
+
+/// The DSK key for `station` out of a `get_dsk_keys` answer.
+fn dsk_of(answer: &Value, station: &str) -> Option<String> {
+    answer
+        .get("device_dsks")?
+        .as_array()?
+        .iter()
+        .find(|entry| entry.get("device_sn").and_then(Value::as_str) == Some(station))?
+        .get("dsk_key")?
+        .as_str()
+        .filter(|key| !key.is_empty())
+        .map(str::to_string)
+}
+
+/// A cipher's keys out of a `get_ciphers` answer (a list, or one under
+/// `ciphers` or `data`): the asked cipher, or, when it carries no ECC key
+/// and the first listed one does, that one.
+fn cipher_of(answer: &Value, cipher_id: u16) -> Option<CipherKeys> {
+    let list = match answer {
+        Value::Array(list) => list,
+        other => other
+            .get("ciphers")
+            .or_else(|| other.get("data"))?
+            .as_array()?,
+    };
+    let text = |entry: &Value, key: &str| {
+        entry
+            .get(key)
+            .and_then(Value::as_str)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string)
+    };
+    let keys = |entry: &Value| CipherKeys {
+        ecc: text(entry, "ecc_private_key"),
+        rsa: text(entry, "private_key"),
+    };
+    let id_of = |entry: &Value| {
+        entry
+            .get("cipher_id")
+            .and_then(|id| id.as_u64().or_else(|| id.as_str()?.parse().ok()))
+    };
+    let asked = list
+        .iter()
+        .find(|entry| id_of(entry) == Some(cipher_id as u64))
+        .map(keys);
+    let first = list.first().map(keys);
+    let chosen = match (asked, first) {
+        (Some(asked), Some(first)) if asked.ecc.is_none() && first.ecc.is_some() => first,
+        (Some(asked), _) => asked,
+        (None, first) => first?,
+    };
+    (chosen.ecc.is_some() || chosen.rsa.is_some()).then_some(chosen)
 }
 
 fn envelope_message(envelope: &Value) -> String {
@@ -699,5 +845,56 @@ mod tests {
             !shown.contains("token-secret") && !shown.contains("share-secret"),
             "{shown}"
         );
+    }
+
+    #[test]
+    fn the_acting_name_is_the_pinned_one_or_the_email_local_part() {
+        let mut config = Config::new("someone+tag@example.com", "p");
+        assert_eq!(config.acting_name(), "someone+tag");
+        config.account_name = "  Front door  ".into();
+        assert_eq!(config.acting_name(), "Front door");
+        assert_eq!(Config::new("no-at-sign", "p").acting_name(), "no-at-sign");
+        assert_eq!(Config::new("", "p").acting_name(), "");
+    }
+
+    #[test]
+    fn a_dsk_key_is_read_for_its_station() {
+        let answer = json!({"device_dsks": [
+            {"device_sn": "T8000P0000000001", "dsk_key": "AAAA"},
+            {"device_sn": "T8000P0000000000", "dsk_key": "XXXXXXXXXXXXXXXXXXXX", "expiration": 1}
+        ]});
+        assert_eq!(
+            dsk_of(&answer, "T8000P0000000000").as_deref(),
+            Some("XXXXXXXXXXXXXXXXXXXX")
+        );
+        assert_eq!(dsk_of(&answer, "T8000P0000000002"), None);
+        assert_eq!(
+            dsk_of(
+                &json!({"device_dsks": [{"device_sn": "T", "dsk_key": ""}]}),
+                "T"
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn cipher_keys_are_read_in_every_shape_the_cloud_answers() {
+        let listed = json!([
+            {"cipher_id": 3, "ecc_private_key": "aa", "private_key": "bb"},
+            {"cipher_id": 9, "private_key": "rr"}
+        ]);
+        let keys = |ecc: Option<&str>, rsa: Option<&str>| CipherKeys {
+            ecc: ecc.map(str::to_string),
+            rsa: rsa.map(str::to_string),
+        };
+        assert_eq!(cipher_of(&listed, 3), Some(keys(Some("aa"), Some("bb"))));
+        // The asked cipher carries no ECC key and the first does: that one.
+        assert_eq!(cipher_of(&listed, 9), Some(keys(Some("aa"), Some("bb"))));
+        let rsa_only = json!({"ciphers": [{"cipher_id": "9", "private_key": "rr"}]});
+        assert_eq!(cipher_of(&rsa_only, 9), Some(keys(None, Some("rr"))));
+        assert_eq!(cipher_of(&json!({"data": [{"cipher_id": 1}]}), 1), None);
+        assert_eq!(cipher_of(&json!({"data": []}), 1), None);
+        assert_eq!(cipher_of(&json!("text"), 1), None);
+        assert!(!format!("{:?}", keys(Some("aa"), None)).contains("aa"));
     }
 }
