@@ -49,9 +49,12 @@ blocks (up to about a minute and a half) while it:
    bare result code or `ff09` reply it sent; a negative result code is an
    error.
 
-The acting name in the frame is the email's local part, or
-`Config::account_name` when set. The identity fields come from the lock's
-`member` record.
+The acting name in the frame is `Config::account_name` when set, else the
+name the sign-in gave the account — the email's local part — which the
+`Session` keeps, so a resumed session acts with no email in its `Config`.
+A session kept before it carried the name falls back to the lock's own
+`member` record (its `email` local part, else its `nick_name`). The
+identity fields come from that `member` record.
 
 **What is verified.** The SDK this is ported from verifies the `ff09` frame
 byte-exact against captures from the T8531 video lock and the T85D0

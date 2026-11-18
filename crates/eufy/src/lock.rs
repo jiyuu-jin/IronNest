@@ -118,18 +118,30 @@ pub fn channel_of(device: &Device, standalone: bool) -> Result<u8, String> {
 }
 
 /// Who the frame says acts: the lock's `member.admin_user_id` and
-/// `member.short_user_id`, and the account's acting name.
+/// `member.short_user_id`, and the account's acting name — or, when the
+/// account names none (a session kept before sessions carried it), the
+/// member the lock's own record names: its `member.email` local part (what
+/// a sign-in would name it), else its `member.nick_name` (the name the SDK's
+/// keyed-payload path shows the acting member by).
 pub fn identity_of(device: &Device, acting_name: &str) -> Result<ff09::Identity, String> {
     let admin = text(&device.raw, "/member/admin_user_id")
         .ok_or("the lock's record names no member.admin_user_id")?;
     let short = text(&device.raw, "/member/short_user_id")
         .ok_or("the lock's record names no member.short_user_id")?;
-    if acting_name.is_empty() {
-        return Err("no acting name: set Config::account_name or sign in with an email".into());
-    }
+    let named = |pointer: &str| {
+        text(&device.raw, pointer)
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+    };
+    let acting_name = Some(acting_name.trim())
+        .filter(|name| !name.is_empty())
+        .map(str::to_string)
+        .or_else(|| named("/member/email").map(crate::cloud::local_part))
+        .or_else(|| named("/member/nick_name").map(str::to_string))
+        .ok_or("no acting name: the session names no account and the lock's record names no member; sign in to eufy again")?;
     Ok(ff09::Identity {
         admin_user_id: admin.to_string(),
-        user_name: acting_name.to_string(),
+        user_name: acting_name,
         short_user_id: short.to_string(),
         device_serial: device.serial.clone(),
     })
@@ -453,6 +465,38 @@ mod tests {
             identity_of(&device(raw), "someone")
                 .unwrap_err()
                 .contains("short_user_id")
+        );
+    }
+
+    #[test]
+    fn with_no_acting_name_the_lock_record_names_the_member() {
+        let mut raw = lock_record();
+        raw["member"]["nick_name"] = json!("Member");
+        raw["member"]["email"] = json!("member@example.com");
+        // The account's own name wins over the record's.
+        assert_eq!(
+            identity_of(&device(raw.clone()), "someone")
+                .unwrap()
+                .user_name,
+            "someone"
+        );
+        // With none, the member's email local part, as the sign-in would name it.
+        assert_eq!(
+            identity_of(&device(raw.clone()), "").unwrap().user_name,
+            "member"
+        );
+        // Then the member's display name.
+        raw["member"]["email"] = json!("");
+        assert_eq!(
+            identity_of(&device(raw.clone()), " ").unwrap().user_name,
+            "Member"
+        );
+        // A record that names nobody still refuses.
+        raw["member"]["nick_name"] = json!("");
+        assert!(
+            identity_of(&device(raw), "")
+                .unwrap_err()
+                .contains("acting name")
         );
     }
 

@@ -65,10 +65,7 @@ impl Config {
         if !pinned.is_empty() {
             return pinned.to_string();
         }
-        match self.email.find('@') {
-            Some(at) if at > 0 => self.email[..at].to_string(),
-            _ => self.email.clone(),
-        }
+        local_part(&self.email)
     }
 
     /// A stable per-install id the token is bound to.
@@ -93,6 +90,12 @@ pub struct Session {
     /// same one.
     #[serde(default)]
     pub openudid: String,
+    /// The account's acting name, as the sign-in named it (see
+    /// [`Cloud::acting_name`]), so a resumed session needs no email to act.
+    /// Absent from sessions kept before it existed, and not written when
+    /// empty.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub account_name: String,
 }
 
 impl std::fmt::Debug for Session {
@@ -232,6 +235,8 @@ pub struct Cloud {
     /// exchange (its own bootstrap key and `/v3/` path).
     life_key: Option<SessionKey>,
     auth: Option<(String, String, String)>,
+    /// The acting name the sign-in (or the kept session) named.
+    account_name: String,
     agent: ureq::Agent,
 }
 
@@ -244,6 +249,7 @@ impl Cloud {
             key: None,
             life_key: None,
             auth: None,
+            account_name: String::new(),
             agent: ureq::AgentBuilder::new()
                 .timeout(Duration::from_secs(20))
                 .build(),
@@ -261,6 +267,7 @@ impl Cloud {
         cloud.region = session.region;
         cloud.key = Some(session.key);
         cloud.auth = Some((session.user_id, session.account_user_id, session.auth_token));
+        cloud.account_name = session.account_name;
         cloud
     }
 
@@ -274,6 +281,7 @@ impl Cloud {
             auth_token,
             key: self.key.clone()?,
             openudid: self.config.openudid(),
+            account_name: self.account_name.clone(),
         })
     }
 
@@ -552,6 +560,7 @@ impl Cloud {
         let token = text(&["auth_token", "token"]).ok_or("the sign-in gave no token")?;
         let account = text(&["user_id", "userId"]).unwrap_or_else(|| user_id.clone());
         self.auth = Some((user_id, account, token));
+        self.account_name = account_name_of(&self.config, &answer);
         let pending = answer
             .pointer("/fa_info/info")
             .and_then(Value::as_str)
@@ -604,8 +613,20 @@ impl Cloud {
         self.auth.as_ref().map(|(user_id, _, _)| user_id.as_str())
     }
 
-    /// The name lock commands attribute themselves to.
+    /// The name lock commands attribute themselves to: a pinned
+    /// [`Config::account_name`], else the name the sign-in gave the account
+    /// (kept in the [`Session`]), else the config's email local part. Empty
+    /// when none says — a session kept before the name was, resumed with no
+    /// email; the lock's own record then names the member
+    /// ([`crate::lock::identity_of`]).
     pub fn acting_name(&self) -> String {
+        if !self.config.account_name.trim().is_empty() {
+            return self.config.acting_name();
+        }
+        let kept = self.account_name.trim();
+        if !kept.is_empty() {
+            return kept.to_string();
+        }
         self.config.acting_name()
     }
 
@@ -751,6 +772,36 @@ fn cipher_of(answer: &Value, cipher_id: u16) -> Option<CipherKeys> {
     (chosen.ecc.is_some() || chosen.rsa.is_some()).then_some(chosen)
 }
 
+/// The acting name a sign-in gives the account: the config's (pinned name or
+/// email local part), else the answer's own `email` local part, else its
+/// `nick_name`.
+fn account_name_of(config: &Config, answer: &Value) -> String {
+    let named = config.acting_name();
+    if !named.trim().is_empty() {
+        return named.trim().to_string();
+    }
+    let field = |key: &str| {
+        answer
+            .get(key)
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+    };
+    field("email")
+        .map(local_part)
+        .or_else(|| field("nick_name").map(str::to_string))
+        .unwrap_or_default()
+}
+
+/// An email's local part (the whole text when it has no `@`), as the app
+/// names an account.
+pub(crate) fn local_part(email: &str) -> String {
+    match email.find('@') {
+        Some(at) if at > 0 => email[..at].to_string(),
+        _ => email.to_string(),
+    }
+}
+
 fn envelope_message(envelope: &Value) -> String {
     envelope
         .get("msg")
@@ -839,12 +890,59 @@ mod tests {
                 share_key: "share-secret".into(),
             },
             openudid: "o".into(),
+            account_name: String::new(),
         };
         let shown = format!("{session:?}");
         assert!(
             !shown.contains("token-secret") && !shown.contains("share-secret"),
             "{shown}"
         );
+    }
+
+    #[test]
+    fn a_session_keeps_the_account_name_and_an_older_one_still_reads() {
+        let mut cloud = Cloud::new(Config::new("someone@example.com", "pw"));
+        cloud.auth = Some(("u".into(), "a".into(), "t".into()));
+        cloud.key = Some(SessionKey {
+            key_ident: "k".into(),
+            share_key: "0".repeat(32),
+        });
+        cloud.account_name = "someone".into();
+        let kept = cloud.session().expect("a session");
+        assert_eq!(kept.account_name, "someone");
+        // Resumed with no email, the name still comes from the session.
+        let resumed = Cloud::resume(Config::new("", ""), kept.clone());
+        assert_eq!(resumed.acting_name(), "someone");
+        // A pinned name still wins.
+        let mut pinned = Config::new("", "");
+        pinned.account_name = "Pinned".into();
+        assert_eq!(Cloud::resume(pinned, kept.clone()).acting_name(), "Pinned");
+        // A session kept before the field existed reads, and names nobody.
+        let mut old = serde_json::to_value(&kept).expect("json");
+        old.as_object_mut().unwrap().remove("account_name");
+        let old: Session = serde_json::from_value(old).expect("an older session reads");
+        assert_eq!(old.account_name, "");
+        assert_eq!(Cloud::resume(Config::new("", ""), old).acting_name(), "");
+        // ... and an empty name is not written, so an older reader is unmoved.
+        let mut nameless = kept;
+        nameless.account_name.clear();
+        let text = serde_json::to_string(&nameless).expect("json");
+        assert!(!text.contains("account_name"), "{text}");
+    }
+
+    #[test]
+    fn the_sign_in_names_the_account_from_the_email_or_the_answer() {
+        let answer = json!({"email": "other@example.com", "nick_name": "Nick"});
+        assert_eq!(
+            account_name_of(&Config::new("someone@example.com", "p"), &answer),
+            "someone"
+        );
+        assert_eq!(account_name_of(&Config::new("", ""), &answer), "other");
+        assert_eq!(
+            account_name_of(&Config::new("", ""), &json!({"nick_name": " Nick "})),
+            "Nick"
+        );
+        assert_eq!(account_name_of(&Config::new("", ""), &json!({})), "");
     }
 
     #[test]
