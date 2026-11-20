@@ -1935,6 +1935,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "govee"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
 name = "group"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

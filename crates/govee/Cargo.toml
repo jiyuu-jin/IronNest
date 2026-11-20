@@ -1,0 +1,9 @@
+[package]
+name = "govee"
+version = "0.1.0"
+edition = "2024"
+description = "Govee lights over the LAN API (UDP): discovery, on/off, brightness, colour, state"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+serde_json = "1.0"
