@@ -263,10 +263,29 @@ impl Govee {
     /// Every device that answers a scan within the timeout (the whole timeout
     /// is waited, since any number may answer).
     pub fn scan(&self) -> Result<Vec<Found>, String> {
+        self.scan_hosts(&[])
+    }
+
+    /// [`Govee::scan`], with the scan also sent to each of `hosts` directly
+    /// on [`SCAN_PORT`]: where multicast does not reach (a bridged container,
+    /// a network that drops it), a device still answers a scan sent to its
+    /// own address. One datagram per host; a host that is not a Govee device
+    /// ignores it.
+    pub fn scan_hosts(&self, hosts: &[IpAddr]) -> Result<Vec<Found>, String> {
         let socket = self.listener()?;
-        socket
-            .send_to(scan_message().as_bytes(), self.scan_to)
-            .map_err(|error| format!("sending a scan to {}: {error}", self.scan_to))?;
+        let group = socket.send_to(scan_message().as_bytes(), self.scan_to);
+        let mut sent_any = group.is_ok();
+        for host in hosts {
+            sent_any |= socket
+                .send_to(
+                    scan_message().as_bytes(),
+                    SocketAddr::new(*host, self.scan_to.port()),
+                )
+                .is_ok();
+        }
+        if !sent_any {
+            group.map_err(|error| format!("sending a scan to {}: {error}", self.scan_to))?;
+        }
         let mut found: Vec<Found> = Vec::new();
         let deadline = Instant::now() + self.timeout;
         let mut buffer = [0u8; DATAGRAM];
@@ -277,8 +296,18 @@ impl Govee {
             socket
                 .set_read_timeout(Some(left))
                 .map_err(|error| error.to_string())?;
-            let Ok((read, _)) = socket.recv_from(&mut buffer) else {
-                break;
+            let read = match socket.recv_from(&mut buffer) {
+                Ok((read, _)) => read,
+                Err(error)
+                    if matches!(
+                        error.kind(),
+                        std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+                    ) =>
+                {
+                    break;
+                }
+                // A host's "nothing here" for one of the direct scans.
+                Err(_) => continue,
             };
             if let Ok(one) = parse_scan(&buffer[..read])
                 && !found
@@ -566,6 +595,23 @@ mod tests {
             commands,
             ["scan", "turn", "brightness", "devStatus", "turn"]
         );
+    }
+
+    #[test]
+    fn a_scan_sent_to_each_host_finds_a_light_multicast_does_not_reach() {
+        let listen = free_port();
+        let (scan_port, _, light) = light(listen, 1);
+        let here: IpAddr = "127.0.0.1".parse().expect("ip");
+        // The "group" is somewhere nothing answers.
+        let govee = Govee::new(Duration::from_millis(400))
+            .with_scan_to(SocketAddr::new("127.0.0.2".parse().expect("ip"), scan_port))
+            .with_ports(SocketAddr::new(here, listen), CONTROL_PORT);
+        let found = govee
+            .scan_hosts(&["127.0.0.3".parse().expect("ip"), here])
+            .expect("scanned");
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert_eq!(found[0].ip, here);
+        light.join().expect("light");
     }
 
     #[test]

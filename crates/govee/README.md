@@ -4,7 +4,9 @@ A blocking client for Govee lights over Govee's LAN API: JSON over UDP on the
 home network, no account and no cloud.
 
 - `scan` finds devices (a multicast to 239.255.255.250:4001; each answers on
-  4002 with its address, device id and model);
+  4002 with its address, device id and model); `scan_hosts` also sends it
+  to each address given, for where multicast does not reach (a bridged
+  container);
 - `turn`, `brightness` (1–100), `color` (RGB), `color_temperature` (kelvin),
   sent to the device on 4003;
 - `status` (`devStatus`): on/off, brightness, colour, colour temperature.
