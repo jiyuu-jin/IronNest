@@ -228,6 +228,18 @@ pub fn gateway_cipher_id(payload: &[u8]) -> u16 {
         .map_or(0, |bytes| u16::from_le_bytes([bytes[0], bytes[1]]))
 }
 
+/// The result code a `CMD_GATEWAYINFO` reply carries instead of a key
+/// envelope: a bare int32 LE, or one padded with zeros to the cipher block
+/// a level-1 seal leaves. A device that offers no level-2 key (the Smart
+/// Lock C220, T8506, answers -103, invalid command) replies this way; read
+/// as an envelope, its first two bytes name a cipher (0xff99) that does not
+/// exist. Every key envelope is far longer than a block.
+pub fn gateway_result(payload: &[u8]) -> Option<i32> {
+    let code = i32::from_le_bytes(payload.get(..4)?.try_into().ok()?);
+    let short = payload.len() == 4 || (payload.len() == 16 && payload[4..].iter().all(|&b| b == 0));
+    short.then_some(code)
+}
+
 /// eufy's ECIES KDF: HMAC-SHA256 feedback under the label "ECIES"; each
 /// 32-byte block is `HMAC(S, t ‖ "ECIES")` with `t = HMAC(S, t)` first.
 pub fn eufy_kdf(shared: &[u8], len: usize) -> Vec<u8> {

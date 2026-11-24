@@ -15,7 +15,8 @@
 //!
 //! A device with a P2P id is driven over P2P (the SDK's `routeCommand`):
 //! the session goes to the device's station — the device itself when it
-//! stands alone — the level-2 key is negotiated, and the frame goes inside
+//! stands alone — the level-2 key is negotiated (a T8506 offers none and
+//! takes the envelope in the clear), and the frame goes inside
 //! a `SET_PAYLOAD` (1350) envelope
 //! `{account_id, cmd: 1940, mChannel, mValue3: 0, payload: {apiCommand: 6018,
 //! lock_payload, seq_num, time}}`, sent five times 200 ms apart as the SDK
