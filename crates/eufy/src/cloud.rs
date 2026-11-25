@@ -660,18 +660,19 @@ impl Cloud {
     }
 
     /// A cipher's private keys (`/v3/app/cipher/get_ciphers`); `user_id`
-    /// is the station's `member.admin_user_id`.
+    /// is the station's `member.admin_user_id`. `Ok(None)`: the cloud
+    /// answered and has no keys for it — the device offers no level-2 key,
+    /// and its commands are sealed at level 1.
     pub fn cipher_keys(
         &mut self,
         cipher_id: u16,
         user_id: &str,
         station_serial: &str,
-    ) -> Result<CipherKeys, String> {
+    ) -> Result<Option<CipherKeys>, String> {
         let body =
             json!({"cipher_ids": [cipher_id], "user_id": user_id, "station_sn": station_serial});
         let answer = self.request_security_app("/v3/app/cipher/get_ciphers", &body)?;
-        cipher_of(&answer, cipher_id)
-            .ok_or_else(|| format!("the cloud has no keys for cipher {cipher_id}"))
+        Ok(cipher_of(&answer, cipher_id))
     }
 
     /// Every device on the account. The device list is scoped by house in a

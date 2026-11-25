@@ -228,16 +228,19 @@ pub fn gateway_cipher_id(payload: &[u8]) -> u16 {
         .map_or(0, |bytes| u16::from_le_bytes([bytes[0], bytes[1]]))
 }
 
-/// The result code a `CMD_GATEWAYINFO` reply carries instead of a key
-/// envelope: a bare int32 LE, or one padded with zeros to the cipher block
-/// a level-1 seal leaves. A device that offers no level-2 key (the Smart
-/// Lock C220, T8506, answers -103, invalid command) replies this way; read
-/// as an envelope, its first two bytes name a cipher (0xff99) that does not
-/// exist. Every key envelope is far longer than a block.
-pub fn gateway_result(payload: &[u8]) -> Option<i32> {
-    let code = i32::from_le_bytes(payload.get(..4)?.try_into().ok()?);
-    let short = payload.len() == 4 || (payload.len() == 16 && payload[4..].iter().all(|&b| b == 0));
-    short.then_some(code)
+/// The shortest `CMD_GATEWAYINFO` reply that can hold a key envelope:
+/// `cipher_id(2) ‖ 00 00` and a 512-bit RSA ciphertext, the smallest RSA
+/// key anything uses (eufy's are 1024-bit; the ECC envelope is
+/// `4 + 33 + 16 + 48` = 101 bytes).
+pub const SHORTEST_KEY_ENVELOPE: usize = 4 + 64;
+
+/// Whether a decrypted `CMD_GATEWAYINFO` reply is too short to hold a key
+/// envelope: the device offers no level-2 key. The Smart Lock C220
+/// (T8506) answers with a result code (-103, invalid command) and
+/// whatever padding its seal leaves; read as an envelope, its first two
+/// bytes name a cipher (0xff99 = 65433) the cloud has no keys for.
+pub fn gateway_holds_no_key(payload: &[u8]) -> bool {
+    payload.len() < SHORTEST_KEY_ENVELOPE
 }
 
 /// eufy's ECIES KDF: HMAC-SHA256 feedback under the label "ECIES"; each

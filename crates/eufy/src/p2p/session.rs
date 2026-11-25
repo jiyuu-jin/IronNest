@@ -20,10 +20,12 @@
 //! reply carries the level-2 key, wrapped for the cipher its `cipher_id`
 //! names; [`Session::establish_level2`] has the caller fetch that cipher's
 //! private keys from the cloud and unwraps it. A device that offers no
-//! level-2 key answers with a bare result code instead (the Smart Lock
-//! C220, T8506: -103); its `SET_PAYLOAD` commands then go in the clear, as
-//! eufy-security-client (MIT) sends them to that lock — the session never
-//! leaves its initial unencrypted state there.
+//! level-2 key — a reply too short to hold one (the Smart Lock C220,
+//! T8506, answers a result code, -103), or one naming a cipher the cloud
+//! has no keys for — has its `SET_PAYLOAD` commands sealed at level 1
+//! (AES-128-ECB under the key derived from serial and P2P id, sign code
+//! 1), as eufy-security-client (MIT) does: its `CMD_GATEWAYINFO` handler
+//! sets level 1 whenever `getCipher` finds no such cipher.
 //!
 //! Ported from mega-yfue/eufy-sdk (Apache-2.0),
 //! `src/transport/p2p/p2p-session.ts`. Left out: media, talkback, the
@@ -124,10 +126,11 @@ enum Level2 {
     /// AES-128-ECB in the level-1 layout, from a cipher's RSA key; it seals
     /// `SET_PAYLOAD` commands only.
     Ecb([u8; 16]),
-    /// The device answered the gateway prompt with a result code, not a
-    /// key: it offers no level-2 key, and `SET_PAYLOAD` goes in the clear
-    /// (sign code 0), as eufy-security-client sends it to a T8506.
-    Clear,
+    /// The device offers no level-2 key (its gateway reply is too short to
+    /// hold one, or names a cipher the cloud has no keys for): `SET_PAYLOAD`
+    /// is sealed under the level-1 key at sign code 1, as
+    /// eufy-security-client falls back to level 1 there.
+    Level1,
 }
 
 /// Per-data-type inbound sequencing and reassembly.
@@ -491,7 +494,7 @@ impl Session {
 
     /// Whether a level-2 key is held that seals `SET_PAYLOAD` commands.
     pub fn has_level2(&self) -> bool {
-        !matches!(self.level2, Level2::None | Level2::Clear)
+        !matches!(self.level2, Level2::None | Level2::Level1)
     }
 
     fn ping(&mut self) {
@@ -522,7 +525,8 @@ impl Session {
     /// `{account_id, cmd, mChannel, mValue3, payload}`, sealed under the
     /// level-2 key — GCM at sign code 8 (header magic `08 00`), or, with
     /// an RSA cipher's key, ECB at sign code 2 in the level-1 layout; to a
-    /// device that offers no level-2 key, in the clear at sign code 0.
+    /// device that offers no level-2 key, ECB under the level-1 key at sign
+    /// code 1.
     fn control_body(
         &mut self,
         cmd: u32,
@@ -542,10 +546,10 @@ impl Session {
         .to_string();
         match self.level2.clone() {
             Level2::None => None,
-            Level2::Clear => Some(codec::command_body(
-                value.as_bytes(),
+            Level2::Level1 => Some(codec::command_body(
+                &codec::ecb_encrypt(&codec::zero_pad(value.as_bytes()), &self.level1_key),
                 channel,
-                0,
+                1,
                 [0x01, 0x00],
             )),
             Level2::Gcm(key) => {
@@ -582,12 +586,13 @@ impl Session {
     }
 
     /// Wait for the level-2 key, fetching the cipher's private keys with
-    /// `resolve` when the gateway reply names it. Asks the device once more
-    /// when the first ask goes unanswered within `grace` or settles with no
-    /// key.
+    /// `resolve` when the gateway reply names it (`Ok(None)`: the cloud has
+    /// no keys for that cipher, and commands are sealed at level 1). Asks
+    /// the device once more when the first ask goes unanswered within
+    /// `grace` or settles with no key.
     pub fn establish_level2(
         &mut self,
-        resolve: &mut dyn FnMut(u16) -> Result<CipherKeys, String>,
+        resolve: &mut dyn FnMut(u16) -> Result<Option<CipherKeys>, String>,
         grace: Duration,
     ) -> Result<(), String> {
         let mut last_error = String::from("the device sent no gateway info");
@@ -614,14 +619,17 @@ impl Session {
     fn negotiate(
         &mut self,
         payload: &[u8],
-        resolve: &mut dyn FnMut(u16) -> Result<CipherKeys, String>,
+        resolve: &mut dyn FnMut(u16) -> Result<Option<CipherKeys>, String>,
     ) -> Result<(), String> {
-        if codec::gateway_result(payload).is_some() {
-            self.level2 = Level2::Clear;
+        if codec::gateway_holds_no_key(payload) {
+            self.level2 = Level2::Level1;
             return Ok(());
         }
         let cipher_id = codec::gateway_cipher_id(payload);
-        let keys = resolve(cipher_id)?;
+        let Some(keys) = resolve(cipher_id)? else {
+            self.level2 = Level2::Level1;
+            return Ok(());
+        };
         if let Some(ecc) = &keys.ecc {
             let key = codec::level2_key_from_gateway_ecc(payload, ecc).ok_or(format!(
                 "the level-2 key did not unwrap (cipher {cipher_id})"
@@ -841,8 +849,12 @@ impl Session {
             .then(|| serde_json::from_str::<Value>(&text).ok())
             .flatten();
         let padded = header.command == CMD_SET_PAYLOAD
-            && header.sign_code == 0
-            && data.len() == PADDED_RESULT_BYTES;
+            && match header.sign_code {
+                0 => data.len() == PADDED_RESULT_BYTES,
+                // A result sealed at level 1: the code, zero-padded to a block.
+                1 => data.len() == 16 && data[4..].iter().all(|&byte| byte == 0),
+                _ => false,
+            };
         if let Some(json) = json {
             self.events.push_back(Event::Json {
                 command: header.command,
@@ -1143,10 +1155,10 @@ mod tests {
             .establish_level2(
                 &mut |id| {
                     asked.push(id);
-                    Ok(CipherKeys {
+                    Ok(Some(CipherKeys {
                         ecc: Some(private.clone()),
                         rsa: None,
-                    })
+                    }))
                 },
                 Duration::from_millis(200),
             )
@@ -1155,34 +1167,11 @@ mod tests {
         assert!(session.level2 == Level2::Gcm([0x5a; 32]));
     }
 
-    /// A Smart Lock C220 (T8506) answers the gateway prompt with a bare
-    /// result, -103 (invalid command), sealed at level 1 and padded to a
-    /// block — not a key envelope. Its first two bytes read as a cipher id
-    /// (0xff99 = 65433) that the cloud does not have, which refused every
-    /// lock command. The device offers no level-2 key: commands go in the
-    /// clear, as eufy-security-client sends them to it.
-    #[test]
-    fn a_gateway_answer_that_is_a_result_code_means_commands_go_in_the_clear() {
-        let (mut session, device) = pair();
-        let sealed = codec::ecb_encrypt(
-            &codec::zero_pad(&(-103i32).to_le_bytes()),
-            &session.level1_key,
-        );
-        deliver(
-            &mut session,
-            &data_packet(0, &frame(CMD_GATEWAYINFO, 255, 1, &sealed)),
-        );
-        session
-            .establish_level2(
-                &mut |id| panic!("a result code names no cipher (asked for {id})"),
-                Duration::from_millis(200),
-            )
-            .unwrap();
-        assert!(!session.has_level2());
-        session
-            .send_control_level2(1940, 0, "acct", &json!({"apiCommand": 6018}), 0)
-            .unwrap();
-        let mut buf = [0u8; 512];
+    /// The `SET_PAYLOAD` frame the device receives next, opened: its
+    /// header and its JSON, unsealed with the level-1 key when it was
+    /// sealed at sign code 1.
+    fn next_set_payload(session: &Session, device: &UdpSocket) -> (codec::FrameHeader, Value) {
+        let mut buf = [0u8; 1024];
         let msg = loop {
             let (len, _) = device.recv_from(&mut buf).unwrap();
             if codec::has_header(&buf[..len], request::DATA) {
@@ -1190,14 +1179,155 @@ mod tests {
             }
         };
         let header = codec::parse_frame_header(&msg[8..]).unwrap();
+        let body = &msg[8 + 16..];
+        let plain = match header.sign_code {
+            0 => body.to_vec(),
+            1 => codec::ecb_decrypt(body, &session.level1_key).unwrap(),
+            other => panic!("sealed at sign code {other}"),
+        };
+        let value = serde_json::from_str(&codec::nul_terminated(&plain)).unwrap();
+        (header, value)
+    }
+
+    /// Answer the gateway prompt with `reply`, sealed at level 1 as the
+    /// device seals it.
+    fn answer_gateway(session: &mut Session, reply: &[u8]) {
+        let sealed = codec::ecb_encrypt(&codec::zero_pad(reply), &session.level1_key);
+        deliver(
+            session,
+            &data_packet(0, &frame(CMD_GATEWAYINFO, 255, 1, &sealed)),
+        );
+    }
+
+    fn assert_sealed_at_level_one(session: &mut Session, device: &UdpSocket) {
+        assert!(!session.has_level2());
+        session
+            .send_control_level2(1940, 0, "acct", &json!({"apiCommand": 6018}), 0)
+            .unwrap();
+        let (header, value) = next_set_payload(session, device);
         assert_eq!(
             (header.command, header.channel, header.sign_code),
-            (CMD_SET_PAYLOAD, 0, 0)
+            (CMD_SET_PAYLOAD, 0, 1)
         );
-        let value: Value = serde_json::from_slice(&msg[8 + 16..]).unwrap();
         assert_eq!(
             value,
             json!({"account_id": "acct", "cmd": 1940, "mChannel": 0, "mValue3": 0, "payload": {"apiCommand": 6018}})
+        );
+    }
+
+    /// A Smart Lock C220 (T8506) answers the gateway prompt with a bare
+    /// result, -103 (invalid command), sealed at level 1 and padded to a
+    /// block — not a key envelope. Its first two bytes read as a cipher id
+    /// (0xff99 = 65433) that the cloud does not have, which refused every
+    /// lock command. The device offers no level-2 key, and its commands are
+    /// sealed at level 1, as eufy-security-client seals them to it: that
+    /// client sets level 1 whenever the cloud has no keys for the cipher a
+    /// gateway reply names.
+    #[test]
+    fn a_gateway_answer_that_is_a_result_code_means_commands_go_at_level_one() {
+        let (mut session, device) = pair();
+        answer_gateway(&mut session, &(-103i32).to_le_bytes());
+        session
+            .establish_level2(
+                &mut |id| panic!("a result code names no cipher (asked for {id})"),
+                Duration::from_millis(200),
+            )
+            .unwrap();
+        assert_sealed_at_level_one(&mut session, &device);
+    }
+
+    /// The live C220's answer was not the bare or zero-padded code: it
+    /// still read as cipher 65433 and asked the cloud, which has no keys
+    /// for it ("no level-2 key: the cloud has no keys for cipher 65433").
+    /// Anything too short to hold a key envelope offers no key, whatever
+    /// follows the code.
+    #[test]
+    fn a_gateway_answer_too_short_for_a_key_means_commands_go_at_level_one() {
+        for reply in [
+            vec![0x99, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00],
+            vec![0x99, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x7f, 0x3c],
+            [0x99, 0xff, 0x00, 0x00]
+                .iter()
+                .copied()
+                .chain([0x55; 40])
+                .collect(),
+        ] {
+            let (mut session, device) = pair();
+            answer_gateway(&mut session, &reply);
+            session
+                .establish_level2(
+                    &mut |id| panic!("{reply:02x?} holds no key (asked for {id})"),
+                    Duration::from_millis(200),
+                )
+                .unwrap();
+            assert_sealed_at_level_one(&mut session, &device);
+        }
+    }
+
+    /// A reply long enough to be an envelope, naming a cipher the cloud
+    /// answers with no keys for: eufy-security-client's `getCipher` finds
+    /// nothing and it sets level 1, and so does this.
+    #[test]
+    fn a_cipher_the_cloud_has_no_keys_for_means_commands_go_at_level_one() {
+        let (mut session, device) = pair();
+        let mut reply = vec![0x99, 0xff, 0, 0];
+        reply.resize(codec::SHORTEST_KEY_ENVELOPE, 0x33);
+        answer_gateway(&mut session, &reply);
+        let mut asked = Vec::new();
+        session
+            .establish_level2(
+                &mut |id| {
+                    asked.push(id);
+                    Ok(None)
+                },
+                Duration::from_millis(200),
+            )
+            .unwrap();
+        assert_eq!(asked, vec![0xff99]);
+        assert_sealed_at_level_one(&mut session, &device);
+    }
+
+    /// A cloud that cannot be asked is not a cloud with no keys: the
+    /// command is refused rather than sent under a guessed seal.
+    #[test]
+    fn a_cloud_that_fails_to_answer_refuses_the_command() {
+        let (mut session, _device) = pair();
+        let mut reply = vec![9, 0, 0, 0];
+        reply.resize(codec::SHORTEST_KEY_ENVELOPE, 0x33);
+        answer_gateway(&mut session, &reply);
+        let error = session
+            .establish_level2(
+                &mut |_| Err("the cloud timed out".into()),
+                Duration::from_millis(100),
+            )
+            .unwrap_err();
+        assert!(error.contains("the cloud timed out"), "{error}");
+        assert!(
+            session
+                .send_control_level2(1940, 0, "acct", &json!({}), 0)
+                .is_err()
+        );
+    }
+
+    /// A lock commanded at level 1 answers at level 1: its result is the
+    /// code sealed and zero-padded to one block.
+    #[test]
+    fn a_result_sealed_at_level_one_is_read() {
+        let (mut session, _device) = pair();
+        let sealed = codec::ecb_encrypt(
+            &codec::zero_pad(&(-108i32).to_le_bytes()),
+            &session.level1_key,
+        );
+        deliver(
+            &mut session,
+            &data_packet(0, &frame(CMD_SET_PAYLOAD, 0, 1, &sealed)),
+        );
+        assert_eq!(
+            events(&mut session),
+            vec![Event::CommandResult {
+                code: -108,
+                channel: 0
+            }]
         );
     }
 
