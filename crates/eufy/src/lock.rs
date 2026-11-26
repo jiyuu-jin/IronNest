@@ -31,8 +31,14 @@
 //! it has shown on that hardware. The SDK also treats the P2P actuation as
 //! fire-and-forget and reads no reply to it; what this port reads as the
 //! acknowledgement (the transport ACK of the sends, a bare int32 result,
-//! or a 1940 reply frame) is described on [`Actuation`], and the meaning of
-//! a reply's status byte is not established.
+//! or a 1940 reply frame) is described on [`Actuation`]. The reply is read
+//! as eufy-security-client reads a smart lock's: opened under the key time
+//! it carries (not ours), its first byte a signed return code, 0 = done.
+//!
+//! **The C220 family** ([`SMART_LOCK_SERIALS`]) is framed as
+//! eufy-security-client frames it — the one public client shown driving a
+//! C220 — rather than as the app frames a T8531: PKCS#7 the only padding,
+//! and the acting member named by `member.nick_name`.
 
 use std::collections::BTreeSet;
 use std::net::{Ipv4Addr, SocketAddrV4, ToSocketAddrs};
@@ -47,8 +53,14 @@ use crate::p2p::{self, Event, Session, codec};
 /// Sends of one actuation (the SDK's `DIRECT_CMD_SENDS`).
 const SENDS: usize = 5;
 const SEND_SPACING: Duration = Duration::from_millis(200);
-/// How long after the last send replies are collected.
-const REPLY_WINDOW: Duration = Duration::from_secs(3);
+/// How long after the last send the lock's answer is waited for (it answers
+/// once the bolt has moved, seconds after the command).
+const REPLY_WINDOW: Duration = Duration::from_secs(15);
+/// The serial prefixes eufy-security-client sends its smart-lock command
+/// to (`getSmartLockP2PCommand`: C220 T8506, T8502, T85L0, T85V0, T85P0;
+/// its T8510P/T8520P variants are keyed-payload here). It frames them
+/// PKCS#7-only and names the acting member by `member.nick_name`.
+const SMART_LOCK_SERIALS: &[&str] = &["T8506", "T8502", "T85L0", "T85V0", "T85P0"];
 
 /// The eufy device types of locks and safes (the SDK's `LOCK_TYPES`).
 const LOCK_TYPES: &[i64] = &[
@@ -88,6 +100,23 @@ pub fn lock_wire(device: &Device) -> Result<Wire, String> {
     Ok(Wire::Ff09)
 }
 
+fn smart_lock(device: &Device) -> bool {
+    SMART_LOCK_SERIALS
+        .iter()
+        .any(|prefix| device.serial.starts_with(prefix))
+}
+
+/// How a lock's `ff09` plaintext is padded: PKCS#7-only for the families
+/// eufy-security-client drives ([`SMART_LOCK_SERIALS`]), else as the app
+/// captures show.
+pub fn padding_of(device: &Device) -> ff09::Padding {
+    if smart_lock(device) {
+        ff09::Padding::Pkcs7Only
+    } else {
+        ff09::Padding::AppZeroPad
+    }
+}
+
 fn text<'a>(raw: &'a Value, pointer: &str) -> Option<&'a str> {
     raw.pointer(pointer)
         .and_then(Value::as_str)
@@ -120,7 +149,9 @@ pub fn channel_of(device: &Device, standalone: bool) -> Result<u8, String> {
 }
 
 /// Who the frame says acts: the lock's `member.admin_user_id` and
-/// `member.short_user_id`, and the account's acting name — or, when the
+/// `member.short_user_id`, and — for the families eufy-security-client
+/// drives ([`SMART_LOCK_SERIALS`]) — the record's `member.nick_name`, as
+/// that client names it; otherwise the account's acting name — or, when the
 /// account names none (a session kept before sessions carried it), the
 /// member the lock's own record names: its `member.email` local part (what
 /// a sign-in would name it), else its `member.nick_name` (the name the SDK's
@@ -135,9 +166,12 @@ pub fn identity_of(device: &Device, acting_name: &str) -> Result<ff09::Identity,
             .map(str::trim)
             .filter(|v| !v.is_empty())
     };
-    let acting_name = Some(acting_name.trim())
-        .filter(|name| !name.is_empty())
-        .map(str::to_string)
+    let nick = smart_lock(device)
+        .then(|| named("/member/nick_name"))
+        .flatten()
+        .map(str::to_string);
+    let acting_name = nick
+        .or_else(|| Some(acting_name.trim().to_string()).filter(|name| !name.is_empty()))
         .or_else(|| named("/member/email").map(crate::cloud::local_part))
         .or_else(|| named("/member/nick_name").map(str::to_string))
         .ok_or("no acting name: the session names no account and the lock's record names no member; sign in to eufy again")?;
@@ -216,9 +250,33 @@ pub struct Actuation {
     /// A bare int32 result the device answered on the lock's channel, if
     /// any (the SDK reads negative values as refusals: -104, -108, …).
     pub result_code: Option<i32>,
-    /// A 1940 reply frame matched to this command's key time, decrypted,
-    /// if the device sent one. Its status byte's meaning is unverified.
+    /// The lock's own answer: a 1940 `ON_OFF_LOCK` frame, opened under the
+    /// key time it carries. Its status byte, signed, is 0 when the lock
+    /// did it (eufy-security-client's reading); any other is a refusal.
     pub reply: Option<ff09::Reply>,
+}
+
+impl std::fmt::Display for Actuation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} sends acknowledged", self.acknowledged_sends)?;
+        if let Some(code) = self.result_code {
+            write!(f, ", result {code}")?;
+        }
+        match &self.reply {
+            Some(reply) => write!(f, ", the lock answered {}", reply.status as i8),
+            None if self.result_code.is_none() => write!(f, ", no answer"),
+            None => write!(f, ", no answer from the lock itself"),
+        }
+    }
+}
+
+/// A lock's answer frame as it arrived: the frame (hex), the key time its
+/// envelope carries, and the serial it names.
+#[derive(Debug, Clone)]
+struct LockAnswer {
+    payload: String,
+    time: u32,
+    serial: Option<String>,
 }
 
 /// Folds the session's events into what an actuation learned.
@@ -227,7 +285,7 @@ pub struct Replies {
     sent: BTreeSet<u16>,
     acked: BTreeSet<u16>,
     result: Option<i32>,
-    reply_payload: Option<String>,
+    answer: Option<LockAnswer>,
 }
 
 impl Replies {
@@ -237,8 +295,11 @@ impl Replies {
     }
 
     /// Take one event: an ACK of one of our sends, a bare result on
-    /// `channel` (a negative one is kept over a non-negative one), or a
-    /// `{cmd: 1940, payload: {lock_payload, time}}` whose time is ours.
+    /// `channel` (a negative one is kept over a non-negative one), or the
+    /// lock's answer, `{cmd: 1940, payload: {lock_payload, time, dev_sn}}`
+    /// carrying an `ON_OFF_LOCK` frame. The lock answers under a key time of
+    /// its own (eufy-security-client opens it with the reply's `time`);
+    /// one under ours is preferred.
     pub fn note(&mut self, event: &Event, channel: u8, key_time: u32) {
         match event {
             Event::Acked(seq) if self.sent.contains(seq) => {
@@ -252,11 +313,25 @@ impl Replies {
             Event::Json { json, .. } if json.get("cmd").and_then(Value::as_u64) == Some(1940) => {
                 let payload = &json["payload"];
                 let time = payload.get("time").and_then(ff09::reply_key_time);
-                if let (Some(lock_payload), Some(time)) =
-                    (payload.get("lock_payload").and_then(Value::as_str), time)
-                    && time == key_time
+                let Some(lock_payload) = payload.get("lock_payload").and_then(Value::as_str) else {
+                    return;
+                };
+                let lock_answer = ff09::frame_opcode(lock_payload)
+                    .is_some_and(|(opcode, _)| opcode == ff09::OPCODE_ON_OFF_LOCK);
+                let kept_is_ours = self.answer.as_ref().is_some_and(|a| a.time == key_time);
+                if let Some(time) = time
+                    && lock_answer
+                    && !kept_is_ours
                 {
-                    self.reply_payload = Some(lock_payload.to_string());
+                    self.answer = Some(LockAnswer {
+                        payload: lock_payload.to_string(),
+                        time,
+                        serial: payload
+                            .get("dev_sn")
+                            .and_then(Value::as_str)
+                            .filter(|sn| !sn.is_empty())
+                            .map(str::to_string),
+                    });
                 }
             }
             _ => {}
@@ -264,13 +339,14 @@ impl Replies {
     }
 
     /// Whether nothing more is worth waiting for: a send was delivered and
-    /// the device answered.
+    /// the lock answered, or the device refused it outright.
     pub fn settled(&self) -> bool {
-        !self.acked.is_empty() && (self.result.is_some() || self.reply_payload.is_some())
+        !self.acked.is_empty()
+            && (self.answer.is_some() || self.result.is_some_and(|code| code < 0))
     }
 
     /// The outcome: a refusal or no delivery is an error.
-    pub fn finish(self, who: &ff09::Identity, key_time: u32) -> Result<Actuation, String> {
+    pub fn finish(self, who: &ff09::Identity) -> Result<Actuation, String> {
         if let Some(code) = self.result.filter(|code| *code < 0) {
             return Err(format!("the lock refused the command (result {code})"));
         }
@@ -280,15 +356,22 @@ impl Replies {
                 self.sent.len()
             ));
         }
-        let reply = match &self.reply_payload {
-            Some(payload) => Some(ff09::parse_reply(&ff09::decrypt_frame(
-                payload,
-                key_time,
+        let reply = match &self.answer {
+            Some(answer) => Some(ff09::parse_reply(&ff09::decrypt_frame(
+                &answer.payload,
+                answer.time,
                 &who.admin_user_id,
-                &who.device_serial,
+                answer.serial.as_deref().unwrap_or(&who.device_serial),
             )?)?),
             None => None,
         };
+        if let Some(status) = reply.as_ref().map(|reply| reply.status as i8)
+            && status != 0
+        {
+            return Err(format!(
+                "the lock refused the command (its answer says {status})"
+            ));
+        }
         Ok(Actuation {
             acknowledged_sends: self.acked.len(),
             result_code: self.result,
@@ -355,7 +438,7 @@ impl Cloud {
             &account_id,
             &station_serial,
             channel,
-            locked,
+            (locked, padding_of(device)),
         );
         session.close();
         result
@@ -368,14 +451,14 @@ impl Cloud {
         account_id: &str,
         station_serial: &str,
         channel: u8,
-        locked: bool,
+        (locked, padding): (bool, ff09::Padding),
     ) -> Result<Actuation, String> {
         let cipher_user = account_id.to_string();
         session.establish_level2(
             &mut |cipher_id| self.cipher_keys(cipher_id, &cipher_user, station_serial),
             p2p::session::LEVEL2_GRACE,
         )?;
-        let frame = ff09::lock_frame_now(locked, who)?;
+        let frame = ff09::lock_frame_now(locked, who, padding)?;
         let (cmd, payload, m_value3) = transfer_command(&frame);
         let mut replies = Replies::default();
         let drain = |session: &mut Session, replies: &mut Replies| {
@@ -394,7 +477,7 @@ impl Cloud {
             session.pump(Instant::now() + Duration::from_millis(100))?;
             drain(session, &mut replies);
         }
-        replies.finish(who, frame.time)
+        replies.finish(who)
     }
 }
 
@@ -473,6 +556,7 @@ mod tests {
     #[test]
     fn with_no_acting_name_the_lock_record_names_the_member() {
         let mut raw = lock_record();
+        raw["device_sn"] = json!("T8531P0000000000");
         raw["member"]["nick_name"] = json!("Member");
         raw["member"]["email"] = json!("member@example.com");
         // The account's own name wins over the record's.
@@ -562,7 +646,7 @@ mod tests {
         replies.note(&Event::Acked(5), 0, 9);
         replies.note(&Event::Acked(77), 0, 9);
         assert!(!replies.settled());
-        let outcome = replies.finish(&who(), 9).unwrap();
+        let outcome = replies.finish(&who()).unwrap();
         assert_eq!(
             outcome,
             Actuation {
@@ -580,7 +664,7 @@ mod tests {
         replies.note(&Event::Acked(3), 0, 9);
         assert!(
             replies
-                .finish(&who(), 9)
+                .finish(&who())
                 .unwrap_err()
                 .contains("none of the 1 sends")
         );
@@ -624,43 +708,118 @@ mod tests {
             9,
         );
         assert!(replies.settled());
-        assert!(replies.finish(&who(), 9).unwrap_err().contains("-108"));
+        assert!(replies.finish(&who()).unwrap_err().contains("-108"));
+    }
+
+    /// eufy-security-client names the acting member of a C220 by the
+    /// lock record's `member.nick_name`, and frames it PKCS#7-only.
+    #[test]
+    fn a_c220_is_framed_as_eufy_security_client_frames_it() {
+        let mut raw = lock_record();
+        raw["member"]["nick_name"] = json!("Member");
+        let lock = device(raw.clone());
+        assert_eq!(identity_of(&lock, "someone").unwrap().user_name, "Member");
+        assert_eq!(padding_of(&lock), ff09::Padding::Pkcs7Only);
+        raw["member"]["nick_name"] = json!("");
+        assert_eq!(
+            identity_of(&device(raw), "someone").unwrap().user_name,
+            "someone"
+        );
+        let mut raw = lock_record();
+        raw["device_sn"] = json!("T8531P0000000000");
+        raw["member"]["nick_name"] = json!("Member");
+        let video = device(raw);
+        assert_eq!(identity_of(&video, "someone").unwrap().user_name, "someone");
+        assert_eq!(padding_of(&video), ff09::Padding::AppZeroPad);
+    }
+
+    /// The lock's answer to a lock/unlock: an ff09 frame of the same
+    /// opcode under its own key time, the plaintext a signed status byte
+    /// (0 = done, as eufy-security-client reads it) then fields.
+    fn lock_reply(who: &ff09::Identity, status: i8, time: u32) -> Value {
+        let payload = ff09::test_reply_frame(
+            ff09::OPCODE_ON_OFF_LOCK,
+            &[status as u8, 0xa1, 0x01, 0x00],
+            &who.admin_user_id,
+            &who.device_serial,
+            time,
+        );
+        json!({"cmd": 1940, "payload": {"dev_sn": who.device_serial, "lock_payload": payload, "time": format!("{time:x}")}})
+    }
+
+    fn notify(json: Value) -> Event {
+        Event::Json {
+            command: 1351,
+            channel: 0,
+            json,
+        }
+    }
+
+    /// The lock answers under a key time of its own, never ours; the reply
+    /// is opened with the time it carries.
+    #[test]
+    fn a_reply_under_the_locks_own_time_is_read() {
+        let who = who();
+        let ours = 0x6a00_0021;
+        let mut replies = Replies::default();
+        replies.sent(1);
+        replies.note(&Event::Acked(1), 0, ours);
+        replies.note(
+            &Event::CommandResult {
+                code: 0,
+                channel: 0,
+            },
+            0,
+            ours,
+        );
+        // The bare result says it was received; the lock's own answer is
+        // still worth waiting for.
+        assert!(!replies.settled());
+        replies.note(
+            &notify(json!({"cmd": 1940, "payload": {"lock_payload": "ff09", "time": "1"}})),
+            0,
+            ours,
+        );
+        assert!(!replies.settled());
+        replies.note(&notify(lock_reply(&who, 0, 0x6a00_0f40)), 0, ours);
+        assert!(replies.settled());
+        let outcome = replies.finish(&who).unwrap();
+        assert_eq!(outcome.reply.unwrap().status, 0);
+        assert_eq!(outcome.result_code, Some(0));
+    }
+
+    /// A reply whose status is not 0 is the lock saying no.
+    #[test]
+    fn a_reply_with_a_nonzero_status_is_a_refusal() {
+        let who = who();
+        let mut replies = Replies::default();
+        replies.sent(1);
+        replies.note(&Event::Acked(1), 0, 5);
+        replies.note(&notify(lock_reply(&who, -3, 0x6a00_0f40)), 0, 5);
+        assert!(replies.settled());
+        let error = replies.finish(&who).unwrap_err();
+        assert!(error.contains("-3"), "{error}");
     }
 
     #[test]
-    fn a_reply_frame_with_our_time_is_decrypted() {
-        let who = who();
-        // Build the reply with the frame builder's own cipher: a frame for
-        // this identity at the reply's key time decrypts to its fields.
-        let sent = ff09::lock_frame(true, &who, 0x6a00_0000, 0x21, 1).unwrap();
-        let mut replies = Replies::default();
-        replies.sent(1);
-        replies.note(&Event::Acked(1), 0, sent.time);
-        let other = json!({"cmd": 1940, "payload": {"lock_payload": "ff09", "time": "1"}});
-        replies.note(
-            &Event::Json {
-                command: 1351,
-                channel: 0,
-                json: other,
-            },
-            0,
-            sent.time,
+    fn an_actuation_says_what_the_lock_answered() {
+        let none = Actuation {
+            acknowledged_sends: 5,
+            result_code: None,
+            reply: None,
+        };
+        assert_eq!(none.to_string(), "5 sends acknowledged, no answer");
+        let answered = Actuation {
+            acknowledged_sends: 2,
+            result_code: Some(0),
+            reply: Some(ff09::Reply {
+                status: 0,
+                fields: vec![],
+            }),
+        };
+        assert_eq!(
+            answered.to_string(),
+            "2 sends acknowledged, result 0, the lock answered 0"
         );
-        assert!(!replies.settled());
-        let reply = json!({"cmd": 1940, "payload": {"dev_sn": who.device_serial, "lock_payload": sent.lock_payload, "time": format!("{:x}", sent.time)}});
-        replies.note(
-            &Event::Json {
-                command: 1351,
-                channel: 0,
-                json: reply,
-            },
-            0,
-            sent.time,
-        );
-        assert!(replies.settled());
-        let outcome = replies.finish(&who, sent.time).unwrap();
-        let parsed = outcome.reply.unwrap();
-        // The frame's plaintext starts with A1 (0xa1) as the "status" byte.
-        assert_eq!(parsed.status, 0xa1);
     }
 }

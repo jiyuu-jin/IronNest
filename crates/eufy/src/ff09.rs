@@ -140,15 +140,40 @@ pub fn random_nonce() -> u32 {
     rand_core::OsRng.next_u32() % 100
 }
 
-/// The lock/unlock frame. `unix_time`, `nonce` and `seq_num` are explicit
-/// so a frame can be reproduced byte for byte; [`lock_frame_now`] fills
-/// them in.
+/// How the plaintext is padded before AES-CBC-PKCS#7.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Padding {
+    /// Zero-padded to a block first, so PKCS#7 adds a whole block: the
+    /// app's frame, captured from a T8531 video lock and a T85D0 garage
+    /// door (mega-yfue/eufy-sdk).
+    AppZeroPad,
+    /// PKCS#7 alone: eufy-security-client's `getSmartLockP2PCommand`, the
+    /// one public client shown driving a Smart Lock C220 (T8506) and its
+    /// siblings.
+    Pkcs7Only,
+}
+
+/// The lock/unlock frame, padded as the app pads it ([`Padding::AppZeroPad`]).
+/// `unix_time`, `nonce` and `seq_num` are explicit so a frame can be
+/// reproduced byte for byte; [`lock_frame_now`] fills them in.
 pub fn lock_frame(
     lock: bool,
     who: &Identity,
     unix_time: u32,
     nonce: u32,
     seq_num: u32,
+) -> Result<Frame, String> {
+    lock_frame_padded(lock, who, unix_time, nonce, seq_num, Padding::AppZeroPad)
+}
+
+/// [`lock_frame`] with the plaintext padded as `padding` says.
+pub fn lock_frame_padded(
+    lock: bool,
+    who: &Identity,
+    unix_time: u32,
+    nonce: u32,
+    seq_num: u32,
+    padding: Padding,
 ) -> Result<Frame, String> {
     check_identity(&who.admin_user_id, &who.device_serial)?;
     if who.user_name.is_empty() || who.short_user_id.is_empty() {
@@ -167,13 +192,17 @@ pub fn lock_frame(
             )
         })?;
     let key_time = unix_time | nonce;
-    let plain = zero_pad(&write_tlv(&[
+    let tlv = write_tlv(&[
         unix_time.to_le_bytes().to_vec(),
         who.admin_user_id.as_bytes().to_vec(),
         vec![if lock { 0 } else { 1 }],
         who.user_name.as_bytes().to_vec(),
         short,
-    ])?);
+    ])?;
+    let plain = match padding {
+        Padding::AppZeroPad => zero_pad(&tlv),
+        Padding::Pkcs7Only => tlv,
+    };
     Ok(assemble(
         OPCODE_ON_OFF_LOCK,
         API_ON_OFF_LOCK,
@@ -185,12 +214,25 @@ pub fn lock_frame(
     ))
 }
 
-/// [`lock_frame`] stamped now, with a fresh nonce.
-pub fn lock_frame_now(lock: bool, who: &Identity) -> Result<Frame, String> {
+/// [`lock_frame_padded`] stamped now, with a fresh nonce.
+pub fn lock_frame_now(lock: bool, who: &Identity, padding: Padding) -> Result<Frame, String> {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |since| since.as_secs() as u32);
-    lock_frame(lock, who, now, random_nonce(), now)
+    lock_frame_padded(lock, who, now, random_nonce(), now, padding)
+}
+
+/// A frame as a device would answer: `plain` under `opcode`, keyed by its
+/// own `key_time`, as hex.
+#[cfg(test)]
+pub(crate) fn test_reply_frame(
+    opcode: u16,
+    plain: &[u8],
+    admin_user_id: &str,
+    device_serial: &str,
+    key_time: u32,
+) -> String {
+    assemble(opcode, 0, plain, admin_user_id, device_serial, key_time, 0).lock_payload
 }
 
 fn assemble(
@@ -329,6 +371,38 @@ mod tests {
         assert_eq!(frame.api_command, API_ON_OFF_LOCK);
     }
 
+    /// eufy-security-client builds a C220 (T8506) frame from the TLV as it
+    /// is, PKCS#7 the only padding (`getSmartLockP2PCommand`); the app the
+    /// captured frame came from (a T8531) zero-pads first.
+    #[test]
+    fn a_pkcs7_only_frame_carries_the_tlv_with_no_zero_padding() {
+        let who = identity();
+        let frame =
+            lock_frame_padded(false, &who, UNIX_TIME, 1, SEQ_NUM, Padding::Pkcs7Only).unwrap();
+        let plain = decrypt_frame(
+            &frame.lock_payload,
+            frame.time,
+            &who.admin_user_id,
+            &who.device_serial,
+        )
+        .unwrap();
+        let tlv = write_tlv(&[
+            UNIX_TIME.to_le_bytes().to_vec(),
+            who.admin_user_id.as_bytes().to_vec(),
+            vec![1],
+            who.user_name.as_bytes().to_vec(),
+            hex::decode(&who.short_user_id).unwrap(),
+        ])
+        .unwrap();
+        assert_eq!(plain, tlv);
+        let captured = lock_frame(false, &who, UNIX_TIME, 1, SEQ_NUM).unwrap();
+        assert_eq!(
+            lock_frame_padded(false, &who, UNIX_TIME, 1, SEQ_NUM, Padding::AppZeroPad).unwrap(),
+            captured
+        );
+        assert_ne!(frame.lock_payload, captured.lock_payload);
+    }
+
     #[test]
     fn lock_and_unlock_differ_only_in_the_a3_byte() {
         let lock = lock_frame(true, &identity(), UNIX_TIME, 1, SEQ_NUM).unwrap();
@@ -355,7 +429,7 @@ mod tests {
 
     #[test]
     fn a_frame_carries_its_magic_size_and_checksum() {
-        let frame = lock_frame_now(true, &identity()).unwrap();
+        let frame = lock_frame_now(true, &identity(), Padding::AppZeroPad).unwrap();
         let bytes = hex::decode(&frame.lock_payload).unwrap();
         assert_eq!(&bytes[..2], &[0xff, 0x09]);
         assert_eq!(
